@@ -5,6 +5,9 @@ export const STORAGE_KEY = 'timetable_courses'
 export const SCHEMA_VERSION = 1
 export const MAX_PERIOD = 9
 
+/** 单个节次单元格高度(rpx)。需与 components/timetable-grid/index.wxss 中的 height 保持一致。 */
+export const CELL_HEIGHT = 96
+
 export const DAYS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
 
 export interface Period {

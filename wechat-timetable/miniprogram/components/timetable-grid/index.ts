@@ -10,9 +10,9 @@ interface CardItem {
 
 Component({
   properties: {
-    cards: {
+    daySlots: {
       type: Array,
-      value: [] as CardItem[],
+      value: [] as CardItem[][],
     },
   },
 

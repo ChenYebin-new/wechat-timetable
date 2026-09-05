@@ -1,6 +1,6 @@
 /* pages/timetable/index.wxss */
 .page {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   padding: 0 16rpx;
@@ -32,7 +32,6 @@
 
 .grid-scroll {
   flex: 1;
-  height: 0;
 }
 
 .empty {

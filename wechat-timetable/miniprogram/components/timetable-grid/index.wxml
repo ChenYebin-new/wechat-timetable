@@ -1,33 +1,39 @@
 <!-- components/timetable-grid/index.wxml -->
-<view class="grid">
-  <view class="corner"></view>
-
-  <view
-    class="day-head"
-    wx:for="{{days}}"
-    wx:key="index"
-    style="grid-row: 1; grid-column: {{index + 2}};"
-  >{{item}}</view>
-
-  <view
-    class="time-cell"
-    wx:for="{{periods}}"
-    wx:key="index"
-    style="grid-row: {{index + 2}}; grid-column: 1;"
-  >
-    <text class="time-label">{{item.label}}</text>
-    <text class="time-range">{{item.time}}</text>
+<view class="timetable">
+  <view class="head">
+    <view class="head-corner"></view>
+    <view class="head-day" wx:for="{{days}}" wx:key="index" style="flex: 1;">{{item}}</view>
   </view>
 
-  <view
-    class="card"
-    wx:for="{{cards}}"
-    wx:key="id"
-    style="{{item.style}} background-color: {{item.course.color}};"
-    data-id="{{item.course.id}}"
-    bindtap="onCardTap"
-  >
-    <text class="card-name">{{item.course.name}}</text>
-    <text class="card-loc" wx:if="{{item.course.location}}">{{item.course.location}}</text>
+  <view class="body">
+    <view class="time-col">
+      <view class="time-cell" wx:for="{{periods}}" wx:key="index">
+        <text class="time-label">{{item.label}}</text>
+        <text class="time-range">{{item.time}}</text>
+      </view>
+    </view>
+
+    <view class="days">
+      <view
+        class="day-col"
+        wx:for="{{daySlots}}"
+        wx:key="index"
+        wx:for-item="slots"
+        style="flex: 1;"
+      >
+        <view class="pcell" wx:for="{{periods}}" wx:key="index" wx:for-item="p"></view>
+        <view
+          class="card"
+          wx:for="{{slots}}"
+          wx:key="id"
+          style="{{item.style}} background-color: {{item.course.color}};"
+          data-id="{{item.course.id}}"
+          bindtap="onCardTap"
+        >
+          <text class="card-name">{{item.course.name}}</text>
+          <text class="card-loc" wx:if="{{item.course.location}}">{{item.course.location}}</text>
+        </view>
+      </view>
+    </view>
   </view>
 </view>

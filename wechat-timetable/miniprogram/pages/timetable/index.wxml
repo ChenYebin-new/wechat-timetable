@@ -13,6 +13,6 @@
   </view>
 
   <scroll-view wx:else class="grid-scroll" scroll-y>
-    <timetable-grid cards="{{cards}}" bind:cardtap="onCourseTap" />
+    <timetable-grid day-slots="{{daySlots}}" bind:cardtap="onCourseTap" />
   </scroll-view>
 </view>
