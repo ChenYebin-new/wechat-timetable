@@ -1,0 +1,78 @@
+/* components/timetable-grid/index.wxss */
+.grid {
+  display: grid;
+  grid-template-columns: 72rpx repeat(7, 1fr);
+  grid-template-rows: 56rpx repeat(9, 104rpx);
+  gap: 4rpx;
+  padding: 8rpx;
+  background: #eef2f4;
+  border-radius: 16rpx;
+}
+
+.corner {
+  background: #dfe8ea;
+  border-radius: 8rpx;
+}
+
+.day-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #25453f;
+  background: #d4ece7;
+  border-radius: 8rpx;
+}
+
+.time-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 20rpx;
+  color: #5b6b66;
+  background: #f7fafa;
+  border-radius: 8rpx;
+}
+
+.time-label {
+  font-weight: 600;
+  color: #33443f;
+}
+
+.time-range {
+  font-size: 17rpx;
+  color: #8a9a94;
+  margin-top: 2rpx;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rpx 6rpx;
+  border-radius: 12rpx;
+  color: #ffffff;
+  overflow: hidden;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+}
+
+.card-name {
+  font-size: 22rpx;
+  font-weight: 600;
+  text-align: center;
+  word-break: break-all;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.card-loc {
+  font-size: 18rpx;
+  opacity: 0.88;
+  margin-top: 4rpx;
+  text-align: center;
+}
