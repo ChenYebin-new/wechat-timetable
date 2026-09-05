@@ -23,7 +23,7 @@
     class="card"
     wx:for="{{cards}}"
     wx:key="id"
-    style="{{item.style}}"
+    style="{{item.style}} background-color: {{item.course.color}};"
     data-id="{{item.course.id}}"
     bindtap="onCardTap"
   >
