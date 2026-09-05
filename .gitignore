@@ -1,0 +1,23 @@
+# 微信开发者工具的个人配置
+project.private.config.json
+
+# 依赖和生成目录
+node_modules/
+miniprogram_npm/
+dist/
+coverage/
+
+# 编辑器和系统文件
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.log
+
+# 环境变量和敏感文件
+.env
+.env.*
+!.env.example
+private.*.key
+upload_private.key
+*.pem
