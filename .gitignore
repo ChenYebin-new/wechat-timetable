@@ -1,6 +1,9 @@
 # 微信开发者工具的个人配置
 project.private.config.json
 
+# Yebin 在微信平台维护的小程序图标，不进入代码仓库
+assets/branding/
+
 # 依赖和生成目录
 node_modules/
 miniprogram_npm/
