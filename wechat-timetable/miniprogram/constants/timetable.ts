@@ -1,14 +1,35 @@
 // constants/timetable.ts
-// 第一版固定的课表常量：星期、九节课时、色板、存储 key
+// 课表常量：星期、九节课时、色板、版本、学期与周次相关常量
+
+import type { WeekMode } from '../models/course'
 
 export const STORAGE_KEY = 'timetable_courses'
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 2
 export const MAX_PERIOD = 9
 
 /** 单个节次单元格高度(rpx)。需与 components/timetable-grid/index.wxss 中的 height 保持一致。 */
 export const CELL_HEIGHT = 124
 
 export const DAYS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+
+/** 学期总周数范围与默认值。 */
+export const MIN_TOTAL_WEEKS = 1
+export const MAX_TOTAL_WEEKS = 30
+export const DEFAULT_TOTAL_WEEKS = 18
+/** 常用学期周数，供快捷选择。 */
+export const COMMON_TOTAL_WEEKS = [16, 18, 20]
+
+export interface WeekModeOption {
+  value: WeekMode
+  label: string
+}
+
+export const WEEK_MODES: WeekModeOption[] = [
+  { value: 'all', label: '全部周' },
+  { value: 'odd', label: '单周' },
+  { value: 'even', label: '双周' },
+  { value: 'custom', label: '指定周次' },
+]
 
 export interface Period {
   index: number
