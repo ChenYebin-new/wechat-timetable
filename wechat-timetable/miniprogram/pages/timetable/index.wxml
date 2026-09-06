@@ -23,9 +23,9 @@
     <button class="empty-btn" bindtap="onAdd">开始添加</button>
   </view>
 
-  <scroll-view class="grid-scroll" scroll-y show-scrollbar="{{false}}">
+  <view class="grid-scroll">
     <view class="grid-frame">
       <timetable-grid day-slots="{{daySlots}}" bind:cardtap="onCourseTap" />
     </view>
-  </scroll-view>
+  </view>
 </view>
