@@ -1,4 +1,9 @@
 /* pages/timetable/index.wxss */
+page {
+  height: 100vh;
+  overflow: hidden;
+}
+
 .page {
   height: 100vh;
   display: flex;
@@ -19,6 +24,7 @@
   background: #dcecea;
   border-radius: 28rpx;
   box-shadow: 0 10rpx 24rpx rgba(52, 83, 77, 0.08);
+  transform: translateZ(0);
 }
 
 .overview-copy {
