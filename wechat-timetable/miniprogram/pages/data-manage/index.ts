@@ -137,7 +137,7 @@ Page({
     const vt = validateTerm(term)
     if (!vt.ok) {
       wx.showModal({
-        title: '学期设置无效',
+        title: '设置无效',
         content: vt.reason || '请检查学期设置',
         showCancel: false,
         confirmText: '知道了',
@@ -169,7 +169,7 @@ Page({
       if (!termArg) return
     }
     this.confirm(
-      '覆盖现有课表',
+      '覆盖确认',
       `将用备份中的 ${preview ? preview.backupCount : 0} 门课程替换当前 ${preview ? preview.currentCount : 0} 门课程。继续前会自动保存当前课表，之后可在本页恢复。`,
       '确认覆盖',
       () => {
@@ -213,7 +213,7 @@ Page({
       return
     }
     this.confirm(
-      '恢复最近备份',
+      '恢复确认',
       `将用最近备份（V${info.schemaVersion}，${info.count} 门课程）替换当前课表。继续前会自动保存当前课表，之后仍可在本页恢复。`,
       '确认恢复',
       () => {
