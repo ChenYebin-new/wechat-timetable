@@ -1,7 +1,7 @@
 // services/backup-service.ts
-// 课表数据的导出、导入校验、预览、覆盖、合并与最近自动备份。
+// 课表数据的导出、导入校验、预览、覆盖、合并与最近自动备份（V2 学期数据，兼容 V1 备份）。
 
-import type { Course, TimetableStorage } from '../models/course'
+import type { Course, TermSettings, TimetableStorage, WeekMode } from '../models/course'
 import { COLOR_PALETTE, MAX_PERIOD, SCHEMA_VERSION } from '../constants/timetable'
 import {
   APP_ID,
@@ -11,6 +11,8 @@ import {
 } from '../models/backup'
 import type { ImportPreview, RecentBackup, TimetableBackupEnvelope } from '../models/backup'
 import { getStorage, writeStorage } from './course-storage'
+import { isOverlapping } from '../utils/course-validator'
+import { expandWeeks, normalizeWeeks, validateTerm } from '../utils/term'
 
 // ---------- 基础工具 ----------
 
@@ -46,12 +48,8 @@ function isValidDateString(s: string): boolean {
   return date.toISOString() === s
 }
 
-/** 课程节次区间是否在同一天重叠。 */
-function overlaps(
-  a: { day: number; startPeriod: number; endPeriod: number },
-  b: { day: number; startPeriod: number; endPeriod: number },
-): boolean {
-  return a.day === b.day && !(a.endPeriod < b.startPeriod || a.startPeriod > b.endPeriod)
+function toWeekMode(v: unknown): WeekMode {
+  return v === 'odd' || v === 'even' || v === 'custom' ? v : 'all'
 }
 
 /** 判断两门课程是否属于重复：ID 相同，或名称相同时星期、开始、结束节次相同。 */
@@ -74,7 +72,7 @@ function unsupportedStorageReason(schemaVersion: number): string {
   return `当前课表数据版本为 V${schemaVersion}，此版本小程序仅支持 V${SCHEMA_VERSION}。请使用更新版本处理课表。`
 }
 
-/** 严格校验单门备份课程，并返回可安全写入的规范化结果。 */
+/** 严格校验单门备份课程的基础字段，返回规范化结果（周次在 analyzeBackup 中按学期处理）。 */
 function validateBackupCourse(raw: unknown): CourseValidationResult {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     return { reason: '课程不是有效对象' }
@@ -123,6 +121,13 @@ function validateBackupCourse(raw: unknown): CourseValidationResult {
   if (c.location !== undefined && typeof c.location !== 'string') {
     return { reason: '教室字段必须是文本' }
   }
+  const weekMode = toWeekMode(c.weekMode)
+  if (c.weekMode !== undefined && c.weekMode !== weekMode) {
+    return { reason: '课程周次模式无效' }
+  }
+  if (c.weeks !== undefined && (!Array.isArray(c.weeks) || c.weeks.some((w) => !Number.isInteger(w)))) {
+    return { reason: '课程周次数组无效' }
+  }
   const course: Course = {
     id: c.id,
     name: c.name.trim(),
@@ -132,6 +137,8 @@ function validateBackupCourse(raw: unknown): CourseValidationResult {
     color: c.color,
     createdAt: c.createdAt,
     updatedAt: c.updatedAt,
+    weekMode,
+    weeks: Array.isArray(c.weeks) ? (c.weeks as number[]) : [],
   }
   if (typeof c.teacher === 'string' && c.teacher.trim()) course.teacher = c.teacher.trim()
   if (typeof c.location === 'string' && c.location.trim()) course.location = c.location.trim()
@@ -143,14 +150,15 @@ function validateBackupCourse(raw: unknown): CourseValidationResult {
 /** 导出当前课表为备份 JSON 文本。 */
 export function exportBackup(): string {
   const storage = getStorage()
-  if (storage.schemaVersion !== SCHEMA_VERSION) {
-    throw new Error(unsupportedStorageReason(storage.schemaVersion))
-  }
   const envelope: TimetableBackupEnvelope = {
     app: APP_ID,
     backupVersion: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
-    data: storage,
+    data: {
+      schemaVersion: storage.schemaVersion,
+      term: storage.term,
+      courses: storage.courses.map((c) => ({ ...c })),
+    },
   }
   return JSON.stringify(envelope)
 }
@@ -203,6 +211,9 @@ export interface AnalyzeResult {
   errors: string[]
   preview?: ImportPreview
   courses?: Course[]
+  term?: TermSettings | null
+  /** 备份为 V1 旧数据，导入前需要设置学期。 */
+  needsTerm?: boolean
 }
 
 /** 深度校验备份并计算导入预览。出现任何错误则整体拒绝导入。 */
@@ -214,11 +225,26 @@ export function analyzeBackup(envelope: TimetableBackupEnvelope): AnalyzeResult 
   envelope = parsed.envelope
   const errors: string[] = []
 
-  if (!Number.isInteger(envelope.data.schemaVersion)) {
+  const schemaVersion = envelope.data.schemaVersion
+  if (!Number.isInteger(schemaVersion)) {
     errors.push('备份数据版本缺失或格式不正确')
-  } else if (envelope.data.schemaVersion !== SCHEMA_VERSION) {
-    errors.push(`不支持的课表数据版本：${envelope.data.schemaVersion}`)
+  } else if (schemaVersion !== 1 && schemaVersion !== SCHEMA_VERSION) {
+    errors.push(`不支持的课表数据版本：${schemaVersion}`)
   }
+
+  // V2 备份必须带有效学期；V1 备份无学期。
+  let term: TermSettings | null = null
+  const needsTerm = schemaVersion === 1
+  if (schemaVersion === SCHEMA_VERSION) {
+    const termCheck = validateTerm(envelope.data.term as TermSettings | null)
+    if (!termCheck.ok) {
+      errors.push(`备份学期设置无效：${termCheck.reason || '缺少学期设置'}`)
+    } else {
+      term = envelope.data.term as TermSettings
+    }
+  }
+
+  const totalWeeks = term ? term.totalWeeks : 0
 
   const backupCourses: Course[] = []
   const courseIds = new Set<string>()
@@ -234,17 +260,34 @@ export function analyzeBackup(envelope: TimetableBackupEnvelope): AnalyzeResult 
         break
       }
       courseIds.add(validated.course.id)
-      backupCourses.push(validated.course)
+
+      // 按学期规范化周次；V1 备份的课程先以"全部周"处理（导入时按所选学期展开）。
+      let course = validated.course
+      if (totalWeeks > 0) {
+        if (course.weekMode === 'custom') {
+          const weeks = normalizeWeeks(course.weeks, totalWeeks)
+          if (!weeks.length || weeks.length !== course.weeks.length) {
+            errors.push(`课程「${course.name}」的指定周次无效或超出学期范围`)
+            break
+          }
+          course = { ...course, weeks }
+        } else {
+          course = { ...course, weeks: expandWeeks(course.weekMode, totalWeeks) }
+        }
+      } else if (needsTerm) {
+        course = { ...course, weekMode: 'all', weeks: [] }
+      }
+      backupCourses.push(course)
     }
   } else {
     errors.push('备份课程数据不是数组')
   }
 
-  // 备份内部不得存在同一天、重叠节次的冲突课程。
+  // 备份内部不得存在冲突课程（星期 + 节次 + 周次三者都重叠）。
   if (!errors.length) {
     for (let i = 0; i < backupCourses.length; i++) {
       for (let j = i + 1; j < backupCourses.length; j++) {
-        if (overlaps(backupCourses[i], backupCourses[j])) {
+        if (isOverlapping(backupCourses[i], backupCourses[j])) {
           errors.push(`备份内部存在冲突：${backupCourses[i].name} 与 ${backupCourses[j].name}`)
           break
         }
@@ -260,6 +303,8 @@ export function analyzeBackup(envelope: TimetableBackupEnvelope): AnalyzeResult 
     errors: [],
     preview: computePreview(envelope, backupCourses),
     courses: backupCourses,
+    term,
+    needsTerm,
   }
 }
 
@@ -274,7 +319,7 @@ function computePreview(envelope: TimetableBackupEnvelope, backupCourses: Course
       duplicateCount++
       continue
     }
-    if (existing.some((e) => overlaps(bc, e))) {
+    if (existing.some((e) => isOverlapping(bc, e))) {
       conflictCount++
       continue
     }
@@ -306,6 +351,7 @@ function buildRecentBackup(current: TimetableStorage): RecentBackup {
       exportedAt: new Date().toISOString(),
       data: {
         schemaVersion: current.schemaVersion,
+        term: current.term,
         courses: current.courses.map((course) => ({ ...course })),
       },
     },
@@ -339,6 +385,7 @@ export function getRecentBackup(): RecentBackup | null {
         ...parsed.envelope,
         data: {
           schemaVersion: parsed.envelope.data.schemaVersion,
+          term: analyzed.term,
           courses: analyzed.courses,
         },
       },
@@ -392,19 +439,38 @@ function recoverAfterMutationFailure(current: TimetableStorage): MutationResult 
   return { ok: false, reason: '写入失败，无法确认原课表状态；请使用最近自动备份恢复' }
 }
 
-/** 用备份整体覆盖当前课表。覆盖前先生成最近自动备份。 */
-export function overwriteFromBackup(envelope: TimetableBackupEnvelope): MutationResult {
+/** V1 备份导入时，把课程按所选学期展开为"全部周"。 */
+function expandV1CoursesWithTerm(courses: Course[], term: TermSettings): Course[] {
+  return courses.map((c) => ({ ...c, weekMode: 'all' as WeekMode, weeks: expandWeeks('all', term.totalWeeks) }))
+}
+
+/** 用备份整体覆盖当前课表。覆盖前先生成最近自动备份。V1 备份需提供 term。 */
+export function overwriteFromBackup(envelope: TimetableBackupEnvelope, term?: TermSettings): MutationResult {
   const currentResult = getCurrentForMutation()
   if (!currentResult.current) return { ok: false, reason: currentResult.reason }
   const analyzed = analyzeBackup(envelope)
   if (!analyzed.ok || !analyzed.courses) return { ok: false, reason: analyzed.errors[0] }
+
+  let targetTerm: TermSettings | null
+  let targetCourses: Course[]
+  if (analyzed.needsTerm) {
+    const vt = validateTerm(term)
+    if (!vt.ok) return { ok: false, reason: `导入旧版备份需要先设置学期：${vt.reason || '学期设置无效'}` }
+    targetTerm = term as TermSettings
+    targetCourses = expandV1CoursesWithTerm(analyzed.courses, targetTerm)
+  } else {
+    targetTerm = analyzed.term
+    targetCourses = analyzed.courses
+  }
+
   if (!snapshotCurrent(currentResult.current)) {
     return { ok: false, reason: '无法创建操作前自动备份，已停止覆盖' }
   }
   try {
     writeStorage({
-      schemaVersion: envelope.data.schemaVersion,
-      courses: analyzed.courses,
+      schemaVersion: SCHEMA_VERSION,
+      term: targetTerm,
+      courses: targetCourses,
     })
     return { ok: true }
   } catch {
@@ -412,13 +478,24 @@ export function overwriteFromBackup(envelope: TimetableBackupEnvelope): Mutation
   }
 }
 
-/** 把备份合并进当前课表：重复与冲突课程跳过，合法课程加入。先生成最近自动备份。 */
-export function mergeFromBackup(envelope: TimetableBackupEnvelope): MutationResult {
+/** 把备份合并进当前课表：重复与冲突课程跳过，合法课程加入。先生成最近自动备份。V1 备份按当前学期展开。 */
+export function mergeFromBackup(envelope: TimetableBackupEnvelope, term?: TermSettings): MutationResult {
   const currentResult = getCurrentForMutation()
   if (!currentResult.current) return { ok: false, reason: currentResult.reason }
   const analyzed = analyzeBackup(envelope)
   if (!analyzed.ok || !analyzed.courses) return { ok: false, reason: analyzed.errors[0] }
   const current = currentResult.current
+
+  let incoming: Course[]
+  if (analyzed.needsTerm) {
+    const targetTerm = current.term || term
+    const vt = validateTerm(targetTerm)
+    if (!vt.ok) return { ok: false, reason: `导入旧版备份需要先设置学期：${vt.reason || '学期设置无效'}` }
+    incoming = expandV1CoursesWithTerm(analyzed.courses, targetTerm as TermSettings)
+  } else {
+    incoming = analyzed.courses
+  }
+
   if (!snapshotCurrent(current)) {
     return { ok: false, reason: '无法创建操作前自动备份，已停止合并' }
   }
@@ -427,12 +504,12 @@ export function mergeFromBackup(envelope: TimetableBackupEnvelope): MutationResu
   let added = 0
   let duplicateCount = 0
   let conflictCount = 0
-  for (const bc of analyzed.courses) {
+  for (const bc of incoming) {
     if (result.some((e) => isDuplicateCourse(bc, e))) {
       duplicateCount++
       continue
     }
-    if (result.some((e) => overlaps(bc, e))) {
+    if (result.some((e) => isOverlapping(bc, e))) {
       conflictCount++
       continue
     }
@@ -441,7 +518,7 @@ export function mergeFromBackup(envelope: TimetableBackupEnvelope): MutationResu
   }
 
   try {
-    writeStorage({ schemaVersion: SCHEMA_VERSION, courses: result })
+    writeStorage({ schemaVersion: SCHEMA_VERSION, term: current.term, courses: result })
     return {
       ok: true,
       added,
@@ -458,13 +535,20 @@ export function mergeFromBackup(envelope: TimetableBackupEnvelope): MutationResu
 export function restoreRecentBackup(): MutationResult {
   const rb = getRecentBackup()
   if (!rb) return { ok: false, reason: '没有可用且通过校验的最近备份' }
+  if (rb.export.data.schemaVersion !== SCHEMA_VERSION || !rb.export.data.term) {
+    return { ok: false, reason: '最近备份为旧版数据，请先设置学期后通过导入恢复' }
+  }
   const currentResult = getCurrentForMutation()
   if (!currentResult.current) return { ok: false, reason: currentResult.reason }
   if (!snapshotCurrent(currentResult.current)) {
     return { ok: false, reason: '无法创建操作前自动备份，已停止恢复' }
   }
   try {
-    writeStorage({ schemaVersion: rb.export.data.schemaVersion, courses: rb.export.data.courses })
+    writeStorage({
+      schemaVersion: SCHEMA_VERSION,
+      term: rb.export.data.term,
+      courses: rb.export.data.courses,
+    })
     return { ok: true }
   } catch {
     const currentRestored = tryWriteStorage(currentResult.current)

@@ -109,6 +109,34 @@
   word-break: break-all;
 }
 
+.term-setup {
+  margin-top: 16rpx;
+  padding: 16rpx;
+  background: #fdf3e7;
+  border-radius: 12rpx;
+}
+
+.term-setup-title {
+  display: block;
+  font-size: 23rpx;
+  font-weight: 700;
+  color: #9a5b13;
+  margin-bottom: 8rpx;
+}
+
+.term-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8rpx 0;
+}
+
+.picker-date {
+  text-align: right;
+  color: #223;
+  font-size: 25rpx;
+}
+
 .actions {
   margin-top: 20rpx;
   display: flex;

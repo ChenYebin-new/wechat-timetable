@@ -1,5 +1,6 @@
 // pages/data-manage/index.ts
 import type { ImportPreview, TimetableBackupEnvelope } from '../../models/backup'
+import type { TermSettings } from '../../models/course'
 import {
   analyzeBackup,
   exportBackup,
@@ -9,6 +10,9 @@ import {
   parseBackup,
   restoreRecentBackup,
 } from '../../services/backup-service'
+import { getTerm } from '../../services/course-storage'
+import { DEFAULT_TOTAL_WEEKS, MAX_TOTAL_WEEKS } from '../../constants/timetable'
+import { formatLocalDate, validateTerm } from '../../utils/term'
 
 interface RecentBackupInfo {
   savedAtText: string
@@ -20,6 +24,16 @@ function pad(n: number): string {
   return n < 10 ? '0' + n : '' + n
 }
 
+function defaultMonday(): string {
+  const now = new Date()
+  const day = now.getDay() === 0 ? 7 : now.getDay()
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (day - 1))
+  return formatLocalDate(monday)
+}
+
+const weekOptions: string[] = []
+for (let w = 1; w <= MAX_TOTAL_WEEKS; w++) weekOptions.push(`${w} 周`)
+
 Page({
   data: {
     inputText: '',
@@ -27,6 +41,10 @@ Page({
     preview: null as ImportPreview | null,
     previewErrors: [] as string[],
     recentBackupInfo: null as RecentBackupInfo | null,
+    needsTerm: false,
+    termStartDate: '',
+    termTotalWeeks: DEFAULT_TOTAL_WEEKS,
+    weekOptions,
   },
 
   onShow() {
@@ -78,19 +96,55 @@ Page({
   onParse() {
     const parsed = parseBackup(this.data.inputText)
     if (!parsed.ok) {
-      this.setData({ envelope: null, preview: null, previewErrors: [parsed.reason || '解析失败'] })
+      this.setData({
+        envelope: null,
+        preview: null,
+        previewErrors: [parsed.reason || '解析失败'],
+        needsTerm: false,
+      })
       return
     }
     const analyzed = analyzeBackup(parsed.envelope as TimetableBackupEnvelope)
     if (!analyzed.ok) {
-      this.setData({ envelope: null, preview: null, previewErrors: analyzed.errors })
+      this.setData({ envelope: null, preview: null, previewErrors: analyzed.errors, needsTerm: false })
       return
     }
+    const needsTerm = analyzed.needsTerm === true
+    const term = getTerm()
     this.setData({
       envelope: parsed.envelope as TimetableBackupEnvelope,
       preview: analyzed.preview as ImportPreview,
       previewErrors: [],
+      needsTerm,
+      termStartDate: term ? term.startDate : defaultMonday(),
+      termTotalWeeks: term ? term.totalWeeks : DEFAULT_TOTAL_WEEKS,
     })
+  },
+
+  onTermDate(e: WechatMiniprogram.PickerChange) {
+    this.setData({ termStartDate: e.detail.value as string })
+  },
+
+  onTermWeeks(e: WechatMiniprogram.PickerChange) {
+    this.setData({ termTotalWeeks: Number(e.detail.value) + 1 })
+  },
+
+  buildImportTerm(): TermSettings | undefined {
+    const term: TermSettings = {
+      startDate: this.data.termStartDate,
+      totalWeeks: this.data.termTotalWeeks,
+    }
+    const vt = validateTerm(term)
+    if (!vt.ok) {
+      wx.showModal({
+        title: '学期设置无效',
+        content: vt.reason || '请检查学期设置',
+        showCancel: false,
+        confirmText: '知道了',
+      })
+      return undefined
+    }
+    return term
   },
 
   confirm(title: string, message: string, confirmText: string, onOk: () => void) {
@@ -109,12 +163,17 @@ Page({
     const envelope = this.data.envelope
     const preview = this.data.preview
     if (!envelope) return
+    let termArg: TermSettings | undefined
+    if (this.data.needsTerm) {
+      termArg = this.buildImportTerm()
+      if (!termArg) return
+    }
     this.confirm(
       '覆盖现有课表',
       `将用备份中的 ${preview ? preview.backupCount : 0} 门课程替换当前 ${preview ? preview.currentCount : 0} 门课程。继续前会自动保存当前课表，之后可在本页恢复。`,
       '确认覆盖',
       () => {
-        const r = overwriteFromBackup(envelope)
+        const r = overwriteFromBackup(envelope, termArg)
         this.afterMutation(r.ok, r.reason)
       },
     )
@@ -124,12 +183,17 @@ Page({
     const envelope = this.data.envelope
     const preview = this.data.preview
     if (!envelope) return
+    let termArg: TermSettings | undefined
+    if (this.data.needsTerm) {
+      termArg = this.buildImportTerm()
+      if (!termArg) return
+    }
     this.confirm(
       '合并课表',
       `将把备份中没有重复、没有冲突的课程合并进当前课表（预计新增 ${preview ? preview.mergeAddCount : 0} 门）。`,
       '确认合并',
       () => {
-        const r = mergeFromBackup(envelope)
+        const r = mergeFromBackup(envelope, termArg)
         this.afterMutation(
           r.ok,
           r.reason,
@@ -187,6 +251,7 @@ Page({
         preview: null,
         previewErrors: [],
         inputText: '',
+        needsTerm: false,
       })
     } else {
       this.setData({ recentBackupInfo: this.buildRecentBackupInfo() })
