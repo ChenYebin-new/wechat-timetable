@@ -385,7 +385,7 @@ export function getRecentBackup(): RecentBackup | null {
         ...parsed.envelope,
         data: {
           schemaVersion: parsed.envelope.data.schemaVersion,
-          term: analyzed.term,
+          term: analyzed.term ?? null,
           courses: analyzed.courses,
         },
       },
@@ -459,7 +459,7 @@ export function overwriteFromBackup(envelope: TimetableBackupEnvelope, term?: Te
     targetTerm = term as TermSettings
     targetCourses = expandV1CoursesWithTerm(analyzed.courses, targetTerm)
   } else {
-    targetTerm = analyzed.term
+    targetTerm = analyzed.term ?? null
     targetCourses = analyzed.courses
   }
 

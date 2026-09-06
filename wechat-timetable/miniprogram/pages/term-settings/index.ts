@@ -18,6 +18,10 @@ function defaultMonday(): string {
 const weekOptions: string[] = []
 for (let w = 1; w <= MAX_TOTAL_WEEKS; w++) weekOptions.push(`${w} 周`)
 
+function errorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback
+}
+
 Page({
   data: {
     startDate: '',
@@ -30,15 +34,30 @@ Page({
   },
 
   onLoad() {
-    const term = getTerm()
-    const courses = getCourses()
-    this.setData({
-      startDate: term ? term.startDate : defaultMonday(),
-      totalWeeks: term ? term.totalWeeks : DEFAULT_TOTAL_WEEKS,
-      isMigration: needsMigration(),
-      isEdit: !!term,
-      affectedCount: courses.length,
-    })
+    try {
+      const term = getTerm()
+      const courses = getCourses()
+      this.setData({
+        startDate: term ? term.startDate : defaultMonday(),
+        totalWeeks: term ? term.totalWeeks : DEFAULT_TOTAL_WEEKS,
+        isMigration: needsMigration(),
+        isEdit: !!term,
+        affectedCount: courses.length,
+      })
+    } catch (error) {
+      this.setData({
+        startDate: defaultMonday(),
+        totalWeeks: DEFAULT_TOTAL_WEEKS,
+        isMigration: false,
+        affectedCount: 0,
+      })
+      wx.showModal({
+        title: '读取数据失败',
+        content: errorMessage(error, '读取课表数据失败，请稍后重试'),
+        showCancel: false,
+        confirmText: '知道了',
+      })
+    }
   },
 
   onDateChange(e: WechatMiniprogram.PickerChange) {
@@ -68,7 +87,18 @@ Page({
       confirmText: isMigration ? '设置并迁移' : '保存',
       success: (res) => {
         if (!res.confirm) return
-        const result = applyTerm(term)
+        let result
+        try {
+          result = applyTerm(term)
+        } catch (error) {
+          wx.showModal({
+            title: '迁移失败',
+            content: errorMessage(error, '迁移过程发生错误，原数据未改动'),
+            showCancel: false,
+            confirmText: '知道了',
+          })
+          return
+        }
         if (result.ok) {
           wx.showToast({ title: isMigration ? '迁移成功' : '已保存', icon: 'success' })
           wx.navigateBack()
