@@ -11,48 +11,41 @@
   top: 0;
   z-index: 10;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 76rpx;
-  padding: 0 16rpx;
+  flex-direction: column;
+  gap: 14rpx;
+  padding: 18rpx 20rpx;
   margin-bottom: 14rpx;
   box-sizing: border-box;
   background: #dcecea;
-  border-radius: 18rpx;
+  border-radius: 20rpx;
   box-shadow: 0 4rpx 12rpx rgba(52, 83, 77, 0.08);
   transform: translateZ(0);
 }
 
 .overview-text {
-  flex: 1 1 auto;
-  min-width: 0;
-  font-size: 25rpx;
+  font-size: 27rpx;
   font-weight: 700;
   color: #213b36;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  padding-right: 12rpx;
+  line-height: 1.4;
 }
 
 .overview-actions {
   display: flex;
   align-items: center;
-  gap: 12rpx;
-  flex-shrink: 0;
+  gap: 14rpx;
 }
 
 .action-btn {
-  height: 52rpx;
-  padding: 0 22rpx;
+  height: 56rpx;
+  padding: 0 26rpx;
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 26rpx;
+  border-radius: 28rpx;
   color: #267d78;
   background: #e8f3f1;
-  font-size: 21rpx;
+  font-size: 22rpx;
   font-weight: 600;
   line-height: 1;
 }
