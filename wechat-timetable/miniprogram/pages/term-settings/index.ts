@@ -34,6 +34,7 @@ Page({
   },
 
   onLoad() {
+    console.log('[term-settings] onLoad 执行')
     try {
       const term = getTerm()
       const courses = getCourses()
@@ -73,6 +74,7 @@ Page({
   },
 
   onSave() {
+    console.log('[term-settings] onSave 被触发')
     const term: TermSettings = {
       startDate: this.data.startDate,
       totalWeeks: this.data.totalWeeks,

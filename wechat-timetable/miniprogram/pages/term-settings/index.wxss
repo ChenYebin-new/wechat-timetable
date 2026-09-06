@@ -86,6 +86,11 @@
   font-size: 30rpx;
 }
 
+.save-btn-pressed {
+  background: #1d5f5b;
+  transform: scale(0.98);
+}
+
 .save-btn::after {
   border: 0;
 }

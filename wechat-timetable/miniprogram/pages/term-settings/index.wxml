@@ -29,5 +29,5 @@
     <text class="notice-desc">检测到 {{affectedCount}} 门旧课程。设置学期后，它们将按"全部周"迁移到新学期（迁移前会自动备份当前课表）。</text>
   </view>
 
-  <button class="save-btn" bindtap="onSave">{{isMigration ? '设置并迁移' : '保存'}}</button>
+  <button class="save-btn hover-btn" hover-class="save-btn-pressed" bindtap="onSave">{{isMigration ? '设置并迁移' : '保存'}}</button>
 </view>
