@@ -1,16 +1,18 @@
 <!-- components/timetable-grid/index.wxml -->
 <view class="timetable">
   <view class="head">
-    <view class="head-corner"></view>
-    <view class="head-day" wx:for="{{days}}" wx:key="index" style="flex: 1;">{{item}}</view>
+    <view class="head-corner">节次</view>
+    <view class="head-day" wx:for="{{days}}" wx:key="index">{{item}}</view>
   </view>
 
   <view class="body">
     <view class="time-col">
       <view class="time-cell" wx:for="{{periods}}" wx:key="index">
-        <text class="time-label">{{item.label}}</text>
-        <text class="time-range">{{item.start}}</text>
-        <text class="time-range">{{item.end}}</text>
+        <text class="period-index">{{item.index}}</text>
+        <view class="time-meta">
+          <text class="time-range">{{item.start}}</text>
+          <text class="time-range">{{item.end}}</text>
+        </view>
       </view>
     </view>
 
@@ -20,7 +22,7 @@
         wx:for="{{daySlots}}"
         wx:key="index"
         wx:for-item="slots"
-        style="flex: 1;"
+        wx:for-index="dayIndex"
       >
         <view class="pcell" wx:for="{{periods}}" wx:key="index" wx:for-item="p"></view>
         <view
@@ -30,6 +32,8 @@
           style="{{item.style}} background-color: {{item.course.color}}; color: {{item.textColor}};"
           data-id="{{item.course.id}}"
           bindtap="onCardTap"
+          aria-role="button"
+          aria-label="{{days[dayIndex]}}，{{item.course.name}}，第{{item.course.startPeriod}}到{{item.course.endPeriod}}节"
         >
           <text class="card-name">{{item.course.name}}</text>
           <text class="card-loc" wx:if="{{item.course.location}}">{{item.course.location}}</text>

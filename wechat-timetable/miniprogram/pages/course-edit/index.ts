@@ -4,7 +4,7 @@ import { COLOR_PALETTE, DAYS, PERIODS } from '../../constants/timetable'
 import { getCourses, getCourseById, remove, save } from '../../services/course-storage'
 import { validate } from '../../utils/course-validator'
 
-const dayOptions = DAYS.map((d, i) => `${i + 1}. ${d}`)
+const dayOptions = DAYS
 const periodOptions = PERIODS.map((p) => `${p.label} ${p.time}`)
 
 Page({

@@ -16,6 +16,9 @@ Page({
   data: {
     daySlots: [] as CardItem[][],
     isEmpty: true,
+    todayName: '',
+    todayCount: 0,
+    courseCount: 0,
   },
 
   onShow() {
@@ -31,7 +34,18 @@ Page({
         })
       }
     }
-    this.setData({ daySlots: slots, isEmpty: courses.length === 0 })
+
+    const systemDay = new Date().getDay()
+    const today = systemDay === 0 ? 7 : systemDay
+    const todayCount = courses.filter((course) => course.day === today).length
+
+    this.setData({
+      daySlots: slots,
+      isEmpty: courses.length === 0,
+      todayName: DAYS[today - 1],
+      todayCount,
+      courseCount: courses.length,
+    })
   },
 
   onAdd() {

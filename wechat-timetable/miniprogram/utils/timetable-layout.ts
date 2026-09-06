@@ -6,7 +6,8 @@ import { Course } from '../models/course'
 import { CELL_HEIGHT } from '../constants/timetable'
 
 export function computeCardStyle(course: Course): string {
-  const top = (course.startPeriod - 1) * CELL_HEIGHT
-  const height = (course.endPeriod - course.startPeriod + 1) * CELL_HEIGHT
+  const cardInset = 4
+  const top = (course.startPeriod - 1) * CELL_HEIGHT + cardInset
+  const height = (course.endPeriod - course.startPeriod + 1) * CELL_HEIGHT - cardInset * 2
   return `top: ${top}rpx; height: ${height}rpx;`
 }

@@ -1,9 +1,10 @@
 /* components/timetable-grid/index.wxss
-   注意：单元格高度(96rpx)需与 constants/timetable.ts 的 CELL_HEIGHT 一致 */
+   注意：单元格高度(124rpx)需与 constants/timetable.ts 的 CELL_HEIGHT 一致 */
 .timetable {
-  background: #eef2f4;
-  border-radius: 16rpx;
+  background: #e8efee;
+  border-radius: 24rpx;
   padding: 8rpx;
+  box-shadow: 0 12rpx 28rpx rgba(52, 83, 77, 0.07);
 }
 
 .head {
@@ -11,58 +12,77 @@
 }
 
 .head-corner {
-  width: 88rpx;
+  width: 108rpx;
   flex-shrink: 0;
-  background: #dfe8ea;
-  border-radius: 8rpx;
-  height: 56rpx;
-}
-
-.head-day {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 26rpx;
+  box-sizing: border-box;
+  border: 2rpx solid #e8efee;
+  color: #63756f;
+  font-size: 19rpx;
+  font-weight: 500;
+  background: #dce5e3;
+  border-radius: 18rpx;
+  height: 80rpx;
+}
+
+.head-day {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  height: 80rpx;
+  box-sizing: border-box;
+  border: 2rpx solid #e8efee;
+  font-size: 27rpx;
   font-weight: 600;
   color: #25453f;
   background: #d4ece7;
-  border-radius: 8rpx;
-  height: 56rpx;
+  border-radius: 18rpx;
 }
 
 .body {
   display: flex;
-  margin-top: 4rpx;
 }
 
 .time-col {
-  width: 88rpx;
+  width: 108rpx;
   flex-shrink: 0;
 }
 
 .time-cell {
-  height: 96rpx;
+  height: 124rpx;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 20rpx;
-  color: #5b6b66;
-  background: #f7fafa;
-  border-radius: 8rpx;
+  color: #3f5550;
+  background: #f5f8f7;
+  border: 2rpx solid #e8efee;
+  border-radius: 18rpx;
   box-sizing: border-box;
 }
 
-.time-label {
-  font-weight: 600;
-  color: #33443f;
-  font-size: 20rpx;
+.period-index {
+  margin-right: 6rpx;
+  color: #2d4540;
+  font-size: 31rpx;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.time-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .time-range {
-  font-size: 16rpx;
-  color: #6f7f79;
-  line-height: 1.2;
+  color: #64756f;
+  font-size: 22rpx;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
 }
 
 .days {
@@ -73,30 +93,32 @@
 .day-col {
   position: relative;
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
 .pcell {
-  height: 96rpx;
-  background: #f7fafa;
-  border-radius: 8rpx;
+  height: 124rpx;
+  background: #f5f8f7;
+  border: 2rpx solid #e8efee;
+  border-radius: 18rpx;
   box-sizing: border-box;
 }
 
 .card {
   position: absolute;
-  left: 2rpx;
-  right: 2rpx;
+  left: 4rpx;
+  right: 4rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 4rpx 6rpx;
-  border-radius: 12rpx;
+  padding: 8rpx 6rpx;
+  border-radius: 20rpx;
   color: #ffffff;
   overflow: hidden;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8rpx 16rpx rgba(38, 72, 66, 0.12);
   box-sizing: border-box;
 }
 
@@ -114,6 +136,6 @@
 .card-loc {
   font-size: 20rpx;
   opacity: 0.9;
-  margin-top: 4rpx;
+  margin-top: 6rpx;
   text-align: center;
 }
