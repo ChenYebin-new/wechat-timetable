@@ -1,5 +1,5 @@
 /* pages/timetable/index.wxss
-   说明：整页滚动 + 顶部概览吸顶(sticky)；概览为一条横向窄栏，避免占过高比例。 */
+   说明：整页滚动 + 顶部概览吸顶(sticky)。概览为一条中等高度横向栏，标题始终显示，副文案超长才省略。 */
 .page {
   min-height: 100vh;
   padding: 20rpx 20rpx 0;
@@ -13,13 +13,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 64rpx;
-  min-height: 64rpx;
-  padding: 0 16rpx 0 20rpx;
-  margin-bottom: 12rpx;
+  min-height: 80rpx;
+  padding: 0 18rpx;
+  margin-bottom: 14rpx;
   box-sizing: border-box;
   background: #dcecea;
-  border-radius: 16rpx;
+  border-radius: 18rpx;
   box-shadow: 0 4rpx 12rpx rgba(52, 83, 77, 0.08);
   transform: translateZ(0);
 }
@@ -29,7 +28,6 @@
   align-items: center;
   flex-direction: row;
   min-width: 0;
-  overflow: hidden;
 }
 
 .overview-title {
@@ -41,6 +39,8 @@
 }
 
 .overview-meta {
+  flex: 1 1 auto;
+  min-width: 0;
   margin-left: 12rpx;
   color: #58706a;
   font-size: 21rpx;
