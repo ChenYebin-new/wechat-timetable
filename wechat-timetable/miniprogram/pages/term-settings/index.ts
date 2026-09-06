@@ -81,6 +81,7 @@ Page({
     }
     const count = this.data.affectedCount
     const isMigration = this.data.isMigration
+    console.log('[term-settings] 准备调用 wx.showModal')
     wx.showModal({
       title: isMigration ? '设置并迁移' : '保存学期设置',
       content: isMigration
@@ -88,6 +89,7 @@ Page({
         : `保存后 ${count} 门课程的周次将按新总周数（${term.totalWeeks} 周）重新计算，指定周次课程只保留仍在新范围内的周次。保存前会自动备份当前课表。`,
       confirmText: isMigration ? '设置并迁移' : '保存',
       success: (res) => {
+        console.log('[term-settings] showModal success, confirm=', res.confirm)
         if (!res.confirm) return
         let result
         try {
@@ -102,9 +104,11 @@ Page({
           return
         }
         if (result.ok) {
+          console.log('[term-settings] applyTerm 成功')
           wx.showToast({ title: isMigration ? '迁移成功' : '已保存', icon: 'success' })
           wx.navigateBack()
         } else {
+          console.log('[term-settings] applyTerm 失败:', result.reason)
           wx.showModal({
             title: '无法保存',
             content: result.reason || '保存失败',
@@ -112,6 +116,9 @@ Page({
             confirmText: '知道了',
           })
         }
+      },
+      fail: (err) => {
+        console.log('[term-settings] showModal fail', err)
       },
     })
   },
