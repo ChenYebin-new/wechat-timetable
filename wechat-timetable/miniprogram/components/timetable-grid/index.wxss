@@ -1,0 +1,119 @@
+/* components/timetable-grid/index.wxss
+   注意：单元格高度(96rpx)需与 constants/timetable.ts 的 CELL_HEIGHT 一致 */
+.timetable {
+  background: #eef2f4;
+  border-radius: 16rpx;
+  padding: 8rpx;
+}
+
+.head {
+  display: flex;
+}
+
+.head-corner {
+  width: 88rpx;
+  flex-shrink: 0;
+  background: #dfe8ea;
+  border-radius: 8rpx;
+  height: 56rpx;
+}
+
+.head-day {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #25453f;
+  background: #d4ece7;
+  border-radius: 8rpx;
+  height: 56rpx;
+}
+
+.body {
+  display: flex;
+  margin-top: 4rpx;
+}
+
+.time-col {
+  width: 88rpx;
+  flex-shrink: 0;
+}
+
+.time-cell {
+  height: 96rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 20rpx;
+  color: #5b6b66;
+  background: #f7fafa;
+  border-radius: 8rpx;
+  box-sizing: border-box;
+}
+
+.time-label {
+  font-weight: 600;
+  color: #33443f;
+  font-size: 20rpx;
+}
+
+.time-range {
+  font-size: 16rpx;
+  color: #6f7f79;
+  line-height: 1.2;
+}
+
+.days {
+  flex: 1;
+  display: flex;
+}
+
+.day-col {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.pcell {
+  height: 96rpx;
+  background: #f7fafa;
+  border-radius: 8rpx;
+  box-sizing: border-box;
+}
+
+.card {
+  position: absolute;
+  left: 2rpx;
+  right: 2rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rpx 6rpx;
+  border-radius: 12rpx;
+  color: #ffffff;
+  overflow: hidden;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
+}
+
+.card-name {
+  font-size: 24rpx;
+  font-weight: 600;
+  text-align: center;
+  word-break: break-all;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.card-loc {
+  font-size: 20rpx;
+  opacity: 0.9;
+  margin-top: 4rpx;
+  text-align: center;
+}

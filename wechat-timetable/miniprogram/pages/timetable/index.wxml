@@ -1,0 +1,18 @@
+<!-- pages/timetable/index.wxml -->
+<view class="page">
+  <view class="toolbar">
+    <text class="toolbar-title">我的课表</text>
+    <button class="add-btn" bindtap="onAdd">＋ 新增课程</button>
+  </view>
+
+  <view wx:if="{{isEmpty}}" class="empty">
+    <text class="empty-icon">📅</text>
+    <text class="empty-title">还没有课程</text>
+    <text class="empty-desc">点击下方按钮，添加你的第一门课程</text>
+    <button class="empty-btn" bindtap="onAdd">添加第一门课程</button>
+  </view>
+
+  <scroll-view wx:else class="grid-scroll" scroll-y>
+    <timetable-grid day-slots="{{daySlots}}" bind:cardtap="onCourseTap" />
+  </scroll-view>
+</view>

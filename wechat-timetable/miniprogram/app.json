@@ -1,12 +1,13 @@
 {
   "pages": [
-    "pages/index/index",
-    "pages/logs/logs"
+    "pages/timetable/index",
+    "pages/course-edit/index"
   ],
   "window": {
     "navigationBarTextStyle": "black",
-    "navigationBarTitleText": "Weixin",
-    "navigationBarBackgroundColor": "#ffffff"
+    "navigationBarTitleText": "我的课表",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f2f5f7"
   },
   "style": "v2",
   "componentFramework": "glass-easel",

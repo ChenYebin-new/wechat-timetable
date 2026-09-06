@@ -1,0 +1,71 @@
+/* pages/timetable/index.wxss */
+.page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0 16rpx;
+  box-sizing: border-box;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 8rpx;
+}
+
+.toolbar-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #223;
+}
+
+.add-btn {
+  margin: 0;
+  padding: 0 24rpx;
+  font-size: 26rpx;
+  color: #ffffff;
+  background: #0ea5a4;
+  border-radius: 32rpx;
+  line-height: 60rpx;
+}
+
+.grid-scroll {
+  flex: 1;
+}
+
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80rpx 40rpx;
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 96rpx;
+}
+
+.empty-title {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #223;
+  margin-top: 24rpx;
+}
+
+.empty-desc {
+  font-size: 26rpx;
+  color: #7a8a84;
+  margin-top: 12rpx;
+  margin-bottom: 40rpx;
+}
+
+.empty-btn {
+  padding: 0 40rpx;
+  font-size: 28rpx;
+  color: #ffffff;
+  background: #0ea5a4;
+  border-radius: 40rpx;
+}

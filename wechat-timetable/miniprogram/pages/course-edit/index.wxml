@@ -1,0 +1,64 @@
+<!-- pages/course-edit/index.wxml -->
+<view class="page">
+  <view class="form">
+    <view class="field">
+      <text class="label">课程名称</text>
+      <input class="input" value="{{name}}" placeholder="必填" placeholder-class="ph" bindinput="onName" />
+    </view>
+
+    <view class="field">
+      <text class="label">星期</text>
+      <picker mode="selector" range="{{dayOptions}}" value="{{dayIndex}}" bindchange="onDay">
+        <view class="picker-value">{{dayOptions[dayIndex]}}</view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <text class="label">开始节次</text>
+      <picker mode="selector" range="{{periodOptions}}" value="{{startIndex}}" bindchange="onStart">
+        <view class="picker-value">{{periodOptions[startIndex]}}</view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <text class="label">结束节次</text>
+      <picker mode="selector" range="{{periodOptions}}" value="{{endIndex}}" bindchange="onEnd">
+        <view class="picker-value">{{periodOptions[endIndex]}}</view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <text class="label">教师</text>
+      <input class="input" value="{{teacher}}" placeholder="可选" placeholder-class="ph" bindinput="onTeacher" />
+    </view>
+
+    <view class="field">
+      <text class="label">教室</text>
+      <input class="input" value="{{location}}" placeholder="可选" placeholder-class="ph" bindinput="onLocation" />
+    </view>
+
+    <view class="field">
+      <text class="label">颜色</text>
+      <view class="colors">
+        <view
+          wx:for="{{colors}}"
+          wx:key="*this"
+          class="swatch {{color === item ? 'active' : ''}}"
+          style="background: {{item}};"
+          data-color="{{item}}"
+          bindtap="onColor"
+          aria-role="button"
+          aria-label="选择颜色 {{item}}{{color === item ? '，已选中' : ''}}"
+          aria-checked="{{color === item}}"
+        >
+          <text wx:if="{{color === item}}" class="swatch-check">✓</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="actions">
+      <button class="btn btn-primary" bindtap="onSave">保存</button>
+      <button wx:if="{{isEdit}}" class="btn btn-danger" bindtap="onDelete">删除</button>
+    </view>
+  </view>
+</view>

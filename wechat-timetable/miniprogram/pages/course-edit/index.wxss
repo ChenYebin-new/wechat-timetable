@@ -1,0 +1,94 @@
+/* pages/course-edit/index.wxss */
+.page {
+  min-height: 100vh;
+  padding: 24rpx 32rpx calc(32rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+.form {
+  background: #ffffff;
+  border-radius: 20rpx;
+  padding: 8rpx 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  min-height: 96rpx;
+  border-bottom: 1rpx solid #f0f3f4;
+}
+
+.field:last-child {
+  border-bottom: none;
+}
+
+.label {
+  width: 170rpx;
+  font-size: 28rpx;
+  color: #33443f;
+  flex-shrink: 0;
+}
+
+.input {
+  flex: 1;
+  font-size: 28rpx;
+  color: #223;
+}
+
+.ph {
+  color: #b5c0bc;
+}
+
+.picker-value {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  font-size: 28rpx;
+  color: #223;
+}
+
+.colors {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.swatch {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  border: 4rpx solid transparent;
+}
+
+.swatch.active {
+  border-color: #1d2b28;
+}
+
+.swatch-check {
+  font-size: 30rpx;
+  color: #ffffff;
+  text-shadow: 0 1rpx 3rpx rgba(0, 0, 0, 0.55);
+  line-height: 1;
+}
+
+.actions {
+  margin-top: 48rpx;
+}
+
+.btn {
+  margin-bottom: 24rpx;
+  border-radius: 44rpx;
+  font-size: 30rpx;
+}
+
+.btn-primary {
+  color: #ffffff;
+  background: #0ea5a4;
+}
+
+.btn-danger {
+  color: #e64340;
+  background: #fdeceb;
+}
