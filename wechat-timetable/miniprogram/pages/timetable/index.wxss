@@ -36,6 +36,7 @@
 }
 
 .action-btn {
+  flex: 1;
   height: 56rpx;
   padding: 0 26rpx;
   box-sizing: border-box;
