@@ -8,6 +8,22 @@
     </view>
   </view>
 
+  <view wx:if="{{!termReady}}" class="term-banner">
+    <text class="term-banner-text">{{needsMigration ? '检测到旧版课表数据，设置学期后自动升级' : '请先设置学期，才能按教学周查看课表'}}</text>
+    <view class="term-banner-btn" bindtap="onTermSettings" aria-role="button" aria-label="设置学期">去设置</view>
+  </view>
+
+  <view wx:if="{{termReady}}" class="week-bar">
+    <view class="week-nav {{currentWeek <= 1 ? 'disabled' : ''}}" bindtap="onPrevWeek" aria-role="button" aria-label="上一周">‹</view>
+    <picker mode="selector" range="{{weekOptions}}" value="{{weekIndex}}" bindchange="onWeekChange">
+      <view class="week-label">第 {{currentWeek}} 周</view>
+    </picker>
+    <view class="week-nav {{currentWeek >= weekOptions.length ? 'disabled' : ''}}" bindtap="onNextWeek" aria-role="button" aria-label="下一周">›</view>
+    <view class="term-edit" bindtap="onTermSettings" aria-role="button" aria-label="修改学期">学期</view>
+  </view>
+
+  <view wx:if="{{termReady && weekStatus}}" class="week-status">{{weekStatus}}</view>
+
   <view wx:if="{{isEmpty}}" class="empty-notice">
     <view class="empty-copy">
       <text class="empty-title">课表还是空的</text>

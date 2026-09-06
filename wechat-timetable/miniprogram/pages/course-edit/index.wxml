@@ -56,6 +56,32 @@
       </view>
     </view>
 
+    <view class="field">
+      <text class="label">周次</text>
+      <block wx:if="{{totalWeeks > 0}}">
+        <picker mode="selector" range="{{weekModeLabels}}" value="{{weekModeIndex}}" bindchange="onWeekMode">
+          <view class="picker-value">{{weekModeLabels[weekModeIndex]}}</view>
+        </picker>
+      </block>
+      <text wx:else class="field-hint">设置学期后可配置周次</text>
+    </view>
+
+    <view wx:if="{{totalWeeks > 0 && weekMode === 'custom'}}" class="field field-column">
+      <text class="label">选择周次</text>
+      <view class="week-chips">
+        <view
+          wx:for="{{weekChips}}"
+          wx:key="value"
+          class="week-chip {{item.selected ? 'active' : ''}}"
+          data-week="{{item.value}}"
+          bindtap="onToggleWeek"
+          aria-role="checkbox"
+          aria-label="第{{item.value}}周{{item.selected ? '，已选择' : ''}}"
+          aria-checked="{{item.selected}}"
+        >{{item.selected ? '✓' : ''}}{{item.value}}</view>
+      </view>
+    </view>
+
     <view class="actions">
       <button class="btn btn-primary" bindtap="onSave">保存</button>
       <button wx:if="{{isEdit}}" class="btn btn-danger" bindtap="onDelete">删除</button>

@@ -56,6 +56,102 @@
   background: #267d78;
 }
 
+.term-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 18rpx 16rpx 22rpx;
+  margin-bottom: 12rpx;
+  background: #fdf3e7;
+  border-radius: 14rpx;
+}
+
+.term-banner-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 22rpx;
+  color: #8a6a3f;
+  line-height: 1.4;
+}
+
+.term-banner-btn {
+  flex-shrink: 0;
+  margin-left: 14rpx;
+  height: 52rpx;
+  padding: 0 24rpx;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 26rpx;
+  background: #c98a2b;
+  color: #ffffff;
+  font-size: 21rpx;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.week-bar {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  padding: 12rpx 16rpx;
+  margin-bottom: 12rpx;
+  background: #ffffff;
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 12rpx rgba(52, 83, 77, 0.06);
+}
+
+.week-nav {
+  width: 60rpx;
+  height: 52rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 26rpx;
+  background: #e8f3f1;
+  color: #267d78;
+  font-size: 34rpx;
+  font-weight: 700;
+}
+
+.week-nav.disabled {
+  opacity: 0.35;
+}
+
+.week-bar picker {
+  flex: 1;
+}
+
+.week-label {
+  text-align: center;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #213b36;
+}
+
+.term-edit {
+  flex-shrink: 0;
+  height: 52rpx;
+  padding: 0 20rpx;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 26rpx;
+  background: #f5f8f8;
+  color: #58706a;
+  font-size: 21rpx;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.week-status {
+  margin: 0 4rpx 12rpx;
+  font-size: 22rpx;
+  color: #9a5b13;
+}
+
 .grid-scroll {
   padding: 0;
 }

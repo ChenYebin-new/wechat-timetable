@@ -1,0 +1,33 @@
+<!-- pages/term-settings/index.wxml -->
+<view class="page">
+  <view class="card">
+    <text class="card-title">第一教学周的星期一</text>
+    <text class="card-desc">请选择新学期开始的第一周对应的星期一，教学周从这一天起每 7 天为一周。</text>
+    <picker mode="date" value="{{startDate}}" bindchange="onDateChange">
+      <view class="picker-value">{{startDate}}</view>
+    </picker>
+  </view>
+
+  <view class="card">
+    <text class="card-title">学期总周数</text>
+    <view class="chips">
+      <view
+        wx:for="{{commonWeeks}}"
+        wx:key="*this"
+        class="chip {{totalWeeks === item ? 'active' : ''}}"
+        data-week="{{item}}"
+        bindtap="onCommonWeek"
+      >{{item}} 周</view>
+    </view>
+    <picker mode="selector" range="{{weekOptions}}" value="{{totalWeeks - 1}}" bindchange="onWeeksChange">
+      <view class="picker-value">{{totalWeeks}} 周（1–30 可调）</view>
+    </picker>
+  </view>
+
+  <view wx:if="{{isMigration}}" class="notice">
+    <text class="notice-title">需要升级旧课表数据</text>
+    <text class="notice-desc">检测到 {{affectedCount}} 门旧课程。设置学期后，它们将按"全部周"迁移到新学期（迁移前会自动备份当前课表）。</text>
+  </view>
+
+  <button class="save-btn" bindtap="onSave">{{isMigration ? '设置并迁移' : '保存'}}</button>
+</view>
