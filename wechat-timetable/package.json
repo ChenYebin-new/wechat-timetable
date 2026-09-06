@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
+    "test": "node --test --disable-warning=ExperimentalWarning tests/*.test.mjs"
   },
   "keywords": [],
   "author": "",

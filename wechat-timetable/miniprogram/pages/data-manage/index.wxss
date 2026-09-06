@@ -1,0 +1,121 @@
+/* pages/data-manage/index.wxss */
+.page {
+  min-height: 100vh;
+  padding: 24rpx 24rpx calc(32rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 20rpx;
+  padding: 26rpx 26rpx 28rpx;
+  margin-bottom: 22rpx;
+  box-shadow: 0 8rpx 20rpx rgba(52, 83, 77, 0.06);
+}
+
+.card-title {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #223;
+}
+
+.card-desc {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: #71837e;
+  line-height: 1.5;
+}
+
+.input {
+  width: 100%;
+  height: 240rpx;
+  margin-top: 18rpx;
+  padding: 16rpx;
+  box-sizing: border-box;
+  font-size: 24rpx;
+  color: #223;
+  background: #f5f8f8;
+  border-radius: 12rpx;
+}
+
+.btn {
+  margin-top: 22rpx;
+  border-radius: 44rpx;
+  font-size: 28rpx;
+}
+
+.btn::after {
+  border: 0;
+}
+
+.btn-primary {
+  color: #ffffff;
+  background: #267d78;
+}
+
+.btn-secondary {
+  color: #267d78;
+  background: #e8f3f1;
+}
+
+.btn-danger {
+  color: #e64340;
+  background: #fdeceb;
+}
+
+.error-box {
+  margin-top: 20rpx;
+  padding: 16rpx;
+  background: #fdeceb;
+  border-radius: 12rpx;
+}
+
+.error-line {
+  display: block;
+  font-size: 24rpx;
+  color: #c0353a;
+  line-height: 1.5;
+}
+
+.preview {
+  margin-top: 22rpx;
+  padding-top: 8rpx;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12rpx 0;
+  border-bottom: 1rpx solid #f0f3f4;
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.k {
+  width: 220rpx;
+  font-size: 24rpx;
+  color: #71837e;
+}
+
+.v {
+  flex: 1;
+  font-size: 25rpx;
+  color: #223;
+  text-align: right;
+  word-break: break-all;
+}
+
+.actions {
+  margin-top: 20rpx;
+  display: flex;
+  gap: 16rpx;
+}
+
+.actions .btn {
+  flex: 1;
+  margin-top: 0;
+}

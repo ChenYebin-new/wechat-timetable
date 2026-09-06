@@ -1,11 +1,15 @@
 // pages/course-edit/index.ts
-import { Course } from '../../models/course'
+import type { Course } from '../../models/course'
 import { COLOR_PALETTE, DAYS, PERIODS } from '../../constants/timetable'
 import { getCourses, getCourseById, remove, save } from '../../services/course-storage'
 import { validate } from '../../utils/course-validator'
 
 const dayOptions = DAYS
 const periodOptions = PERIODS.map((p) => `${p.label} ${p.time}`)
+
+function mutationErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback
+}
 
 Page({
   data: {
@@ -96,7 +100,17 @@ Page({
       })
       return
     }
-    save(course)
+    try {
+      save(course)
+    } catch (error) {
+      wx.showModal({
+        title: '无法保存',
+        content: mutationErrorMessage(error, '课表数据写入失败，请稍后重试'),
+        showCancel: false,
+        confirmText: '知道了',
+      })
+      return
+    }
     wx.showToast({ title: '已保存', icon: 'success' })
     wx.navigateBack()
   },
@@ -109,7 +123,17 @@ Page({
       confirmColor: '#e64340',
       success: (res) => {
         if (res.confirm) {
-          remove(this.data.id)
+          try {
+            remove(this.data.id)
+          } catch (error) {
+            wx.showModal({
+              title: '无法删除',
+              content: mutationErrorMessage(error, '课表数据写入失败，请稍后重试'),
+              showCancel: false,
+              confirmText: '知道了',
+            })
+            return
+          }
           wx.showToast({ title: '已删除', icon: 'success' })
           wx.navigateBack()
         }

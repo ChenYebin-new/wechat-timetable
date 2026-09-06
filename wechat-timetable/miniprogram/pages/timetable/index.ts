@@ -19,6 +19,7 @@ Page({
     todayName: '',
     todayCount: 0,
     courseCount: 0,
+    overviewText: '',
   },
 
   onShow() {
@@ -38,6 +39,7 @@ Page({
     const systemDay = new Date().getDay()
     const today = systemDay === 0 ? 7 : systemDay
     const todayCount = courses.filter((course) => course.day === today).length
+    const todayText = todayCount > 0 ? `今天有 ${todayCount} 门课` : '今天没有课程'
 
     this.setData({
       daySlots: slots,
@@ -45,11 +47,16 @@ Page({
       todayName: DAYS[today - 1],
       todayCount,
       courseCount: courses.length,
+      overviewText: `${todayText} · ${DAYS[today - 1]} · 本周共 ${courses.length} 门`,
     })
   },
 
   onAdd() {
     wx.navigateTo({ url: '/pages/course-edit/index' })
+  },
+
+  onDataManage() {
+    wx.navigateTo({ url: '/pages/data-manage/index' })
   },
 
   onCourseTap(e: WechatMiniprogram.CustomEvent) {

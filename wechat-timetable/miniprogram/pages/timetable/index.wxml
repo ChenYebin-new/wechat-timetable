@@ -1,15 +1,11 @@
 <!-- pages/timetable/index.wxml -->
 <view class="page">
   <view class="overview">
-    <view class="overview-copy">
-      <text class="overview-title" wx:if="{{todayCount > 0}}">今天有 {{todayCount}} 门课</text>
-      <text class="overview-title" wx:else>今天没有课程</text>
-      <text class="overview-meta">{{todayName}} · 本周共 {{courseCount}} 门课程</text>
+    <text class="overview-text">{{overviewText}}</text>
+    <view class="overview-actions">
+      <view class="action-btn" bindtap="onDataManage" aria-role="button" aria-label="数据管理">数据</view>
+      <view class="action-btn action-primary" bindtap="onAdd" aria-role="button" aria-label="新增课程">＋新增</view>
     </view>
-    <button class="quick-add" bindtap="onAdd" aria-label="新增课程">
-      <view class="add-symbol" aria-hidden="true"></view>
-      <text class="quick-add-text">新增</text>
-    </button>
   </view>
 
   <view wx:if="{{isEmpty}}" class="empty-notice">
@@ -17,12 +13,12 @@
       <text class="empty-title">课表还是空的</text>
       <text class="empty-desc">先添加第一门课程，周课表会立即显示。</text>
     </view>
-    <button class="empty-btn" bindtap="onAdd">开始添加</button>
+    <view class="empty-btn" bindtap="onAdd" aria-role="button" aria-label="开始添加">开始添加</view>
   </view>
 
-  <scroll-view class="grid-scroll" scroll-y show-scrollbar="{{false}}">
+  <view class="grid-scroll">
     <view class="grid-frame">
       <timetable-grid day-slots="{{daySlots}}" bind:cardtap="onCourseTap" />
     </view>
-  </scroll-view>
+  </view>
 </view>

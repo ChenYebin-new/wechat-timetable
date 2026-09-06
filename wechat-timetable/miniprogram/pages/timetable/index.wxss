@@ -1,99 +1,63 @@
-/* pages/timetable/index.wxss */
+/* pages/timetable/index.wxss
+   说明：整页滚动 + 顶部概览吸顶(sticky)。概览为一条文字 + 右侧两个小按钮(用 view 精确控制尺寸)。 */
 .page {
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
+  min-height: 100vh;
   padding: 20rpx 20rpx 0;
   box-sizing: border-box;
-  overflow: hidden;
 }
 
 .overview {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 120rpx;
-  padding: 16rpx 24rpx 16rpx 28rpx;
-  margin-bottom: 18rpx;
-  box-sizing: border-box;
-  background: #dcecea;
-  border-radius: 28rpx;
-  box-shadow: 0 10rpx 24rpx rgba(52, 83, 77, 0.08);
-}
-
-.overview-copy {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  gap: 14rpx;
+  padding: 18rpx 20rpx;
+  margin-bottom: 14rpx;
+  box-sizing: border-box;
+  background: #dcecea;
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 12rpx rgba(52, 83, 77, 0.08);
+  transform: translateZ(0);
 }
 
-.overview-title {
-  color: #213b36;
-  font-size: 32rpx;
+.overview-text {
+  font-size: 27rpx;
   font-weight: 700;
-  line-height: 1.35;
+  color: #213b36;
+  line-height: 1.4;
 }
 
-.overview-meta {
-  margin-top: 6rpx;
-  color: #58706a;
-  font-size: 24rpx;
-  line-height: 1.3;
-}
-
-.quick-add {
-  width: 128rpx;
-  height: 88rpx;
-  min-height: 44px;
-  margin: 0;
-  padding: 0 18rpx;
+.overview-actions {
   display: flex;
   align-items: center;
+  gap: 14rpx;
+}
+
+.action-btn {
+  flex: 1;
+  height: 56rpx;
+  padding: 0 26rpx;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  color: #ffffff;
-  background: #267d78;
-  border-radius: 34rpx;
+  border-radius: 28rpx;
+  color: #267d78;
+  background: #e8f3f1;
+  font-size: 22rpx;
+  font-weight: 600;
   line-height: 1;
 }
 
-.quick-add::after,
-.empty-btn::after {
-  border: 0;
-}
-
-.add-symbol {
-  position: relative;
-  width: 22rpx;
-  height: 22rpx;
-  margin-right: 8rpx;
-}
-
-.add-symbol::before,
-.add-symbol::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 22rpx;
-  height: 4rpx;
-  border-radius: 2rpx;
-  background: #ffffff;
-  transform: translate(-50%, -50%);
-}
-
-.add-symbol::after {
-  transform: translate(-50%, -50%) rotate(90deg);
-}
-
-.quick-add-text {
-  font-size: 23rpx;
-  font-weight: 600;
+.action-primary {
+  color: #ffffff;
+  background: #267d78;
 }
 
 .grid-scroll {
-  flex: 1;
-  min-height: 0;
+  padding: 0;
 }
 
 .grid-frame {
@@ -104,11 +68,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20rpx 20rpx 20rpx 24rpx;
-  margin-bottom: 18rpx;
+  padding: 16rpx 16rpx 16rpx 20rpx;
+  margin-bottom: 12rpx;
   background: #ffffff;
-  border-radius: 20rpx;
-  box-shadow: 0 8rpx 20rpx rgba(52, 83, 77, 0.06);
+  border-radius: 14rpx;
+  box-shadow: 0 4rpx 12rpx rgba(52, 83, 77, 0.06);
 }
 
 .empty-copy {
@@ -119,29 +83,29 @@
 
 .empty-title {
   color: #2f4641;
-  font-size: 26rpx;
+  font-size: 24rpx;
   font-weight: 600;
 }
 
 .empty-desc {
-  margin-top: 6rpx;
+  margin-top: 4rpx;
   color: #71837e;
-  font-size: 23rpx;
+  font-size: 21rpx;
 }
 
 .empty-btn {
-  height: 88rpx;
-  min-height: 44px;
-  margin: 0 0 0 18rpx;
-  padding: 0 22rpx;
-  display: flex;
+  height: 52rpx;
+  padding: 0 24rpx;
+  margin: 0 0 0 16rpx;
+  box-sizing: border-box;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   color: #267d78;
-  font-size: 22rpx;
+  font-size: 21rpx;
   font-weight: 600;
   line-height: 1;
   background: #e8f3f1;
-  border-radius: 44rpx;
+  border-radius: 26rpx;
 }
