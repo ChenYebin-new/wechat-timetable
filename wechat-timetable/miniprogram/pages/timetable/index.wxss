@@ -1,5 +1,5 @@
 /* pages/timetable/index.wxss
-   说明：整页滚动 + 顶部概览吸顶(sticky)。概览为一条中等高度横向栏，标题始终显示，副文案超长才省略。 */
+   说明：整页滚动 + 顶部概览吸顶(sticky)。概览为一条文字 + 右侧两个小按钮的横栏。 */
 .page {
   min-height: 100vh;
   padding: 20rpx 20rpx 0;
@@ -13,8 +13,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 80rpx;
-  padding: 0 18rpx;
+  min-height: 76rpx;
+  padding: 0 16rpx;
   margin-bottom: 14rpx;
   box-sizing: border-box;
   background: #dcecea;
@@ -23,30 +23,16 @@
   transform: translateZ(0);
 }
 
-.overview-copy {
-  display: flex;
-  align-items: center;
-  flex-direction: row;
-  min-width: 0;
-}
-
-.overview-title {
-  color: #213b36;
-  font-size: 28rpx;
-  font-weight: 700;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.overview-meta {
+.overview-text {
   flex: 1 1 auto;
   min-width: 0;
-  margin-left: 12rpx;
-  color: #58706a;
-  font-size: 21rpx;
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #213b36;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding-right: 12rpx;
 }
 
 .overview-actions {
@@ -57,17 +43,17 @@
 }
 
 .data-entry {
-  height: 56rpx;
-  min-height: 56rpx;
+  height: 52rpx;
+  min-height: 52rpx;
   margin: 0;
-  padding: 0 22rpx;
+  padding: 0 20rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
   color: #267d78;
   background: #e8f3f1;
-  border-radius: 28rpx;
+  border-radius: 26rpx;
   font-size: 21rpx;
   font-weight: 600;
   line-height: 1;
@@ -78,51 +64,24 @@
 }
 
 .quick-add {
-  height: 56rpx;
-  min-height: 56rpx;
+  height: 52rpx;
+  min-height: 52rpx;
   margin: 0;
-  padding: 0 22rpx;
+  padding: 0 20rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
   color: #ffffff;
   background: #267d78;
-  border-radius: 28rpx;
+  border-radius: 26rpx;
+  font-size: 21rpx;
+  font-weight: 600;
   line-height: 1;
 }
 
 .quick-add::after {
   border: 0;
-}
-
-.add-symbol {
-  position: relative;
-  width: 18rpx;
-  height: 18rpx;
-  margin-right: 8rpx;
-}
-
-.add-symbol::before,
-.add-symbol::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 18rpx;
-  height: 4rpx;
-  border-radius: 2rpx;
-  background: #ffffff;
-  transform: translate(-50%, -50%);
-}
-
-.add-symbol::after {
-  transform: translate(-50%, -50%) rotate(90deg);
-}
-
-.quick-add-text {
-  font-size: 22rpx;
-  font-weight: 600;
 }
 
 .grid-scroll {
@@ -163,8 +122,8 @@
 }
 
 .empty-btn {
-  height: 56rpx;
-  min-height: 56rpx;
+  height: 52rpx;
+  min-height: 52rpx;
   margin: 0 0 0 16rpx;
   padding: 0 22rpx;
   display: flex;
@@ -177,7 +136,7 @@
   font-weight: 600;
   line-height: 1;
   background: #e8f3f1;
-  border-radius: 28rpx;
+  border-radius: 26rpx;
 }
 
 .empty-btn::after {
