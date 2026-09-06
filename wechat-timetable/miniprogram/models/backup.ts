@@ -1,7 +1,7 @@
 // models/backup.ts
 // 课表数据备份相关类型与常量。
 
-import { TimetableStorage } from './course'
+import type { TimetableStorage } from './course'
 
 /** 本项目备份的应用标识，用于识别是否为本项目生成的备份。 */
 export const APP_ID = 'qige-timetable'

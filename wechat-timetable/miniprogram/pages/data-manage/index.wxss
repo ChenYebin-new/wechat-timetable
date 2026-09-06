@@ -30,7 +30,7 @@
 
 .input {
   width: 100%;
-  min-height: 200rpx;
+  height: 240rpx;
   margin-top: 18rpx;
   padding: 16rpx;
   box-sizing: border-box;

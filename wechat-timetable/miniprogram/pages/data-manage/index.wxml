@@ -12,8 +12,8 @@
       class="input"
       value="{{inputText}}"
       placeholder="在此粘贴课表备份 JSON"
+      aria-label="课表备份 JSON"
       bindinput="onInput"
-      auto-height
       maxlength="-1"
     />
     <button class="btn btn-secondary" bindtap="onParse">解析并预览</button>

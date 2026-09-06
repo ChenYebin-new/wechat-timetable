@@ -1,17 +1,15 @@
 // services/backup-service.ts
 // 课表数据的导出、导入校验、预览、覆盖、合并与最近自动备份。
 
-import { Course, TimetableStorage } from '../models/course'
-import { MAX_PERIOD, SCHEMA_VERSION } from '../constants/timetable'
+import type { Course, TimetableStorage } from '../models/course'
+import { COLOR_PALETTE, MAX_PERIOD, SCHEMA_VERSION } from '../constants/timetable'
 import {
   APP_ID,
   BACKUP_VERSION,
-  ImportPreview,
   MAX_BACKUP_BYTES,
   RECENT_BACKUP_KEY,
-  RecentBackup,
-  TimetableBackupEnvelope,
 } from '../models/backup'
+import type { ImportPreview, RecentBackup, TimetableBackupEnvelope } from '../models/backup'
 import { getStorage, writeStorage } from './course-storage'
 
 // ---------- 基础工具 ----------
@@ -31,7 +29,21 @@ function utf8ByteLength(s: string): number {
 }
 
 function isValidDateString(s: string): boolean {
-  return typeof s === 'string' && !Number.isNaN(Date.parse(s))
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{3})Z$/.exec(s)
+  if (!match) return false
+  const [, year, month, day, hour, minute, second, millisecond] = match
+  const date = new Date(
+    Date.UTC(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+      Number(second),
+      Number(millisecond),
+    ),
+  )
+  return date.toISOString() === s
 }
 
 /** 课程节次区间是否在同一天重叠。 */
@@ -53,31 +65,77 @@ function isDuplicateCourse(a: Course, b: Course): boolean {
   )
 }
 
-/** 严格校验单门备份课程；非法返回 null。 */
-function validateBackupCourse(raw: unknown): Course | null {
-  if (!raw || typeof raw !== 'object') return null
+interface CourseValidationResult {
+  course?: Course
+  reason?: string
+}
+
+function unsupportedStorageReason(schemaVersion: number): string {
+  return `当前课表数据版本为 V${schemaVersion}，此版本小程序仅支持 V${SCHEMA_VERSION}。请使用更新版本处理课表。`
+}
+
+/** 严格校验单门备份课程，并返回可安全写入的规范化结果。 */
+function validateBackupCourse(raw: unknown): CourseValidationResult {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { reason: '课程不是有效对象' }
+  }
   const c = raw as Record<string, unknown>
-  if (typeof c.id !== 'string' || !c.id) return null
-  if (typeof c.name !== 'string' || !c.name.trim()) return null
-  if (typeof c.day !== 'number' || c.day < 1 || c.day > 7) return null
-  if (typeof c.startPeriod !== 'number' || c.startPeriod < 1 || c.startPeriod > MAX_PERIOD) return null
-  if (typeof c.endPeriod !== 'number' || c.endPeriod < 1 || c.endPeriod > MAX_PERIOD) return null
-  if (c.startPeriod > c.endPeriod) return null
-  if (typeof c.color !== 'string' || !c.color) return null
-  if (typeof c.createdAt !== 'number') return null
-  if (typeof c.updatedAt !== 'number') return null
-  return {
+  if (typeof c.id !== 'string' || !c.id.trim() || c.id !== c.id.trim()) {
+    return { reason: '课程 ID 缺失或格式不正确' }
+  }
+  if (typeof c.name !== 'string' || !c.name.trim()) {
+    return { reason: '课程名称不能为空' }
+  }
+  if (typeof c.day !== 'number' || !Number.isInteger(c.day) || c.day < 1 || c.day > 7) {
+    return { reason: '星期必须是 1–7 的整数' }
+  }
+  if (
+    typeof c.startPeriod !== 'number' ||
+    !Number.isInteger(c.startPeriod) ||
+    c.startPeriod < 1 ||
+    c.startPeriod > MAX_PERIOD
+  ) {
+    return { reason: '开始节次必须是 1–9 的整数' }
+  }
+  if (
+    typeof c.endPeriod !== 'number' ||
+    !Number.isInteger(c.endPeriod) ||
+    c.endPeriod < 1 ||
+    c.endPeriod > MAX_PERIOD
+  ) {
+    return { reason: '结束节次必须是 1–9 的整数' }
+  }
+  if (c.startPeriod > c.endPeriod) {
+    return { reason: '开始节次不能晚于结束节次' }
+  }
+  if (typeof c.color !== 'string' || !COLOR_PALETTE.includes(c.color)) {
+    return { reason: '课程颜色不在支持的色板中' }
+  }
+  if (typeof c.createdAt !== 'number' || !Number.isSafeInteger(c.createdAt) || c.createdAt < 0) {
+    return { reason: '创建时间戳必须是非负安全整数' }
+  }
+  if (typeof c.updatedAt !== 'number' || !Number.isSafeInteger(c.updatedAt) || c.updatedAt < 0) {
+    return { reason: '更新时间戳必须是非负安全整数' }
+  }
+  if (c.teacher !== undefined && typeof c.teacher !== 'string') {
+    return { reason: '教师字段必须是文本' }
+  }
+  if (c.location !== undefined && typeof c.location !== 'string') {
+    return { reason: '教室字段必须是文本' }
+  }
+  const course: Course = {
     id: c.id,
-    name: c.name,
+    name: c.name.trim(),
     day: c.day,
     startPeriod: c.startPeriod,
     endPeriod: c.endPeriod,
-    teacher: typeof c.teacher === 'string' && c.teacher ? c.teacher : undefined,
-    location: typeof c.location === 'string' && c.location ? c.location : undefined,
     color: c.color,
     createdAt: c.createdAt,
     updatedAt: c.updatedAt,
   }
+  if (typeof c.teacher === 'string' && c.teacher.trim()) course.teacher = c.teacher.trim()
+  if (typeof c.location === 'string' && c.location.trim()) course.location = c.location.trim()
+  return { course }
 }
 
 // ---------- 导出 ----------
@@ -85,6 +143,9 @@ function validateBackupCourse(raw: unknown): Course | null {
 /** 导出当前课表为备份 JSON 文本。 */
 export function exportBackup(): string {
   const storage = getStorage()
+  if (storage.schemaVersion !== SCHEMA_VERSION) {
+    throw new Error(unsupportedStorageReason(storage.schemaVersion))
+  }
   const envelope: TimetableBackupEnvelope = {
     app: APP_ID,
     backupVersion: BACKUP_VERSION,
@@ -102,6 +163,26 @@ export interface ParseResult {
   reason?: string
 }
 
+function validateEnvelopeObject(obj: unknown): ParseResult {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+    return { ok: false, reason: '备份不是有效对象' }
+  }
+  const envelope = obj as TimetableBackupEnvelope
+  if (envelope.app !== APP_ID) {
+    return { ok: false, reason: '应用标识不正确，无法识别为本项目备份' }
+  }
+  if (envelope.backupVersion !== BACKUP_VERSION) {
+    return { ok: false, reason: `不支持的备份版本：${String(envelope.backupVersion)}` }
+  }
+  if (typeof envelope.exportedAt !== 'string' || !isValidDateString(envelope.exportedAt)) {
+    return { ok: false, reason: '导出时间必须是有效的 UTC ISO 8601 时间' }
+  }
+  if (!envelope.data || typeof envelope.data !== 'object' || Array.isArray(envelope.data)) {
+    return { ok: false, reason: '备份缺少有效的 data 数据' }
+  }
+  return { ok: true, envelope }
+}
+
 /** 解析粘贴的 JSON 文本，仅做 JSON 语法、大小和浅层结构检查。 */
 export function parseBackup(text: string): ParseResult {
   if (!text || !text.trim()) return { ok: false, reason: '请先粘贴备份 JSON' }
@@ -114,50 +195,46 @@ export function parseBackup(text: string): ParseResult {
   } catch {
     return { ok: false, reason: '不是有效的 JSON 文本' }
   }
-  const envelope = obj as TimetableBackupEnvelope
-  if (!envelope || typeof envelope !== 'object') {
-    return { ok: false, reason: '备份不是有效对象' }
-  }
-  if (envelope.app !== APP_ID) {
-    return { ok: false, reason: '应用标识不正确，无法识别为本项目备份' }
-  }
-  if (envelope.backupVersion !== BACKUP_VERSION) {
-    return { ok: false, reason: `不支持的备份版本：${String(envelope.backupVersion)}` }
-  }
-  if (!isValidDateString(envelope.exportedAt)) {
-    return { ok: false, reason: '导出时间不是有效时间' }
-  }
-  if (!envelope.data || typeof envelope.data !== 'object') {
-    return { ok: false, reason: '备份缺少 data 数据' }
-  }
-  return { ok: true, envelope }
+  return validateEnvelopeObject(obj)
 }
 
 export interface AnalyzeResult {
   ok: boolean
   errors: string[]
   preview?: ImportPreview
+  courses?: Course[]
 }
 
 /** 深度校验备份并计算导入预览。出现任何错误则整体拒绝导入。 */
 export function analyzeBackup(envelope: TimetableBackupEnvelope): AnalyzeResult {
+  const parsed = validateEnvelopeObject(envelope)
+  if (!parsed.ok || !parsed.envelope) {
+    return { ok: false, errors: [parsed.reason || '备份外层结构不正确'] }
+  }
+  envelope = parsed.envelope
   const errors: string[] = []
 
-  if (typeof envelope.data.schemaVersion !== 'number') {
-    errors.push('备份数据版本缺失')
+  if (!Number.isInteger(envelope.data.schemaVersion)) {
+    errors.push('备份数据版本缺失或格式不正确')
   } else if (envelope.data.schemaVersion !== SCHEMA_VERSION) {
     errors.push(`不支持的课表数据版本：${envelope.data.schemaVersion}`)
   }
 
   const backupCourses: Course[] = []
+  const courseIds = new Set<string>()
   if (Array.isArray(envelope.data.courses)) {
-    for (const raw of envelope.data.courses) {
-      const course = validateBackupCourse(raw)
-      if (!course) {
-        errors.push('备份包含非法课程（字段缺失、星期/节次越界或开始晚于结束）')
+    for (let index = 0; index < envelope.data.courses.length; index++) {
+      const validated = validateBackupCourse(envelope.data.courses[index])
+      if (!validated.course) {
+        errors.push(`第 ${index + 1} 门课程无效：${validated.reason || '字段不完整'}`)
         break
       }
-      backupCourses.push(course)
+      if (courseIds.has(validated.course.id)) {
+        errors.push(`备份包含重复课程 ID：${validated.course.id}`)
+        break
+      }
+      courseIds.add(validated.course.id)
+      backupCourses.push(validated.course)
     }
   } else {
     errors.push('备份课程数据不是数组')
@@ -178,7 +255,12 @@ export function analyzeBackup(envelope: TimetableBackupEnvelope): AnalyzeResult 
 
   if (errors.length) return { ok: false, errors }
 
-  return { ok: true, errors: [], preview: computePreview(envelope, backupCourses) }
+  return {
+    ok: true,
+    errors: [],
+    preview: computePreview(envelope, backupCourses),
+    courses: backupCourses,
+  }
 }
 
 function computePreview(envelope: TimetableBackupEnvelope, backupCourses: Course[]): ImportPreview {
@@ -222,15 +304,17 @@ function buildRecentBackup(current: TimetableStorage): RecentBackup {
       app: APP_ID,
       backupVersion: BACKUP_VERSION,
       exportedAt: new Date().toISOString(),
-      data: current,
+      data: {
+        schemaVersion: current.schemaVersion,
+        courses: current.courses.map((course) => ({ ...course })),
+      },
     },
   }
 }
 
 /** 覆盖、合并或恢复前，先把当前完整课表写入"最近自动备份"。 */
-function snapshotCurrent(): boolean {
+function snapshotCurrent(current: TimetableStorage): boolean {
   try {
-    const current = getStorage()
     wx.setStorageSync(RECENT_BACKUP_KEY, buildRecentBackup(current))
     return true
   } catch {
@@ -242,11 +326,23 @@ function snapshotCurrent(): boolean {
 export function getRecentBackup(): RecentBackup | null {
   try {
     const raw = wx.getStorageSync(RECENT_BACKUP_KEY)
-    if (!raw || typeof raw !== 'object') return null
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
     const rb = raw as RecentBackup
-    if (typeof rb.savedAt !== 'number' || !rb.export || typeof rb.export !== 'object') return null
-    if (!rb.export.data || typeof rb.export.data !== 'object') return null
-    return rb
+    if (!Number.isSafeInteger(rb.savedAt) || rb.savedAt < 0) return null
+    const parsed = validateEnvelopeObject(rb.export)
+    if (!parsed.ok || !parsed.envelope) return null
+    const analyzed = analyzeBackup(parsed.envelope)
+    if (!analyzed.ok || !analyzed.courses) return null
+    return {
+      savedAt: rb.savedAt,
+      export: {
+        ...parsed.envelope,
+        data: {
+          schemaVersion: parsed.envelope.data.schemaVersion,
+          courses: analyzed.courses,
+        },
+      },
+    }
   } catch {
     return null
   }
@@ -263,37 +359,75 @@ export interface MutationResult {
   finalCount?: number
 }
 
+function getCurrentForMutation(): { current?: TimetableStorage; reason?: string } {
+  const current = getStorage()
+  if (current.schemaVersion !== SCHEMA_VERSION) {
+    return { reason: unsupportedStorageReason(current.schemaVersion) }
+  }
+  return { current }
+}
+
+function tryWriteStorage(data: TimetableStorage): boolean {
+  try {
+    writeStorage(data)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function tryWriteRecentBackup(backup: RecentBackup): boolean {
+  try {
+    wx.setStorageSync(RECENT_BACKUP_KEY, backup)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function recoverAfterMutationFailure(current: TimetableStorage): MutationResult {
+  if (tryWriteStorage(current)) {
+    return { ok: false, reason: '写入失败，原课表已恢复，自动备份已保留' }
+  }
+  return { ok: false, reason: '写入失败，无法确认原课表状态；请使用最近自动备份恢复' }
+}
+
 /** 用备份整体覆盖当前课表。覆盖前先生成最近自动备份。 */
 export function overwriteFromBackup(envelope: TimetableBackupEnvelope): MutationResult {
+  const currentResult = getCurrentForMutation()
+  if (!currentResult.current) return { ok: false, reason: currentResult.reason }
   const analyzed = analyzeBackup(envelope)
-  if (!analyzed.ok) return { ok: false, reason: analyzed.errors[0] }
-  if (!snapshotCurrent()) return { ok: false, reason: '无法创建前序自动备份' }
+  if (!analyzed.ok || !analyzed.courses) return { ok: false, reason: analyzed.errors[0] }
+  if (!snapshotCurrent(currentResult.current)) {
+    return { ok: false, reason: '无法创建操作前自动备份，已停止覆盖' }
+  }
   try {
     writeStorage({
       schemaVersion: envelope.data.schemaVersion,
-      courses: envelope.data.courses,
+      courses: analyzed.courses,
     })
     return { ok: true }
   } catch {
-    // 写入失败：恢复自动备份中的原数据。
-    const rb = getRecentBackup()
-    if (rb) writeStorage(rb.export.data)
-    return { ok: false, reason: '写入失败，已恢复原数据' }
+    return recoverAfterMutationFailure(currentResult.current)
   }
 }
 
 /** 把备份合并进当前课表：重复与冲突课程跳过，合法课程加入。先生成最近自动备份。 */
 export function mergeFromBackup(envelope: TimetableBackupEnvelope): MutationResult {
+  const currentResult = getCurrentForMutation()
+  if (!currentResult.current) return { ok: false, reason: currentResult.reason }
   const analyzed = analyzeBackup(envelope)
-  if (!analyzed.ok) return { ok: false, reason: analyzed.errors[0] }
-  const current = getStorage()
-  if (!snapshotCurrent()) return { ok: false, reason: '无法创建前序自动备份' }
+  if (!analyzed.ok || !analyzed.courses) return { ok: false, reason: analyzed.errors[0] }
+  const current = currentResult.current
+  if (!snapshotCurrent(current)) {
+    return { ok: false, reason: '无法创建操作前自动备份，已停止合并' }
+  }
 
   const result = current.courses.map((c) => ({ ...c }))
   let added = 0
   let duplicateCount = 0
   let conflictCount = 0
-  for (const bc of envelope.data.courses) {
+  for (const bc of analyzed.courses) {
     if (result.some((e) => isDuplicateCourse(bc, e))) {
       duplicateCount++
       continue
@@ -316,21 +450,31 @@ export function mergeFromBackup(envelope: TimetableBackupEnvelope): MutationResu
       finalCount: result.length,
     }
   } catch {
-    const rb = getRecentBackup()
-    if (rb) writeStorage(rb.export.data)
-    return { ok: false, reason: '写入失败，已恢复原数据' }
+    return recoverAfterMutationFailure(current)
   }
 }
 
 /** 恢复最近自动备份。恢复前先生成最近自动备份。 */
 export function restoreRecentBackup(): MutationResult {
   const rb = getRecentBackup()
-  if (!rb) return { ok: false, reason: '没有可用备份' }
-  if (!snapshotCurrent()) return { ok: false, reason: '无法创建前序自动备份' }
+  if (!rb) return { ok: false, reason: '没有可用且通过校验的最近备份' }
+  const currentResult = getCurrentForMutation()
+  if (!currentResult.current) return { ok: false, reason: currentResult.reason }
+  if (!snapshotCurrent(currentResult.current)) {
+    return { ok: false, reason: '无法创建操作前自动备份，已停止恢复' }
+  }
   try {
     writeStorage({ schemaVersion: rb.export.data.schemaVersion, courses: rb.export.data.courses })
     return { ok: true }
   } catch {
-    return { ok: false, reason: '恢复失败，原数据未受影响' }
+    const currentRestored = tryWriteStorage(currentResult.current)
+    const backupRestored = tryWriteRecentBackup(rb)
+    if (currentRestored && backupRestored) {
+      return { ok: false, reason: '恢复失败，原课表和最近备份均已保留' }
+    }
+    if (currentRestored) {
+      return { ok: false, reason: '恢复失败，原课表已保留，但最近备份无法还原' }
+    }
+    return { ok: false, reason: '恢复失败，无法确认原课表状态；请暂时不要继续操作' }
   }
 }

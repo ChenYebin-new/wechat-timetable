@@ -2,7 +2,7 @@
 // 统一管理本地 Storage 里的课程：读取、查询、新增、更新、删除，以及数据版本识别。
 // 页面不要直接调用 wx.getStorageSync / setStorageSync 操作课程。
 
-import { Course, TimetableStorage } from '../models/course'
+import type { Course, TimetableStorage } from '../models/course'
 import { DAYS, MAX_PERIOD, SCHEMA_VERSION, STORAGE_KEY } from '../constants/timetable'
 
 function defaultStorage(): TimetableStorage {
@@ -47,6 +47,14 @@ function persist(data: TimetableStorage): void {
   wx.setStorageSync(STORAGE_KEY, data)
 }
 
+function assertWritableStorage(data: TimetableStorage): void {
+  if (data.schemaVersion !== SCHEMA_VERSION) {
+    throw new Error(
+      `当前课表数据版本为 V${data.schemaVersion}，此版本小程序仅支持修改 V${SCHEMA_VERSION}。请使用更新版本处理课表。`,
+    )
+  }
+}
+
 function load(): TimetableStorage {
   try {
     const raw = wx.getStorageSync(STORAGE_KEY)
@@ -87,6 +95,7 @@ export function getStorage(): TimetableStorage {
 
 /** 一次性写入课表根数据。调用方须自行完成校验。 */
 export function writeStorage(data: TimetableStorage): void {
+  assertWritableStorage(data)
   persist(data)
 }
 
@@ -108,6 +117,7 @@ export function getCourseById(id: string): Course | undefined {
 /** 新增或更新课程。无 id 视为新增；有 id 视为更新。 */
 export function save(course: Course): void {
   const data = load()
+  assertWritableStorage(data)
   const now = Date.now()
   if (course.id) {
     data.courses = data.courses.map((c) =>
@@ -127,6 +137,7 @@ export function save(course: Course): void {
 /** 删除课程。 */
 export function remove(id: string): void {
   const data = load()
+  assertWritableStorage(data)
   data.courses = data.courses.filter((c) => c.id !== id)
   persist(data)
 }
