@@ -41,6 +41,34 @@
   line-height: 1.3;
 }
 
+.overview-actions {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  flex-shrink: 0;
+}
+
+.data-entry {
+  width: 108rpx;
+  height: 88rpx;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 18rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #267d78;
+  background: #e8f3f1;
+  border-radius: 34rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.data-entry::after {
+  border: 0;
+}
+
 .quick-add {
   width: 128rpx;
   height: 88rpx;

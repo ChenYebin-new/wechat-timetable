@@ -1,7 +1,8 @@
 {
   "pages": [
     "pages/timetable/index",
-    "pages/course-edit/index"
+    "pages/course-edit/index",
+    "pages/data-manage/index"
   ],
   "window": {
     "navigationBarTextStyle": "black",

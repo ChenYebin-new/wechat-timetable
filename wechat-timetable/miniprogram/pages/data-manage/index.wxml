@@ -1,0 +1,54 @@
+<!-- pages/data-manage/index.wxml -->
+<view class="page">
+  <view class="card">
+    <text class="card-title">导出课表</text>
+    <text class="card-desc">把当前课表导出为 JSON 文本，复制后保存到备忘录、发给同学或其他设备。</text>
+    <button class="btn btn-primary" bindtap="onExport">复制课表 JSON</button>
+  </view>
+
+  <view class="card">
+    <text class="card-title">导入课表</text>
+    <textarea
+      class="input"
+      value="{{inputText}}"
+      placeholder="在此粘贴课表备份 JSON"
+      bindinput="onInput"
+      auto-height
+      maxlength="-1"
+    />
+    <button class="btn btn-secondary" bindtap="onParse">解析并预览</button>
+
+    <view wx:if="{{previewErrors.length}}" class="error-box">
+      <text class="error-line" wx:for="{{previewErrors}}" wx:key="index">{{item}}</text>
+    </view>
+
+    <view wx:if="{{preview}}" class="preview">
+      <view class="row"><text class="k">导出时间</text><text class="v">{{preview.exportedAt}}</text></view>
+      <view class="row"><text class="k">课表数据版本</text><text class="v">V{{preview.schemaVersion}}</text></view>
+      <view class="row"><text class="k">备份课程数</text><text class="v">{{preview.backupCount}}</text></view>
+      <view class="row"><text class="k">当前课程数</text><text class="v">{{preview.currentCount}}</text></view>
+      <view class="row"><text class="k">重复课程数</text><text class="v">{{preview.duplicateCount}}</text></view>
+      <view class="row"><text class="k">冲突课程数</text><text class="v">{{preview.conflictCount}}</text></view>
+      <view class="row"><text class="k">覆盖后课程数</text><text class="v">{{preview.overwriteCount}}</text></view>
+      <view class="row"><text class="k">合并-新增</text><text class="v">{{preview.mergeAddCount}}</text></view>
+      <view class="row"><text class="k">合并-跳过重复</text><text class="v">{{preview.mergeSkipDuplicateCount}}</text></view>
+      <view class="row"><text class="k">合并-跳过冲突</text><text class="v">{{preview.mergeSkipConflictCount}}</text></view>
+      <view class="row"><text class="k">合并最终课程数</text><text class="v">{{preview.mergeFinalCount}}</text></view>
+      <view class="actions">
+        <button class="btn btn-primary" bindtap="onOverwrite">覆盖现有课表</button>
+        <button class="btn btn-secondary" bindtap="onMerge">合并到现有课表</button>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <text class="card-title">最近自动备份</text>
+    <block wx:if="{{recentBackupInfo}}">
+      <view class="row"><text class="k">备份时间</text><text class="v">{{recentBackupInfo.savedAtText}}</text></view>
+      <view class="row"><text class="k">数据版本</text><text class="v">V{{recentBackupInfo.schemaVersion}}</text></view>
+      <view class="row"><text class="k">课程数量</text><text class="v">{{recentBackupInfo.count}}</text></view>
+      <button class="btn btn-danger" bindtap="onRestoreRecent">恢复最近备份</button>
+    </block>
+    <text wx:else class="card-desc">暂无最近自动备份。覆盖、合并或恢复前会自动保留一份当前课表。</text>
+  </view>
+</view>

@@ -52,6 +52,10 @@ Page({
     wx.navigateTo({ url: '/pages/course-edit/index' })
   },
 
+  onDataManage() {
+    wx.navigateTo({ url: '/pages/data-manage/index' })
+  },
+
   onCourseTap(e: WechatMiniprogram.CustomEvent) {
     const id = e.detail.id as string
     wx.navigateTo({ url: `/pages/course-edit/index?id=${id}` })

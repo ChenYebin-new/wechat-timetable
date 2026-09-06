@@ -6,10 +6,13 @@
       <text class="overview-title" wx:else>今天没有课程</text>
       <text class="overview-meta">{{todayName}} · 本周共 {{courseCount}} 门课程</text>
     </view>
-    <button class="quick-add" bindtap="onAdd" aria-label="新增课程">
-      <view class="add-symbol" aria-hidden="true"></view>
-      <text class="quick-add-text">新增</text>
-    </button>
+    <view class="overview-actions">
+      <button class="data-entry" bindtap="onDataManage" aria-label="数据管理">数据</button>
+      <button class="quick-add" bindtap="onAdd" aria-label="新增课程">
+        <view class="add-symbol" aria-hidden="true"></view>
+        <text class="quick-add-text">新增</text>
+      </button>
+    </view>
   </view>
 
   <view wx:if="{{isEmpty}}" class="empty-notice">
