@@ -1,5 +1,5 @@
 /* pages/timetable/index.wxss
-   说明：整页滚动 + 顶部概览吸顶(sticky)。概览为一条文字 + 右侧两个小按钮的横栏。 */
+   说明：整页滚动 + 顶部概览吸顶(sticky)。概览为一条文字 + 右侧两个小按钮(用 view 精确控制尺寸)。 */
 .page {
   min-height: 100vh;
   padding: 20rpx 20rpx 0;
@@ -26,7 +26,7 @@
 .overview-text {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 26rpx;
+  font-size: 25rpx;
   font-weight: 700;
   color: #213b36;
   white-space: nowrap;
@@ -42,46 +42,24 @@
   flex-shrink: 0;
 }
 
-.data-entry {
+.action-btn {
   height: 52rpx;
-  min-height: 52rpx;
-  margin: 0;
-  padding: 0 20rpx;
-  display: flex;
+  padding: 0 22rpx;
+  box-sizing: border-box;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-sizing: border-box;
+  border-radius: 26rpx;
   color: #267d78;
   background: #e8f3f1;
-  border-radius: 26rpx;
   font-size: 21rpx;
   font-weight: 600;
   line-height: 1;
 }
 
-.data-entry::after {
-  border: 0;
-}
-
-.quick-add {
-  height: 52rpx;
-  min-height: 52rpx;
-  margin: 0;
-  padding: 0 20rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
+.action-primary {
   color: #ffffff;
   background: #267d78;
-  border-radius: 26rpx;
-  font-size: 21rpx;
-  font-weight: 600;
-  line-height: 1;
-}
-
-.quick-add::after {
-  border: 0;
 }
 
 .grid-scroll {
@@ -123,22 +101,17 @@
 
 .empty-btn {
   height: 52rpx;
-  min-height: 52rpx;
+  padding: 0 24rpx;
   margin: 0 0 0 16rpx;
-  padding: 0 22rpx;
-  display: flex;
+  box-sizing: border-box;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-sizing: border-box;
   color: #267d78;
   font-size: 21rpx;
   font-weight: 600;
   line-height: 1;
   background: #e8f3f1;
   border-radius: 26rpx;
-}
-
-.empty-btn::after {
-  border: 0;
 }

@@ -3,8 +3,8 @@
   <view class="overview">
     <text class="overview-text">{{overviewText}}</text>
     <view class="overview-actions">
-      <button class="data-entry" bindtap="onDataManage" aria-label="数据管理">数据</button>
-      <button class="quick-add" bindtap="onAdd" aria-label="新增课程">＋ 新增</button>
+      <view class="action-btn" bindtap="onDataManage" aria-role="button" aria-label="数据管理">数据</view>
+      <view class="action-btn action-primary" bindtap="onAdd" aria-role="button" aria-label="新增课程">＋新增</view>
     </view>
   </view>
 
@@ -13,7 +13,7 @@
       <text class="empty-title">课表还是空的</text>
       <text class="empty-desc">先添加第一门课程，周课表会立即显示。</text>
     </view>
-    <button class="empty-btn" bindtap="onAdd">开始添加</button>
+    <view class="empty-btn" bindtap="onAdd" aria-role="button" aria-label="开始添加">开始添加</view>
   </view>
 
   <view class="grid-scroll">
