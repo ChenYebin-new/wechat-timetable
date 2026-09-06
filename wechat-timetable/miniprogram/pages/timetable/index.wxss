@@ -1,5 +1,5 @@
 /* pages/timetable/index.wxss
-   说明：页面整体滚动，顶部概览吸顶(sticky)，避免内层 scroll-view 裁切内容或头部位移导致闪烁。 */
+   说明：整页滚动 + 顶部概览吸顶(sticky)；概览为一条横向窄栏，避免占过高比例。 */
 .page {
   min-height: 100vh;
   padding: 20rpx 20rpx 0;
@@ -13,35 +13,40 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 88rpx;
-  padding: 12rpx 20rpx 12rpx 24rpx;
-  margin-bottom: 16rpx;
+  height: 64rpx;
+  min-height: 64rpx;
+  padding: 0 16rpx 0 20rpx;
+  margin-bottom: 12rpx;
   box-sizing: border-box;
   background: #dcecea;
-  border-radius: 24rpx;
-  box-shadow: 0 6rpx 16rpx rgba(52, 83, 77, 0.1);
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 12rpx rgba(52, 83, 77, 0.08);
   transform: translateZ(0);
 }
 
 .overview-copy {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  flex-direction: row;
   min-width: 0;
-  padding-right: 16rpx;
+  overflow: hidden;
 }
 
 .overview-title {
   color: #213b36;
-  font-size: 30rpx;
+  font-size: 28rpx;
   font-weight: 700;
-  line-height: 1.35;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .overview-meta {
-  margin-top: 6rpx;
+  margin-left: 12rpx;
   color: #58706a;
-  font-size: 23rpx;
-  line-height: 1.3;
+  font-size: 21rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .overview-actions {
@@ -52,18 +57,18 @@
 }
 
 .data-entry {
-  height: 64rpx;
-  min-height: 64rpx;
+  height: 56rpx;
+  min-height: 56rpx;
   margin: 0;
-  padding: 0 24rpx;
+  padding: 0 22rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
   color: #267d78;
   background: #e8f3f1;
-  border-radius: 32rpx;
-  font-size: 22rpx;
+  border-radius: 28rpx;
+  font-size: 21rpx;
   font-weight: 600;
   line-height: 1;
 }
@@ -73,17 +78,17 @@
 }
 
 .quick-add {
-  height: 64rpx;
-  min-height: 64rpx;
+  height: 56rpx;
+  min-height: 56rpx;
   margin: 0;
-  padding: 0 24rpx;
+  padding: 0 22rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
   color: #ffffff;
   background: #267d78;
-  border-radius: 32rpx;
+  border-radius: 28rpx;
   line-height: 1;
 }
 
@@ -93,8 +98,8 @@
 
 .add-symbol {
   position: relative;
-  width: 20rpx;
-  height: 20rpx;
+  width: 18rpx;
+  height: 18rpx;
   margin-right: 8rpx;
 }
 
@@ -104,7 +109,7 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 20rpx;
+  width: 18rpx;
   height: 4rpx;
   border-radius: 2rpx;
   background: #ffffff;
@@ -116,7 +121,7 @@
 }
 
 .quick-add-text {
-  font-size: 23rpx;
+  font-size: 22rpx;
   font-weight: 600;
 }
 
@@ -132,11 +137,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18rpx 18rpx 18rpx 22rpx;
-  margin-bottom: 16rpx;
+  padding: 16rpx 16rpx 16rpx 20rpx;
+  margin-bottom: 12rpx;
   background: #ffffff;
-  border-radius: 16rpx;
-  box-shadow: 0 6rpx 16rpx rgba(52, 83, 77, 0.06);
+  border-radius: 14rpx;
+  box-shadow: 0 4rpx 12rpx rgba(52, 83, 77, 0.06);
 }
 
 .empty-copy {
@@ -147,32 +152,32 @@
 
 .empty-title {
   color: #2f4641;
-  font-size: 25rpx;
+  font-size: 24rpx;
   font-weight: 600;
 }
 
 .empty-desc {
-  margin-top: 6rpx;
+  margin-top: 4rpx;
   color: #71837e;
-  font-size: 22rpx;
+  font-size: 21rpx;
 }
 
 .empty-btn {
-  height: 64rpx;
-  min-height: 64rpx;
-  margin: 0 0 0 18rpx;
-  padding: 0 24rpx;
+  height: 56rpx;
+  min-height: 56rpx;
+  margin: 0 0 0 16rpx;
+  padding: 0 22rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   box-sizing: border-box;
   color: #267d78;
-  font-size: 22rpx;
+  font-size: 21rpx;
   font-weight: 600;
   line-height: 1;
   background: #e8f3f1;
-  border-radius: 32rpx;
+  border-radius: 28rpx;
 }
 
 .empty-btn::after {
