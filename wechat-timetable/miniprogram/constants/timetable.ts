@@ -13,20 +13,22 @@ export const DAYS = ['周一', '周二', '周三', '周四', '周五', '周六',
 export interface Period {
   index: number
   label: string
-  time: string
+  time: string // 完整时段，用于编辑页选择器显示
+  start: string // 开始时间
+  end: string // 结束时间
 }
 
 /** 第一版固定九节课的时间。 */
 export const PERIODS: Period[] = [
-  { index: 1, label: '第1节', time: '08:00-08:50' },
-  { index: 2, label: '第2节', time: '09:00-09:50' },
-  { index: 3, label: '第3节', time: '10:00-10:50' },
-  { index: 4, label: '第4节', time: '11:00-11:50' },
-  { index: 5, label: '第5节', time: '14:00-14:50' },
-  { index: 6, label: '第6节', time: '15:00-15:50' },
-  { index: 7, label: '第7节', time: '16:00-16:50' },
-  { index: 8, label: '第8节', time: '17:00-17:50' },
-  { index: 9, label: '第9节', time: '18:00-18:50' },
+  { index: 1, label: '第1节', time: '08:00-08:50', start: '08:00', end: '08:50' },
+  { index: 2, label: '第2节', time: '09:00-09:50', start: '09:00', end: '09:50' },
+  { index: 3, label: '第3节', time: '10:00-10:50', start: '10:00', end: '10:50' },
+  { index: 4, label: '第4节', time: '11:00-11:50', start: '11:00', end: '11:50' },
+  { index: 5, label: '第5节', time: '14:00-14:50', start: '14:00', end: '14:50' },
+  { index: 6, label: '第6节', time: '15:00-15:50', start: '15:00', end: '15:50' },
+  { index: 7, label: '第7节', time: '16:00-16:50', start: '16:00', end: '16:50' },
+  { index: 8, label: '第8节', time: '17:00-17:50', start: '17:00', end: '17:50' },
+  { index: 9, label: '第9节', time: '18:00-18:50', start: '18:00', end: '18:50' },
 ]
 
 /** 蓝绿色系为主的课程颜色板。 */

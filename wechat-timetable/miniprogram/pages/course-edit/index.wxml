@@ -47,7 +47,12 @@
           style="background: {{item}};"
           data-color="{{item}}"
           bindtap="onColor"
-        ></view>
+          aria-role="button"
+          aria-label="选择颜色 {{item}}{{color === item ? '，已选中' : ''}}"
+          aria-checked="{{color === item}}"
+        >
+          <text wx:if="{{color === item}}" class="swatch-check">✓</text>
+        </view>
       </view>
     </view>
 

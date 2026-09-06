@@ -66,6 +66,13 @@
   border-color: #1d2b28;
 }
 
+.swatch-check {
+  font-size: 30rpx;
+  color: #ffffff;
+  text-shadow: 0 1rpx 3rpx rgba(0, 0, 0, 0.55);
+  line-height: 1;
+}
+
 .actions {
   margin-top: 48rpx;
 }

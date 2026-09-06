@@ -11,7 +11,7 @@
 }
 
 .head-corner {
-  width: 72rpx;
+  width: 88rpx;
   flex-shrink: 0;
   background: #dfe8ea;
   border-radius: 8rpx;
@@ -36,7 +36,7 @@
 }
 
 .time-col {
-  width: 72rpx;
+  width: 88rpx;
   flex-shrink: 0;
 }
 
@@ -56,12 +56,13 @@
 .time-label {
   font-weight: 600;
   color: #33443f;
+  font-size: 20rpx;
 }
 
 .time-range {
-  font-size: 17rpx;
-  color: #8a9a94;
-  margin-top: 2rpx;
+  font-size: 16rpx;
+  color: #6f7f79;
+  line-height: 1.2;
 }
 
 .days {
@@ -100,7 +101,7 @@
 }
 
 .card-name {
-  font-size: 22rpx;
+  font-size: 24rpx;
   font-weight: 600;
   text-align: center;
   word-break: break-all;
@@ -111,8 +112,8 @@
 }
 
 .card-loc {
-  font-size: 18rpx;
-  opacity: 0.88;
+  font-size: 20rpx;
+  opacity: 0.9;
   margin-top: 4rpx;
   text-align: center;
 }

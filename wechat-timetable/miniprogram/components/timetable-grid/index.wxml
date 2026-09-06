@@ -9,7 +9,8 @@
     <view class="time-col">
       <view class="time-cell" wx:for="{{periods}}" wx:key="index">
         <text class="time-label">{{item.label}}</text>
-        <text class="time-range">{{item.time}}</text>
+        <text class="time-range">{{item.start}}</text>
+        <text class="time-range">{{item.end}}</text>
       </view>
     </view>
 
@@ -26,7 +27,7 @@
           class="card"
           wx:for="{{slots}}"
           wx:key="id"
-          style="{{item.style}} background-color: {{item.course.color}};"
+          style="{{item.style}} background-color: {{item.course.color}}; color: {{item.textColor}};"
           data-id="{{item.course.id}}"
           bindtap="onCardTap"
         >
