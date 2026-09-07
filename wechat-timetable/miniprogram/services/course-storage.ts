@@ -106,6 +106,13 @@ function assertWritableStorage(data: TimetableStorage): void {
   }
 }
 
+function assertTermReady(data: TimetableStorage): asserts data is TimetableStorage & { term: TermSettings } {
+  const termCheck = validateTerm(data.term)
+  if (!termCheck.ok) {
+    throw new Error(termCheck.reason || '请先设置有效学期')
+  }
+}
+
 function snapshotCurrentRaw(): boolean {
   try {
     const raw = wx.getStorageSync(STORAGE_KEY)
@@ -126,18 +133,20 @@ function snapshotCurrentRaw(): boolean {
   }
 }
 
-function restoreFromRecentRaw(): void {
+function restoreFromRecentRaw(): boolean {
   try {
     const raw = wx.getStorageSync(RECENT_BACKUP_KEY)
     if (raw && typeof raw === 'object') {
       const rb = raw as { export?: { data?: unknown } }
       if (rb.export && rb.export.data) {
         wx.setStorageSync(STORAGE_KEY, rb.export.data)
+        return true
       }
     }
   } catch {
-    // 忽略恢复失败
+    return false
   }
+  return false
 }
 
 function generateId(): string {
@@ -184,7 +193,8 @@ export function getCourseById(id: string): Course | undefined {
 export function save(course: Course): void {
   const data = load()
   assertWritableStorage(data)
-  const totalWeeks = data.term ? data.term.totalWeeks : 0
+  assertTermReady(data)
+  const totalWeeks = data.term.totalWeeks
   const weekMode = toWeekMode(course.weekMode)
   const weeks =
     weekMode === 'custom'
@@ -227,9 +237,14 @@ export function applyTerm(term: TermSettings): { ok: boolean; reason?: string; m
   if (!vt.ok) return { ok: false, reason: vt.reason }
 
   const current = load()
-  if (!snapshotCurrentRaw()) return { ok: false, reason: '无法创建前序自动备份' }
+  if (current.schemaVersion !== 1 && current.schemaVersion !== SCHEMA_VERSION) {
+    return {
+      ok: false,
+      reason: `当前课表数据版本为 V${current.schemaVersion}，不能按 V1 或 V2 猜测迁移。请使用更新版本处理课表。`,
+    }
+  }
 
-  const migrated = current.schemaVersion !== SCHEMA_VERSION
+  const migrated = current.schemaVersion === 1
 
   const newCourses: Course[] = []
   for (const c of current.courses) {
@@ -265,16 +280,34 @@ export function applyTerm(term: TermSettings): { ok: boolean; reason?: string; m
     courses: newCourses,
   }
 
+  if (!snapshotCurrentRaw()) return { ok: false, reason: '无法创建操作前自动备份' }
+
   try {
     persist(storage)
     const reread = load()
-    if (reread.schemaVersion !== SCHEMA_VERSION || !reread.term) {
-      restoreFromRecentRaw()
-      return { ok: false, reason: '写入后校验失败，已恢复原数据' }
+    if (
+      reread.schemaVersion !== SCHEMA_VERSION ||
+      !reread.term ||
+      reread.term.startDate !== storage.term!.startDate ||
+      reread.term.totalWeeks !== storage.term!.totalWeeks ||
+      reread.courses.length !== storage.courses.length
+    ) {
+      const restored = restoreFromRecentRaw()
+      return {
+        ok: false,
+        reason: restored
+          ? '写入后校验失败，原数据已恢复'
+          : '写入后校验失败，无法确认原数据状态；请暂时不要继续操作',
+      }
     }
     return { ok: true, migrated }
   } catch {
-    restoreFromRecentRaw()
-    return { ok: false, reason: '写入失败，已恢复原数据' }
+    const restored = restoreFromRecentRaw()
+    return {
+      ok: false,
+      reason: restored
+        ? '写入失败，原数据已恢复'
+        : '写入失败，无法确认原数据状态；请使用最近自动备份恢复',
+    }
   }
 }

@@ -183,6 +183,15 @@ Page({
     const envelope = this.data.envelope
     const preview = this.data.preview
     if (!envelope) return
+    if (preview && !preview.mergeAllowed) {
+      wx.showModal({
+        title: '无法合并',
+        content: preview.mergeReason || '当前课表与备份不满足合并条件',
+        showCancel: false,
+        confirmText: '知道了',
+      })
+      return
+    }
     let termArg: TermSettings | undefined
     if (this.data.needsTerm) {
       termArg = this.buildImportTerm()

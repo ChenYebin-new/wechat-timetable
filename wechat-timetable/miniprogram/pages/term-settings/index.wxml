@@ -3,7 +3,7 @@
   <view class="card">
     <text class="card-title">第一教学周的星期一</text>
     <text class="card-desc">请选择新学期开始的第一周对应的星期一，教学周从这一天起每 7 天为一周。</text>
-    <picker mode="date" value="{{startDate}}" bindchange="onDateChange">
+    <picker mode="date" value="{{startDate}}" bindchange="onDateChange" aria-label="选择第一教学周星期一">
       <view class="picker-value">{{startDate}}</view>
     </picker>
   </view>
@@ -17,9 +17,12 @@
         class="chip {{totalWeeks === item ? 'active' : ''}}"
         data-week="{{item}}"
         bindtap="onCommonWeek"
+        aria-role="radio"
+        aria-label="学期共{{item}}周{{totalWeeks === item ? '，已选择' : ''}}"
+        aria-checked="{{totalWeeks === item}}"
       >{{item}} 周</view>
     </view>
-    <picker mode="selector" range="{{weekOptions}}" value="{{totalWeeks - 1}}" bindchange="onWeeksChange">
+    <picker mode="selector" range="{{weekOptions}}" value="{{totalWeeks - 1}}" bindchange="onWeeksChange" aria-label="选择学期总周数">
       <view class="picker-value">{{totalWeeks}} 周（1–30 可调）</view>
     </picker>
   </view>

@@ -9,13 +9,20 @@ function pad(n: number): string {
   return n < 10 ? '0' + n : '' + n
 }
 
+const DAY_MS = 86400000
+
+function calendarDayNumber(d: Date): number {
+  return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / DAY_MS
+}
+
 /** 解析 YYYY-MM-DD 为本地日期；非法返回 null。 */
 export function parseLocalDate(dateStr: string): Date | null {
   if (!dateStr || typeof dateStr !== 'string') return null
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr)
   if (!m) return null
   const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
-  return Number.isNaN(d.getTime()) ? null : d
+  if (Number.isNaN(d.getTime()) || formatLocalDate(d) !== dateStr) return null
+  return d
 }
 
 /** 把本地日期格式化为 YYYY-MM-DD。 */
@@ -32,7 +39,7 @@ export function calcCurrentWeek(term: TermSettings | null, now: Date): number | 
   const start = parseLocalDate(term.startDate)
   if (!start) return null
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const diffDays = Math.floor((today.getTime() - start.getTime()) / 86400000)
+  const diffDays = calendarDayNumber(today) - calendarDayNumber(start)
   if (diffDays < 0) return null
   const week = Math.floor(diffDays / 7) + 1
   if (week > term.totalWeeks) return null
@@ -43,7 +50,7 @@ export function calcCurrentWeek(term: TermSettings | null, now: Date): number | 
 export function weekDateRange(term: TermSettings, week: number): { start: Date; end: Date } | null {
   const start = parseLocalDate(term.startDate)
   if (!start) return null
-  if (week < 1 || week > term.totalWeeks) return null
+  if (!Number.isInteger(week) || week < 1 || week > term.totalWeeks) return null
   const s = new Date(start.getFullYear(), start.getMonth(), start.getDate() + (week - 1) * 7)
   const e = new Date(start.getFullYear(), start.getMonth(), start.getDate() + week * 7 - 1)
   return { start: s, end: e }
@@ -113,6 +120,7 @@ export function validateTerm(term: TermSettings | null | undefined): { ok: boole
   if (!term) return { ok: false, reason: '缺少学期设置' }
   const start = parseLocalDate(term.startDate)
   if (!start) return { ok: false, reason: '请选择有效的第一教学周星期一日期' }
+  if (start.getDay() !== 1) return { ok: false, reason: '第一教学周开始日期必须是星期一' }
   if (!Number.isInteger(term.totalWeeks) || term.totalWeeks < 1 || term.totalWeeks > MAX_TOTAL_WEEKS) {
     return { ok: false, reason: `学期总周数需要是 1–${MAX_TOTAL_WEEKS} 的整数` }
   }

@@ -3,7 +3,7 @@
 
 import type { Course } from '../models/course'
 import { DAYS, MAX_PERIOD, MAX_TOTAL_WEEKS, WEEK_MODES } from '../constants/timetable'
-import { compressWeeks, weeksIntersect } from './term'
+import { compressWeeks, expandWeeks, normalizeWeeks, weeksIntersect } from './term'
 
 export interface ValidateResult {
   ok: boolean
@@ -42,23 +42,26 @@ export function validate(
   if (!course.name || !course.name.trim()) {
     errors.push('请填写课程名称')
   }
-  if (course.day < 1 || course.day > DAYS.length) {
+  if (!Number.isInteger(course.day) || course.day < 1 || course.day > DAYS.length) {
     errors.push('请选择星期')
   }
-  if (course.startPeriod < 1 || course.startPeriod > MAX_PERIOD) {
+  if (!Number.isInteger(course.startPeriod) || course.startPeriod < 1 || course.startPeriod > MAX_PERIOD) {
     errors.push('开始节次需要在 1–9 之间')
   }
-  if (course.endPeriod < 1 || course.endPeriod > MAX_PERIOD) {
+  if (!Number.isInteger(course.endPeriod) || course.endPeriod < 1 || course.endPeriod > MAX_PERIOD) {
     errors.push('结束节次需要在 1–9 之间')
   }
   if (course.startPeriod > course.endPeriod) {
     errors.push('开始节次不能晚于结束节次')
   }
 
-  if (!VALID_MODES.has(course.weekMode)) {
+  let activeWeeks = Array.isArray(course.weeks) ? course.weeks : []
+  if (!Number.isInteger(totalWeeks) || totalWeeks < 1 || totalWeeks > MAX_TOTAL_WEEKS) {
+    errors.push('请先设置有效学期')
+  } else if (!VALID_MODES.has(course.weekMode)) {
     errors.push('请选择课程周次模式')
   } else if (course.weekMode === 'custom') {
-    if (!course.weeks || !course.weeks.length) {
+    if (!Array.isArray(course.weeks) || !course.weeks.length) {
       errors.push('请至少选择一个上课周次')
     } else {
       const bad = course.weeks.filter(
@@ -66,8 +69,15 @@ export function validate(
       )
       if (bad.length) {
         errors.push(`周次需要在 1–${totalWeeks} 之间`)
+      } else {
+        activeWeeks = normalizeWeeks(course.weeks, totalWeeks)
+        if (activeWeeks.length !== course.weeks.length) {
+          errors.push('指定周次不能重复')
+        }
       }
     }
+  } else {
+    activeWeeks = expandWeeks(course.weekMode, totalWeeks)
   }
 
   if (
@@ -76,10 +86,12 @@ export function validate(
     course.day <= DAYS.length &&
     course.startPeriod <= course.endPeriod
   ) {
+    const candidate = { ...course, weeks: activeWeeks }
     for (const other of all) {
       if (other.id === excludeId) continue
-      if (isOverlapping(course, other)) {
-        const common = course.weeks.filter((w) => other.weeks.includes(w))
+      if (isOverlapping(candidate, other)) {
+        const otherWeeks = other.weeks.length ? other.weeks : expandWeeks('all', totalWeeks)
+        const common = activeWeeks.filter((w) => otherWeeks.includes(w))
         const weeksText = common.length ? `第${compressWeeks(common)}周` : '重叠周次'
         errors.push(
           `${DAYS[course.day - 1]} 第${course.startPeriod}–${course.endPeriod}节 ${weeksText} 与「${other.name}」冲突`,

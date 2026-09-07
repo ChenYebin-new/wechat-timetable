@@ -15,7 +15,7 @@
 
   <view wx:if="{{termReady}}" class="week-bar">
     <view class="week-nav {{currentWeek <= 1 ? 'disabled' : ''}}" bindtap="onPrevWeek" aria-role="button" aria-label="上一周">‹</view>
-    <picker mode="selector" range="{{weekOptions}}" value="{{weekIndex}}" bindchange="onWeekChange">
+    <picker mode="selector" range="{{weekOptions}}" value="{{weekIndex}}" bindchange="onWeekChange" aria-label="选择教学周">
       <view class="week-label">第 {{currentWeek}} 周</view>
     </picker>
     <view class="week-nav {{currentWeek >= weekOptions.length ? 'disabled' : ''}}" bindtap="onNextWeek" aria-role="button" aria-label="下一周">›</view>

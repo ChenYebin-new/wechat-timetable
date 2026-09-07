@@ -108,8 +108,23 @@ Page({
     this.changeWeek(Number(e.detail.value) + 1)
   },
 
+  openCourseEditor(url: string) {
+    if (getTerm()) {
+      wx.navigateTo({ url })
+      return
+    }
+    wx.showModal({
+      title: '先设学期',
+      content: '设置第一教学周星期一和总周数后，才能为课程保存正确的上课周次。',
+      confirmText: '去设置',
+      success: (res) => {
+        if (res.confirm) wx.navigateTo({ url: '/pages/term-settings/index' })
+      },
+    })
+  },
+
   onAdd() {
-    wx.navigateTo({ url: '/pages/course-edit/index' })
+    this.openCourseEditor('/pages/course-edit/index')
   },
 
   onDataManage() {
@@ -122,6 +137,6 @@ Page({
 
   onCourseTap(e: WechatMiniprogram.CustomEvent) {
     const id = e.detail.id as string
-    wx.navigateTo({ url: `/pages/course-edit/index?id=${id}` })
+    this.openCourseEditor(`/pages/course-edit/index?id=${id}`)
   },
 })

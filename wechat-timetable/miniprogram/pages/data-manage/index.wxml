@@ -34,6 +34,7 @@
       <view class="row"><text class="k">合并-跳过重复</text><text class="v">{{preview.mergeSkipDuplicateCount}}</text></view>
       <view class="row"><text class="k">合并-跳过冲突</text><text class="v">{{preview.mergeSkipConflictCount}}</text></view>
       <view class="row"><text class="k">合并最终课程数</text><text class="v">{{preview.mergeFinalCount}}</text></view>
+      <view wx:if="{{!preview.mergeAllowed}}" class="merge-warning">{{preview.mergeReason}}</view>
 
       <view wx:if="{{needsTerm}}" class="term-setup">
         <text class="term-setup-title">这是旧版（V1）备份，导入前请确认学期设置</text>
@@ -53,7 +54,7 @@
 
       <view class="actions">
         <button class="btn btn-primary" bindtap="onOverwrite">覆盖现有课表</button>
-        <button class="btn btn-secondary" bindtap="onMerge">合并到现有课表</button>
+        <button class="btn btn-secondary" bindtap="onMerge" disabled="{{!preview.mergeAllowed}}">合并到现有课表</button>
       </view>
     </view>
   </view>

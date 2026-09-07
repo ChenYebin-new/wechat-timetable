@@ -79,6 +79,16 @@
   line-height: 1.5;
 }
 
+.merge-warning {
+  margin-top: 16rpx;
+  padding: 14rpx 16rpx;
+  border-radius: 12rpx;
+  background: #fdf3e7;
+  color: #8a5a1f;
+  font-size: 23rpx;
+  line-height: 1.5;
+}
+
 .preview {
   margin-top: 22rpx;
   padding-top: 8rpx;
@@ -146,4 +156,8 @@
 .actions .btn {
   flex: 1;
   margin-top: 0;
+}
+
+.btn[disabled] {
+  opacity: 0.5;
 }

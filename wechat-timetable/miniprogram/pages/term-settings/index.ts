@@ -6,7 +6,7 @@ import {
   MAX_TOTAL_WEEKS,
 } from '../../constants/timetable'
 import { applyTerm, getCourses, getTerm, needsMigration } from '../../services/course-storage'
-import { formatLocalDate } from '../../utils/term'
+import { formatLocalDate, validateTerm } from '../../utils/term'
 
 function defaultMonday(): string {
   const now = new Date()
@@ -76,6 +76,16 @@ Page({
     const term: TermSettings = {
       startDate: this.data.startDate,
       totalWeeks: this.data.totalWeeks,
+    }
+    const termCheck = validateTerm(term)
+    if (!termCheck.ok) {
+      wx.showModal({
+        title: '设置无效',
+        content: termCheck.reason || '请检查学期设置',
+        showCancel: false,
+        confirmText: '知道了',
+      })
+      return
     }
     const count = this.data.affectedCount
     const isMigration = this.data.isMigration
