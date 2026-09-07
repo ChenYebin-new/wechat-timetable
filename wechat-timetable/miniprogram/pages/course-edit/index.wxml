@@ -8,21 +8,21 @@
 
     <view class="field">
       <text class="label">星期</text>
-      <picker mode="selector" range="{{dayOptions}}" value="{{dayIndex}}" bindchange="onDay">
+      <picker mode="selector" range="{{dayOptions}}" value="{{dayIndex}}" bindchange="onDay" aria-label="选择星期">
         <view class="picker-value">{{dayOptions[dayIndex]}}</view>
       </picker>
     </view>
 
     <view class="field">
       <text class="label">开始节次</text>
-      <picker mode="selector" range="{{periodOptions}}" value="{{startIndex}}" bindchange="onStart">
+      <picker mode="selector" range="{{periodOptions}}" value="{{startIndex}}" bindchange="onStart" aria-label="选择开始节次">
         <view class="picker-value">{{periodOptions[startIndex]}}</view>
       </picker>
     </view>
 
     <view class="field">
       <text class="label">结束节次</text>
-      <picker mode="selector" range="{{periodOptions}}" value="{{endIndex}}" bindchange="onEnd">
+      <picker mode="selector" range="{{periodOptions}}" value="{{endIndex}}" bindchange="onEnd" aria-label="选择结束节次">
         <view class="picker-value">{{periodOptions[endIndex]}}</view>
       </picker>
     </view>
@@ -53,6 +53,32 @@
         >
           <text wx:if="{{color === item}}" class="swatch-check">✓</text>
         </view>
+      </view>
+    </view>
+
+    <view class="field">
+      <text class="label">周次</text>
+      <block wx:if="{{totalWeeks > 0}}">
+        <picker mode="selector" range="{{weekModeLabels}}" value="{{weekModeIndex}}" bindchange="onWeekMode" aria-label="选择课程周次模式">
+          <view class="picker-value">{{weekModeLabels[weekModeIndex]}}</view>
+        </picker>
+      </block>
+      <text wx:else class="field-hint">设置学期后可配置周次</text>
+    </view>
+
+    <view wx:if="{{totalWeeks > 0 && weekMode === 'custom'}}" class="field field-column">
+      <text class="label">选择周次</text>
+      <view class="week-chips">
+        <view
+          wx:for="{{weekChips}}"
+          wx:key="value"
+          class="week-chip {{item.selected ? 'active' : ''}}"
+          data-week="{{item.value}}"
+          bindtap="onToggleWeek"
+          aria-role="checkbox"
+          aria-label="第{{item.value}}周{{item.selected ? '，已选择' : ''}}"
+          aria-checked="{{item.selected}}"
+        >{{item.selected ? '✓' : ''}}{{item.value}}</view>
       </view>
     </view>
 

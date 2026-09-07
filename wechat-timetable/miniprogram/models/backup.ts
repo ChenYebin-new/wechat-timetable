@@ -39,4 +39,6 @@ export interface ImportPreview {
   mergeSkipDuplicateCount: number
   mergeSkipConflictCount: number
   mergeFinalCount: number
+  mergeAllowed: boolean
+  mergeReason?: string
 }

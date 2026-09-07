@@ -73,6 +73,45 @@
   line-height: 1;
 }
 
+.field-column {
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 16rpx 0;
+}
+
+.field-hint {
+  flex: 1;
+  font-size: 24rpx;
+  color: #71837e;
+}
+
+.week-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 14rpx;
+}
+
+.week-chip {
+  min-width: 64rpx;
+  height: 56rpx;
+  padding: 0 14rpx;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 28rpx;
+  background: #f5f8f8;
+  color: #58706a;
+  font-size: 22rpx;
+  font-weight: 600;
+}
+
+.week-chip.active {
+  background: #267d78;
+  color: #ffffff;
+}
+
 .actions {
   margin-top: 48rpx;
 }
