@@ -1,21 +1,22 @@
 <!-- pages/timetable/index.wxml -->
-<view class="page">
+<view class="page {{selectionMode ? 'selecting' : ''}}">
   <view class="overview">
     <text class="overview-text">{{overviewText}}</text>
-    <view class="overview-actions">
+    <view class="overview-actions {{selectionMode ? 'actions-disabled' : ''}}">
       <view class="action-btn" bindtap="onDataManage" aria-role="button" aria-label="数据管理">数据</view>
       <view class="action-btn action-primary" bindtap="onAdd" aria-role="button" aria-label="新增课程">＋新增</view>
     </view>
   </view>
 
-  <view wx:if="{{!termReady}}" class="term-banner">
-    <text class="term-banner-text">{{needsMigration ? '检测到旧版课表数据，设置学期后自动升级' : '请先设置学期，才能按教学周查看课表'}}</text>
-    <view class="term-banner-btn" bindtap="onTermSettings" aria-role="button" aria-label="设置学期">去设置</view>
+  <view wx:if="{{!termReady || needsMigration}}" class="term-banner">
+    <text class="term-banner-text">{{needsMigration ? (termReady ? '旧版课表自动升级未完成，原数据已保留' : '检测到旧版课表数据，设置学期后自动升级') : '请先设置学期，才能按教学周查看课表'}}</text>
+    <view wx:if="{{needsMigration && termReady}}" class="term-banner-btn" bindtap="onRetryMigration" aria-role="button" aria-label="重试数据升级">重试</view>
+    <view wx:else class="term-banner-btn" bindtap="onTermSettings" aria-role="button" aria-label="设置学期">去设置</view>
   </view>
 
-  <view wx:if="{{termReady}}" class="week-bar">
+  <view wx:if="{{termReady}}" class="week-bar {{selectionMode ? 'week-bar-disabled' : ''}}">
     <view class="week-nav {{currentWeek <= 1 ? 'disabled' : ''}}" bindtap="onPrevWeek" aria-role="button" aria-label="上一周">‹</view>
-    <picker mode="selector" range="{{weekOptions}}" value="{{weekIndex}}" bindchange="onWeekChange" aria-label="选择教学周">
+    <picker mode="selector" range="{{weekOptions}}" value="{{weekIndex}}" bindchange="onWeekChange" disabled="{{selectionMode}}" aria-label="选择教学周">
       <view class="week-label">第 {{currentWeek}} 周</view>
     </picker>
     <view class="week-nav {{currentWeek >= weekOptions.length ? 'disabled' : ''}}" bindtap="onNextWeek" aria-role="button" aria-label="下一周">›</view>
@@ -23,6 +24,8 @@
   </view>
 
   <view wx:if="{{termReady && weekStatus}}" class="week-status">{{weekStatus}}</view>
+
+  <view wx:if="{{termReady && !selectionMode}}" class="selection-hint">长按空白格 1.2 秒，可多选上课时段</view>
 
   <view wx:if="{{isEmpty}}" class="empty-notice">
     <view class="empty-copy">
@@ -34,7 +37,28 @@
 
   <view class="grid-scroll">
     <view class="grid-frame">
-      <timetable-grid day-slots="{{daySlots}}" bind:cardtap="onCourseTap" />
+      <timetable-grid
+        day-slots="{{daySlots}}"
+        selection-mode="{{selectionMode}}"
+        selected-keys="{{selectedKeys}}"
+        disabled-keys="{{disabledKeys}}"
+        hold-enabled="{{termReady}}"
+        bind:cardtap="onCourseTap"
+        bind:occupiedtap="onOccupiedTap"
+        bind:cellhold="onCellHold"
+        bind:celltap="onCellTap"
+      />
+    </view>
+  </view>
+
+  <view wx:if="{{selectionMode}}" class="selection-bar">
+    <view class="selection-copy">
+      <text class="selection-title">已选 {{selectedCount}} 格 · {{selectedRangeCount}} 个时段</text>
+      <text class="selection-detail">{{selectionSummary}}</text>
+    </view>
+    <view class="selection-actions">
+      <view class="selection-cancel" bindtap="onCancelSelection" aria-role="button" aria-label="取消选择">取消</view>
+      <view class="selection-next" bindtap="onSelectionNext" aria-role="button" aria-label="下一步填写课程">下一步</view>
     </view>
   </view>
 </view>

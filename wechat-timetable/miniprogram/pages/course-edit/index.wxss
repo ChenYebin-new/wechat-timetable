@@ -79,6 +79,54 @@
   padding: 16rpx 0;
 }
 
+.range-field {
+  gap: 14rpx;
+}
+
+.range-heading {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.range-edit {
+  min-height: 56rpx;
+  padding: 0 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border-radius: 28rpx;
+  color: #176c66;
+  background: #e1f1ee;
+  font-size: 23rpx;
+  font-weight: 700;
+}
+
+.range-list {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  padding-bottom: 8rpx;
+}
+
+.range-chip {
+  max-width: 100%;
+  padding: 10rpx 16rpx;
+  box-sizing: border-box;
+  border-radius: 12rpx;
+  color: #2e514b;
+  background: #f0f7f5;
+  font-size: 23rpx;
+  line-height: 1.35;
+}
+
+.range-empty {
+  padding-bottom: 16rpx;
+}
+
 .field-hint {
   flex: 1;
   font-size: 24rpx;

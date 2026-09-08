@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "选择上课时段",
+  "usingComponents": {
+    "timetable-grid": "../../components/timetable-grid/index"
+  }
+}

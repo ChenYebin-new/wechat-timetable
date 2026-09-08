@@ -1,16 +1,22 @@
 // pages/timetable/index.ts
-import type { Course, TermSettings } from '../../models/course'
+import type { Course, CourseRange, TermSettings } from '../../models/course'
 import { DAYS } from '../../constants/timetable'
-import { getCourses, getTerm, needsMigration } from '../../services/course-storage'
+import { getCourseGroupByCourseId, getCourses, getTerm, needsMigration } from '../../services/course-storage'
 import { calcCurrentWeek } from '../../utils/term'
 import { computeCardStyle } from '../../utils/timetable-layout'
 import { getContrastText } from '../../utils/color'
+import { formatRanges, keysToRanges, rangesToKeys } from '../../utils/grid-selection'
 
 interface CardItem {
   id: string
   course: Course
   style: string
   textColor: string
+}
+
+interface CourseEditorInit {
+  ranges: CourseRange[]
+  sourceWeek: number
 }
 
 Page({
@@ -24,6 +30,12 @@ Page({
     weekIndex: 0,
     weekOptions: [] as string[],
     weekStatus: '',
+    selectionMode: false,
+    selectedKeys: [] as string[],
+    selectedCount: 0,
+    selectedRangeCount: 0,
+    selectionSummary: '',
+    disabledKeys: [] as string[],
   },
 
   buildSlots(courses: Course[]): CardItem[][] {
@@ -43,6 +55,10 @@ Page({
 
   onShow() {
     this.refresh()
+  },
+
+  onHide() {
+    if (this.data.selectionMode) this.updateSelection([])
   },
 
   /** 整页刷新（进入页面/返回时）：默认定位到当前自然周。 */
@@ -84,10 +100,16 @@ Page({
       daySlots: this.buildSlots(visible),
       isEmpty: courses.length === 0,
       overviewText,
+      disabledKeys: rangesToKeys(visible.map((course) => ({
+        day: course.day,
+        startPeriod: course.startPeriod,
+        endPeriod: course.endPeriod,
+      }))),
     })
   },
 
   changeWeek(w: number) {
+    if (this.data.selectionMode) return
     const total = this.data.weekOptions.length
     if (total === 0) return
     if (w < 1) w = 1
@@ -108,9 +130,14 @@ Page({
     this.changeWeek(Number(e.detail.value) + 1)
   },
 
-  openCourseEditor(url: string) {
+  openCourseEditor(url: string, init?: CourseEditorInit) {
     if (getTerm()) {
-      wx.navigateTo({ url })
+      wx.navigateTo({
+        url,
+        success: (result) => {
+          if (init) result.eventChannel.emit('courseEditorInit', init)
+        },
+      })
       return
     }
     wx.showModal({
@@ -124,19 +151,87 @@ Page({
   },
 
   onAdd() {
+    if (this.data.selectionMode) return
     this.openCourseEditor('/pages/course-edit/index')
   },
 
   onDataManage() {
+    if (this.data.selectionMode) return
     wx.navigateTo({ url: '/pages/data-manage/index' })
   },
 
   onTermSettings() {
+    if (this.data.selectionMode) return
     wx.navigateTo({ url: '/pages/term-settings/index' })
+  },
+
+  onRetryMigration() {
+    this.refresh()
+    if (needsMigration()) {
+      wx.showToast({ title: '升级仍未完成，请稍后重试', icon: 'none' })
+    } else {
+      wx.showToast({ title: '课表数据已升级', icon: 'success' })
+    }
   },
 
   onCourseTap(e: WechatMiniprogram.CustomEvent) {
     const id = e.detail.id as string
-    this.openCourseEditor(`/pages/course-edit/index?id=${id}`)
+    const group = getCourseGroupByCourseId(id)
+    if (group.length <= 1) {
+      this.openCourseEditor(`/pages/course-edit/index?id=${id}&mode=segment-edit&sourceWeek=${this.data.currentWeek}`)
+      return
+    }
+    wx.showActionSheet({
+      itemList: ['仅编辑本时段', '编辑整门课程'],
+      success: (result) => {
+        const mode = result.tapIndex === 0 ? 'segment-edit' : 'group-edit'
+        this.openCourseEditor(`/pages/course-edit/index?id=${id}&mode=${mode}&sourceWeek=${this.data.currentWeek}`)
+      },
+    })
+  },
+
+  updateSelection(keys: string[]) {
+    const ranges = keysToRanges(keys)
+    const normalizedKeys = rangesToKeys(ranges)
+    this.setData({
+      selectionMode: normalizedKeys.length > 0,
+      selectedKeys: normalizedKeys,
+      selectedCount: normalizedKeys.length,
+      selectedRangeCount: ranges.length,
+      selectionSummary: formatRanges(ranges),
+    })
+  },
+
+  onCellHold(e: WechatMiniprogram.CustomEvent) {
+    if (!this.data.termReady || this.data.selectionMode) return
+    const key = e.detail.key as string
+    this.updateSelection([key])
+    wx.vibrateShort({ type: 'light' })
+  },
+
+  onCellTap(e: WechatMiniprogram.CustomEvent) {
+    if (!this.data.selectionMode) return
+    const key = e.detail.key as string
+    const selected = [...this.data.selectedKeys]
+    const index = selected.indexOf(key)
+    if (index >= 0) selected.splice(index, 1)
+    else selected.push(key)
+    this.updateSelection(selected)
+  },
+
+  onOccupiedTap() {
+    wx.showToast({ title: '该时段已有课程', icon: 'none' })
+  },
+
+  onCancelSelection() {
+    this.updateSelection([])
+  },
+
+  onSelectionNext() {
+    const ranges = keysToRanges(this.data.selectedKeys)
+    if (!ranges.length) return
+    const init: CourseEditorInit = { ranges, sourceWeek: this.data.currentWeek }
+    this.updateSelection([])
+    this.openCourseEditor('/pages/course-edit/index?mode=group-create', init)
   },
 })

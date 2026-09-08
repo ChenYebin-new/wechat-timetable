@@ -6,26 +6,40 @@
       <input class="input" value="{{name}}" placeholder="必填" placeholder-class="ph" bindinput="onName" />
     </view>
 
-    <view class="field">
-      <text class="label">星期</text>
-      <picker mode="selector" range="{{dayOptions}}" value="{{dayIndex}}" bindchange="onDay" aria-label="选择星期">
-        <view class="picker-value">{{dayOptions[dayIndex]}}</view>
-      </picker>
-    </view>
+    <block wx:if="{{isGroupMode}}">
+      <view class="field field-column range-field">
+        <view class="range-heading">
+          <text class="label">上课时段</text>
+          <view class="range-edit" bindtap="onReselect" aria-role="button" aria-label="重新选择上课时段">重新选择</view>
+        </view>
+        <view wx:if="{{rangeItems.length}}" class="range-list">
+          <text class="range-chip" wx:for="{{rangeItems}}" wx:key="*this">{{item}}</text>
+        </view>
+        <text wx:else class="field-hint range-empty">还没有选择上课时段</text>
+      </view>
+    </block>
+    <block wx:else>
+      <view class="field">
+        <text class="label">星期</text>
+        <picker mode="selector" range="{{dayOptions}}" value="{{dayIndex}}" bindchange="onDay" aria-label="选择星期">
+          <view class="picker-value">{{dayOptions[dayIndex]}}</view>
+        </picker>
+      </view>
 
-    <view class="field">
-      <text class="label">开始节次</text>
-      <picker mode="selector" range="{{periodOptions}}" value="{{startIndex}}" bindchange="onStart" aria-label="选择开始节次">
-        <view class="picker-value">{{periodOptions[startIndex]}}</view>
-      </picker>
-    </view>
+      <view class="field">
+        <text class="label">开始节次</text>
+        <picker mode="selector" range="{{periodOptions}}" value="{{startIndex}}" bindchange="onStart" aria-label="选择开始节次">
+          <view class="picker-value">{{periodOptions[startIndex]}}</view>
+        </picker>
+      </view>
 
-    <view class="field">
-      <text class="label">结束节次</text>
-      <picker mode="selector" range="{{periodOptions}}" value="{{endIndex}}" bindchange="onEnd" aria-label="选择结束节次">
-        <view class="picker-value">{{periodOptions[endIndex]}}</view>
-      </picker>
-    </view>
+      <view class="field">
+        <text class="label">结束节次</text>
+        <picker mode="selector" range="{{periodOptions}}" value="{{endIndex}}" bindchange="onEnd" aria-label="选择结束节次">
+          <view class="picker-value">{{periodOptions[endIndex]}}</view>
+        </picker>
+      </view>
+    </block>
 
     <view class="field">
       <text class="label">教师</text>
@@ -83,7 +97,7 @@
     </view>
 
     <view class="actions">
-      <button class="btn btn-primary" bindtap="onSave">保存</button>
+      <button class="btn btn-primary" bindtap="onSave" loading="{{saving}}" disabled="{{saving}}">保存</button>
       <button wx:if="{{isEdit}}" class="btn btn-danger" bindtap="onDelete">删除</button>
     </view>
   </view>

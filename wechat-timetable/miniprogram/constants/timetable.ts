@@ -4,7 +4,8 @@
 import type { WeekMode } from '../models/course'
 
 export const STORAGE_KEY = 'timetable_courses'
-export const SCHEMA_VERSION = 2
+export const SCHEMA_VERSION = 3
+export const GRID_HOLD_DURATION_MS = 1200
 export const MAX_PERIOD = 9
 
 /** 单个节次单元格高度(rpx)。需与 components/timetable-grid/index.wxss 中的 height 保持一致。 */
