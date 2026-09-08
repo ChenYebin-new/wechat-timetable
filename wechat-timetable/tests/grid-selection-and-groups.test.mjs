@@ -54,6 +54,10 @@ const selection = await import('../miniprogram/utils/grid-selection.ts')
 const courseStorage = await import('../miniprogram/services/course-storage.ts')
 const timetableConstants = await import('../miniprogram/constants/timetable.ts')
 const timetableLayout = await import('../miniprogram/utils/timetable-layout.ts')
+const timetablePageMarkup = readFileSync(
+  new URL('../miniprogram/pages/timetable/index.wxml', import.meta.url),
+  'utf8',
+)
 
 function draft(overrides = {}) {
   return {
@@ -82,6 +86,12 @@ function reset(courses = []) {
 
 test('课表空白格长按阈值为 1.2 秒', () => {
   assert.equal(timetableConstants.GRID_HOLD_DURATION_MS, 1200)
+})
+
+test('多选模式使用静态课表，避免 swiper 继续响应横向拖动', () => {
+  assert.match(timetablePageMarkup, /<swiper\s+wx:if="{{!selectionMode}}"/)
+  assert.match(timetablePageMarkup, /<view wx:else class="week-static"/)
+  assert.match(timetablePageMarkup, /wx:if="{{item\.week === currentWeek}}"/)
 })
 
 test('课程卡片按星期分组并复用统一布局信息', () => {

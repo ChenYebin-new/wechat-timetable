@@ -37,6 +37,7 @@
 
   <view class="grid-scroll">
     <swiper
+      wx:if="{{!selectionMode}}"
       class="week-swiper"
       style="height: {{swiperHeightRpx}}rpx;"
       current="{{weekIndex}}"
@@ -44,7 +45,7 @@
       easing-function="easeOutCubic"
       circular="{{false}}"
       skip-hidden-item-layout="{{true}}"
-      disable-touch="{{!termReady || selectionMode}}"
+      disable-touch="{{!termReady}}"
       bindchange="onWeekSwipeChange"
       aria-label="课表，可左右滑动切换周次"
     >
@@ -64,6 +65,23 @@
         </view>
       </swiper-item>
     </swiper>
+    <view wx:else class="week-static" style="height: {{swiperHeightRpx}}rpx;">
+      <block wx:for="{{weekPanels}}" wx:key="week">
+        <view wx:if="{{item.week === currentWeek}}" class="grid-frame">
+          <timetable-grid
+            day-slots="{{item.daySlots}}"
+            selection-mode="{{true}}"
+            selected-keys="{{selectedKeys}}"
+            disabled-keys="{{item.disabledKeys}}"
+            hold-enabled="{{false}}"
+            bind:cardtap="onCourseTap"
+            bind:occupiedtap="onOccupiedTap"
+            bind:cellhold="onCellHold"
+            bind:celltap="onCellTap"
+          />
+        </view>
+      </block>
+    </view>
   </view>
 
   <view wx:if="{{selectionMode}}" class="selection-bar">

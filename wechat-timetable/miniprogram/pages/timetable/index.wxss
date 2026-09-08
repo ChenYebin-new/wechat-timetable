@@ -244,6 +244,7 @@
 }
 
 .week-swiper,
+.week-static,
 .grid-frame {
   width: 100%;
 }
