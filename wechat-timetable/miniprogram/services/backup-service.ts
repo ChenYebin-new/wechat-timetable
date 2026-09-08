@@ -1,5 +1,5 @@
 // services/backup-service.ts
-// 课表数据的导出、导入校验、预览、覆盖、合并与最近自动备份（V2 学期数据，兼容 V1 备份）。
+// 课表数据的导出、导入校验、预览、覆盖、合并与最近自动备份（V3，兼容 V1/V2）。
 
 import type { Course, TermSettings, TimetableStorage, WeekMode } from '../models/course'
 import { COLOR_PALETTE, MAX_PERIOD, SCHEMA_VERSION } from '../constants/timetable'
@@ -82,13 +82,17 @@ function unsupportedStorageReason(schemaVersion: number): string {
 }
 
 /** 严格校验单门备份课程的基础字段，返回规范化结果（周次在 analyzeBackup 中按学期处理）。 */
-function validateBackupCourse(raw: unknown): CourseValidationResult {
+function validateBackupCourse(raw: unknown, schemaVersion: number): CourseValidationResult {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     return { reason: '课程不是有效对象' }
   }
   const c = raw as Record<string, unknown>
   if (typeof c.id !== 'string' || !c.id.trim() || c.id !== c.id.trim()) {
     return { reason: '课程 ID 缺失或格式不正确' }
+  }
+  const groupId = schemaVersion >= 3 ? c.groupId : c.id
+  if (typeof groupId !== 'string' || !groupId.trim() || groupId !== groupId.trim()) {
+    return { reason: '课程组 ID 缺失或格式不正确' }
   }
   if (typeof c.name !== 'string' || !c.name.trim()) {
     return { reason: '课程名称不能为空' }
@@ -139,6 +143,7 @@ function validateBackupCourse(raw: unknown): CourseValidationResult {
   }
   const course: Course = {
     id: c.id,
+    groupId,
     name: c.name.trim(),
     day: c.day,
     startPeriod: c.startPeriod,
@@ -159,10 +164,10 @@ function validateBackupCourse(raw: unknown): CourseValidationResult {
 /** 导出当前课表为备份 JSON 文本。 */
 export function exportBackup(): string {
   const storage = getStorage()
-  if (storage.schemaVersion !== 1 && storage.schemaVersion !== SCHEMA_VERSION) {
+  if (storage.schemaVersion !== 1 && storage.schemaVersion !== 2 && storage.schemaVersion !== SCHEMA_VERSION) {
     throw new Error(unsupportedStorageReason(storage.schemaVersion))
   }
-  if (storage.schemaVersion === SCHEMA_VERSION) {
+  if (storage.schemaVersion >= 2 && storage.schemaVersion <= SCHEMA_VERSION) {
     const termCheck = validateTerm(storage.term)
     if (!termCheck.ok) {
       throw new Error(termCheck.reason || '请先设置有效学期再导出')
@@ -246,14 +251,14 @@ export function analyzeBackup(envelope: TimetableBackupEnvelope): AnalyzeResult 
   const schemaVersion = envelope.data.schemaVersion
   if (!Number.isInteger(schemaVersion)) {
     errors.push('备份数据版本缺失或格式不正确')
-  } else if (schemaVersion !== 1 && schemaVersion !== SCHEMA_VERSION) {
+  } else if (schemaVersion !== 1 && schemaVersion !== 2 && schemaVersion !== SCHEMA_VERSION) {
     errors.push(`不支持的课表数据版本：${schemaVersion}`)
   }
 
-  // V2 备份必须带有效学期；V1 备份无学期。
+  // V2/V3 备份必须带有效学期；V1 备份无学期。
   let term: TermSettings | null = null
   const needsTerm = schemaVersion === 1
-  if (schemaVersion === SCHEMA_VERSION) {
+  if (schemaVersion === 2 || schemaVersion === SCHEMA_VERSION) {
     const termCheck = validateTerm(envelope.data.term as TermSettings | null)
     if (!termCheck.ok) {
       errors.push(`备份学期设置无效：${termCheck.reason || '缺少学期设置'}`)
@@ -270,17 +275,24 @@ export function analyzeBackup(envelope: TimetableBackupEnvelope): AnalyzeResult 
     for (let index = 0; index < envelope.data.courses.length; index++) {
       const rawCourse = envelope.data.courses[index]
       if (
-        schemaVersion === SCHEMA_VERSION &&
+        (schemaVersion === 2 || schemaVersion === SCHEMA_VERSION) &&
         (!rawCourse ||
           typeof rawCourse !== 'object' ||
           Array.isArray(rawCourse) ||
           !('weekMode' in rawCourse) ||
           !('weeks' in rawCourse))
       ) {
-        errors.push(`第 ${index + 1} 门课程缺少 V2 周次字段`)
+        errors.push(`第 ${index + 1} 门课程缺少周次字段`)
         break
       }
-      const validated = validateBackupCourse(rawCourse)
+      if (
+        schemaVersion === SCHEMA_VERSION &&
+        (!rawCourse || typeof rawCourse !== 'object' || Array.isArray(rawCourse) || !('groupId' in rawCourse))
+      ) {
+        errors.push(`第 ${index + 1} 门课程缺少 V3 课程组字段`)
+        break
+      }
+      const validated = validateBackupCourse(rawCourse, schemaVersion)
       if (!validated.course) {
         errors.push(`第 ${index + 1} 门课程无效：${validated.reason || '字段不完整'}`)
         break
@@ -316,6 +328,29 @@ export function analyzeBackup(envelope: TimetableBackupEnvelope): AnalyzeResult 
     }
   } else {
     errors.push('备份课程数据不是数组')
+  }
+
+  // 同一课程组的共同字段必须一致，避免导入后出现无法整体编辑的脏数据。
+  if (!errors.length && schemaVersion === SCHEMA_VERSION) {
+    const groupHeads = new Map<string, Course>()
+    for (const course of backupCourses) {
+      const head = groupHeads.get(course.groupId)
+      if (!head) {
+        groupHeads.set(course.groupId, course)
+        continue
+      }
+      if (
+        head.name !== course.name ||
+        head.teacher !== course.teacher ||
+        head.location !== course.location ||
+        head.color !== course.color ||
+        head.weekMode !== course.weekMode ||
+        !sameWeeks(head.weeks, course.weeks)
+      ) {
+        errors.push(`课程组「${course.name}」的共同信息不一致`)
+        break
+      }
+    }
   }
 
   // 备份内部不得存在冲突课程（星期 + 节次 + 周次三者都重叠）。
@@ -366,7 +401,7 @@ function computePreview(
       mergeReason = '备份与当前课表的学期开始日期或总周数不同，不能直接合并；可改用覆盖导入。'
     } else if (!current.term && current.courses.length > 0) {
       mergeAllowed = false
-      mergeReason = '当前课表缺少有效学期，不能直接合并 V2 备份；请先设置学期。'
+      mergeReason = '当前课表缺少有效学期，不能直接合并新版备份；请先设置学期。'
     }
   }
 
@@ -502,7 +537,16 @@ function recoverAfterMutationFailure(current: TimetableStorage): MutationResult 
 
 /** V1 备份导入时，把课程按所选学期展开为"全部周"。 */
 function expandV1CoursesWithTerm(courses: Course[], term: TermSettings): Course[] {
-  return courses.map((c) => ({ ...c, weekMode: 'all' as WeekMode, weeks: expandWeeks('all', term.totalWeeks) }))
+  return courses.map((c) => ({
+    ...c,
+    groupId: c.groupId || c.id,
+    weekMode: 'all' as WeekMode,
+    weeks: expandWeeks('all', term.totalWeeks),
+  }))
+}
+
+function generateImportId(): string {
+  return `import-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
 /** 用备份整体覆盖当前课表。覆盖前先生成最近自动备份。V1 备份需提供 term。 */
@@ -567,7 +611,7 @@ export function mergeFromBackup(envelope: TimetableBackupEnvelope, term?: TermSe
       }
     }
     if (!current.term && current.courses.length > 0) {
-      return { ok: false, reason: '当前课表缺少有效学期，不能直接合并 V2 备份；请先设置学期。' }
+      return { ok: false, reason: '当前课表缺少有效学期，不能直接合并新版备份；请先设置学期。' }
     }
     targetTerm = current.term || analyzed.term
     incoming = analyzed.courses
@@ -578,6 +622,7 @@ export function mergeFromBackup(envelope: TimetableBackupEnvelope, term?: TermSe
   }
 
   const result = current.courses.map((c) => ({ ...c }))
+  const remappedGroups = new Map<string, string>()
   let added = 0
   let duplicateCount = 0
   let conflictCount = 0
@@ -590,7 +635,12 @@ export function mergeFromBackup(envelope: TimetableBackupEnvelope, term?: TermSe
       conflictCount++
       continue
     }
-    result.push(bc)
+    let groupId = remappedGroups.get(bc.groupId)
+    if (!groupId) {
+      groupId = generateImportId()
+      remappedGroups.set(bc.groupId, groupId)
+    }
+    result.push({ ...bc, id: generateImportId(), groupId })
     added++
   }
 
@@ -624,7 +674,10 @@ export function restoreRecentBackup(): MutationResult {
     }
     targetTerm = current.term
     targetCourses = expandV1CoursesWithTerm(rb.export.data.courses, targetTerm)
-  } else if (rb.export.data.schemaVersion === SCHEMA_VERSION && rb.export.data.term) {
+  } else if (
+    (rb.export.data.schemaVersion === 2 || rb.export.data.schemaVersion === SCHEMA_VERSION) &&
+    rb.export.data.term
+  ) {
     targetTerm = rb.export.data.term
     targetCourses = rb.export.data.courses
   } else {

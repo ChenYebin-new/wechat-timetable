@@ -67,12 +67,15 @@ function v1Course(overrides = {}) {
 }
 
 function v2Course(overrides = {}) {
-  return {
+  const value = {
     ...v1Course(),
+    groupId: 'group-1',
     weekMode: 'all',
     weeks: [...ALL_WEEKS],
     ...overrides,
   }
+  if (!Object.prototype.hasOwnProperty.call(overrides, 'groupId')) value.groupId = value.id
+  return value
 }
 
 test('学期日期必须是真实存在的星期一', () => {
@@ -111,10 +114,10 @@ test('指定周次为空、重复或越界时不能保存', () => {
 })
 
 test('未设置学期时服务层拒绝新增课程', () => {
-  storage = new Map([[TIMETABLE_KEY, { schemaVersion: 2, term: null, courses: [] }]])
+  storage = new Map([[TIMETABLE_KEY, { schemaVersion: 3, term: null, courses: [] }]])
   timetableWriteFailures = 0
   assert.throws(() => courseStorage.save(v2Course({ id: '' })), /学期/)
-  assert.deepEqual(storage.get(TIMETABLE_KEY), { schemaVersion: 2, term: null, courses: [] })
+  assert.deepEqual(storage.get(TIMETABLE_KEY), { schemaVersion: 3, term: null, courses: [] })
 })
 
 test('V1 迁移完整保留课程字段并展开全部周', () => {
@@ -125,10 +128,11 @@ test('V1 迁移完整保留课程字段并展开全部周', () => {
   const result = courseStorage.applyTerm(TERM)
   assert.deepEqual(result, { ok: true, migrated: true })
   const saved = storage.get(TIMETABLE_KEY)
-  assert.equal(saved.schemaVersion, 2)
+  assert.equal(saved.schemaVersion, 3)
   assert.deepEqual(saved.term, TERM)
   assert.deepEqual(saved.courses[0], {
     ...original,
+    groupId: original.id,
     weekMode: 'all',
     weeks: ALL_WEEKS,
   })
@@ -137,7 +141,7 @@ test('V1 迁移完整保留课程字段并展开全部周', () => {
 
 test('学期调整校验失败时不覆盖原来的最近备份', () => {
   const current = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     term: { startDate: '2026-09-07', totalWeeks: 20 },
     courses: [v2Course({ weekMode: 'custom', weeks: [20] })],
   }

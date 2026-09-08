@@ -1,0 +1,29 @@
+<view class="page">
+  <view class="intro">
+    <text class="intro-title">重新选择上课时段</text>
+    <text class="intro-desc">点击空白格进行多选，同一天连续节次会自动合并。已有课程占用的时段不可选择。</text>
+  </view>
+
+  <view wx:if="{{ready}}" class="grid-frame">
+    <timetable-grid
+      day-slots="{{daySlots}}"
+      selection-mode="{{true}}"
+      selected-keys="{{selectedKeys}}"
+      disabled-keys="{{disabledKeys}}"
+      hold-enabled="{{false}}"
+      bind:celltap="onCellTap"
+      bind:occupiedtap="onOccupiedTap"
+    />
+  </view>
+
+  <view class="selection-bar">
+    <view class="selection-copy">
+      <text class="selection-title">已选 {{selectedCount}} 格 · {{rangeCount}} 个时段</text>
+      <text class="selection-detail">{{summary || '请点击课表中的空白格'}}</text>
+    </view>
+    <view class="selection-actions">
+      <view class="selection-cancel" bindtap="onCancel" aria-role="button" aria-label="取消重新选择">取消</view>
+      <view class="selection-done {{selectedCount ? '' : 'disabled'}}" bindtap="onDone" aria-role="button" aria-label="完成时段选择">完成</view>
+    </view>
+  </view>
+</view>

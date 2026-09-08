@@ -2,6 +2,7 @@
   "pages": [
     "pages/timetable/index",
     "pages/course-edit/index",
+    "pages/slot-select/index",
     "pages/data-manage/index",
     "pages/term-settings/index"
   ],
