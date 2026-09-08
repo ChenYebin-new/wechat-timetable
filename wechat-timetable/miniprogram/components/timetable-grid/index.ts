@@ -1,13 +1,7 @@
 // components/timetable-grid/index.ts
-import { Course } from '../../models/course'
 import { DAYS, GRID_HOLD_DURATION_MS, PERIODS } from '../../constants/timetable'
 import { cellKey } from '../../utils/grid-selection'
-
-interface CardItem {
-  id: string
-  course: Course
-  style: string
-}
+import type { TimetableCardItem } from '../../utils/timetable-layout'
 
 interface GridCellItem {
   key: string
@@ -19,28 +13,43 @@ interface GridCellItem {
 
 interface GridColumnItem {
   day: number
-  slots: CardItem[]
+  slots: TimetableCardItem[]
   cells: GridCellItem[]
 }
 
-let holdTimer: ReturnType<typeof setTimeout> | null = null
-let holdKey = ''
-let ignoreTapKey = ''
-let ignoreTapUntil = 0
-let holdStartX = 0
-let holdStartY = 0
+interface HoldState {
+  timer: ReturnType<typeof setTimeout> | null
+  key: string
+  ignoreTapKey: string
+  ignoreTapUntil: number
+  startX: number
+  startY: number
+}
 
-function clearHoldTimer(): void {
-  if (holdTimer !== null) clearTimeout(holdTimer)
-  holdTimer = null
-  holdKey = ''
+const holdStates = new WeakMap<object, HoldState>()
+
+function getHoldState(instance: object): HoldState {
+  let state = holdStates.get(instance)
+  if (!state) {
+    state = { timer: null, key: '', ignoreTapKey: '', ignoreTapUntil: 0, startX: 0, startY: 0 }
+    holdStates.set(instance, state)
+  }
+  return state
+}
+
+function clearHoldTimer(instance: object): void {
+  const state = holdStates.get(instance)
+  if (!state) return
+  if (state.timer !== null) clearTimeout(state.timer)
+  state.timer = null
+  state.key = ''
 }
 
 Component({
   properties: {
     daySlots: {
       type: Array,
-      value: [] as CardItem[][],
+      value: [] as TimetableCardItem[][],
       observer: 'rebuildColumns',
     },
     selectionMode: {
@@ -75,7 +84,8 @@ Component({
       this.rebuildColumns()
     },
     detached() {
-      clearHoldTimer()
+      clearHoldTimer(this)
+      holdStates.delete(this)
     },
   },
 
@@ -83,7 +93,7 @@ Component({
     rebuildColumns() {
       const selected = new Set(this.properties.selectedKeys as string[])
       const disabled = new Set(this.properties.disabledKeys as string[])
-      const daySlots = this.properties.daySlots as CardItem[][]
+      const daySlots = this.properties.daySlots as TimetableCardItem[][]
       const columns = DAYS.map((_, dayIndex) => ({
         day: dayIndex + 1,
         slots: daySlots[dayIndex] || [],
@@ -111,16 +121,17 @@ Component({
       if (e.currentTarget.dataset.disabled) return
       const touch = e.touches[0]
       if (!touch) return
-      clearHoldTimer()
-      holdKey = e.currentTarget.dataset.key as string
-      holdStartX = touch.clientX
-      holdStartY = touch.clientY
-      this.setData({ pressingKey: holdKey })
-      holdTimer = setTimeout(() => {
-        const key = holdKey
-        clearHoldTimer()
-        ignoreTapKey = key
-        ignoreTapUntil = Date.now() + 600
+      const state = getHoldState(this)
+      clearHoldTimer(this)
+      state.key = e.currentTarget.dataset.key as string
+      state.startX = touch.clientX
+      state.startY = touch.clientY
+      this.setData({ pressingKey: state.key })
+      state.timer = setTimeout(() => {
+        const key = state.key
+        clearHoldTimer(this)
+        state.ignoreTapKey = key
+        state.ignoreTapUntil = Date.now() + 600
         this.setData({ pressingKey: '' })
         this.triggerEvent('cellhold', {
           key,
@@ -131,29 +142,31 @@ Component({
     },
 
     onCellTouchMove(e: WechatMiniprogram.TouchEvent) {
-      if (holdTimer === null) return
+      const state = getHoldState(this)
+      if (state.timer === null) return
       const touch = e.touches[0]
       if (!touch) return
-      if (Math.abs(touch.clientX - holdStartX) > 12 || Math.abs(touch.clientY - holdStartY) > 12) {
-        clearHoldTimer()
+      if (Math.abs(touch.clientX - state.startX) > 12 || Math.abs(touch.clientY - state.startY) > 12) {
+        clearHoldTimer(this)
         this.setData({ pressingKey: '' })
       }
     },
 
     onCellTouchEnd() {
-      clearHoldTimer()
+      clearHoldTimer(this)
       this.setData({ pressingKey: '' })
     },
 
     onCellTap(e: WechatMiniprogram.TouchEvent) {
+      const state = getHoldState(this)
       const key = e.currentTarget.dataset.key as string
-      if (ignoreTapKey === key && Date.now() <= ignoreTapUntil) {
-        ignoreTapKey = ''
-        ignoreTapUntil = 0
+      if (state.ignoreTapKey === key && Date.now() <= state.ignoreTapUntil) {
+        state.ignoreTapKey = ''
+        state.ignoreTapUntil = 0
         return
       }
-      ignoreTapKey = ''
-      ignoreTapUntil = 0
+      state.ignoreTapKey = ''
+      state.ignoreTapUntil = 0
       if (!this.properties.selectionMode) return
       if (e.currentTarget.dataset.disabled && !e.currentTarget.dataset.selected) {
         this.triggerEvent('occupiedtap')

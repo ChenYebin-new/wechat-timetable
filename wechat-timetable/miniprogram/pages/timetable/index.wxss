@@ -240,11 +240,13 @@
 }
 
 .grid-scroll {
-  padding: 0;
+  padding: 0 0 calc(28rpx + env(safe-area-inset-bottom));
 }
 
+.week-swiper,
+.week-static,
 .grid-frame {
-  padding-bottom: calc(28rpx + env(safe-area-inset-bottom));
+  width: 100%;
 }
 
 .empty-notice {
