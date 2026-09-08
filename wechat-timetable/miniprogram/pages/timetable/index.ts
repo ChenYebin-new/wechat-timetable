@@ -1,18 +1,15 @@
 // pages/timetable/index.ts
-import type { Course, CourseRange, TermSettings } from '../../models/course'
+import type { CourseRange, TermSettings } from '../../models/course'
 import { DAYS } from '../../constants/timetable'
 import { getCourseGroupByCourseId, getCourses, getTerm, needsMigration } from '../../services/course-storage'
 import { calcCurrentWeek } from '../../utils/term'
-import { computeCardStyle } from '../../utils/timetable-layout'
-import { getContrastText } from '../../utils/color'
+import {
+  buildWeekPanels,
+  coursesForWeek,
+  TIMETABLE_GRID_HEIGHT_RPX,
+} from '../../utils/timetable-layout'
+import type { WeekPanel } from '../../utils/timetable-layout'
 import { formatRanges, keysToRanges, rangesToKeys } from '../../utils/grid-selection'
-
-interface CardItem {
-  id: string
-  course: Course
-  style: string
-  textColor: string
-}
 
 interface CourseEditorInit {
   ranges: CourseRange[]
@@ -21,7 +18,8 @@ interface CourseEditorInit {
 
 Page({
   data: {
-    daySlots: [] as CardItem[][],
+    weekPanels: [] as WeekPanel[],
+    swiperHeightRpx: TIMETABLE_GRID_HEIGHT_RPX,
     isEmpty: true,
     overviewText: '',
     termReady: false,
@@ -35,22 +33,6 @@ Page({
     selectedCount: 0,
     selectedRangeCount: 0,
     selectionSummary: '',
-    disabledKeys: [] as string[],
-  },
-
-  buildSlots(courses: Course[]): CardItem[][] {
-    const slots: CardItem[][] = DAYS.map(() => [])
-    for (const c of courses) {
-      if (c.day >= 1 && c.day <= DAYS.length) {
-        slots[c.day - 1].push({
-          id: c.id,
-          course: c,
-          style: computeCardStyle(c),
-          textColor: getContrastText(c.color),
-        })
-      }
-    }
-    return slots
   },
 
   onShow() {
@@ -85,7 +67,7 @@ Page({
   renderWeek(week: number, term: TermSettings | null) {
     const courses = getCourses()
     const visible = term
-      ? courses.filter((c) => c.weeks.length === 0 || c.weeks.includes(week))
+      ? coursesForWeek(courses, week)
       : courses
     const systemDay = new Date().getDay()
     const today = systemDay === 0 ? 7 : systemDay
@@ -97,14 +79,9 @@ Page({
     this.setData({
       currentWeek: week,
       weekIndex: week - 1,
-      daySlots: this.buildSlots(visible),
+      weekPanels: buildWeekPanels(courses, week, term?.totalWeeks),
       isEmpty: courses.length === 0,
       overviewText,
-      disabledKeys: rangesToKeys(visible.map((course) => ({
-        day: course.day,
-        startPeriod: course.startPeriod,
-        endPeriod: course.endPeriod,
-      }))),
     })
   },
 
@@ -128,6 +105,11 @@ Page({
 
   onWeekChange(e: WechatMiniprogram.PickerChange) {
     this.changeWeek(Number(e.detail.value) + 1)
+  },
+
+  onWeekSwipeChange(e: WechatMiniprogram.SwiperChange) {
+    if (e.detail.source !== 'touch') return
+    this.changeWeek(e.detail.current + 1)
   },
 
   openCourseEditor(url: string, init?: CourseEditorInit) {

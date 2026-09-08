@@ -25,7 +25,7 @@
 
   <view wx:if="{{termReady && weekStatus}}" class="week-status">{{weekStatus}}</view>
 
-  <view wx:if="{{termReady && !selectionMode}}" class="selection-hint">长按空白格 1.2 秒，可多选上课时段</view>
+  <view wx:if="{{termReady && !selectionMode}}" class="selection-hint">左右滑动切换周次；长按空白格 1.2 秒可多选时段</view>
 
   <view wx:if="{{isEmpty}}" class="empty-notice">
     <view class="empty-copy">
@@ -36,19 +36,34 @@
   </view>
 
   <view class="grid-scroll">
-    <view class="grid-frame">
-      <timetable-grid
-        day-slots="{{daySlots}}"
-        selection-mode="{{selectionMode}}"
-        selected-keys="{{selectedKeys}}"
-        disabled-keys="{{disabledKeys}}"
-        hold-enabled="{{termReady}}"
-        bind:cardtap="onCourseTap"
-        bind:occupiedtap="onOccupiedTap"
-        bind:cellhold="onCellHold"
-        bind:celltap="onCellTap"
-      />
-    </view>
+    <swiper
+      class="week-swiper"
+      style="height: {{swiperHeightRpx}}rpx;"
+      current="{{weekIndex}}"
+      duration="320"
+      easing-function="easeOutCubic"
+      circular="{{false}}"
+      skip-hidden-item-layout="{{true}}"
+      disable-touch="{{!termReady || selectionMode}}"
+      bindchange="onWeekSwipeChange"
+      aria-label="课表，可左右滑动切换周次"
+    >
+      <swiper-item wx:for="{{weekPanels}}" wx:key="week">
+        <view wx:if="{{item.active}}" class="grid-frame">
+          <timetable-grid
+            day-slots="{{item.daySlots}}"
+            selection-mode="{{selectionMode}}"
+            selected-keys="{{selectedKeys}}"
+            disabled-keys="{{item.disabledKeys}}"
+            hold-enabled="{{termReady && item.week === currentWeek}}"
+            bind:cardtap="onCourseTap"
+            bind:occupiedtap="onOccupiedTap"
+            bind:cellhold="onCellHold"
+            bind:celltap="onCellTap"
+          />
+        </view>
+      </swiper-item>
+    </swiper>
   </view>
 
   <view wx:if="{{selectionMode}}" class="selection-bar">

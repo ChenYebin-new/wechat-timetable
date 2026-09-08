@@ -53,6 +53,7 @@ globalThis.wx = {
 const selection = await import('../miniprogram/utils/grid-selection.ts')
 const courseStorage = await import('../miniprogram/services/course-storage.ts')
 const timetableConstants = await import('../miniprogram/constants/timetable.ts')
+const timetableLayout = await import('../miniprogram/utils/timetable-layout.ts')
 
 function draft(overrides = {}) {
   return {
@@ -81,6 +82,53 @@ function reset(courses = []) {
 
 test('课表空白格长按阈值为 1.2 秒', () => {
   assert.equal(timetableConstants.GRID_HOLD_DURATION_MS, 1200)
+})
+
+test('课程卡片按星期分组并复用统一布局信息', () => {
+  const courses = [
+    draft({ id: 'monday', groupId: 'monday', day: 1, startPeriod: 2, endPeriod: 3 }),
+    draft({ id: 'sunday', groupId: 'sunday', day: 7, startPeriod: 9, endPeriod: 9 }),
+  ]
+  const slots = timetableLayout.buildDaySlots(courses)
+
+  assert.equal(slots.length, 7)
+  assert.deepEqual(slots[0].map((item) => item.id), ['monday'])
+  assert.deepEqual(slots[6].map((item) => item.id), ['sunday'])
+  assert.match(slots[0][0].style, /^top: \d+rpx; height: \d+rpx;$/)
+  assert.match(slots[0][0].textColor, /^#[0-9a-f]{6}$/i)
+})
+
+test('周面板只为当前周与相邻周构建课表，并按课程周次过滤', () => {
+  const courses = [
+    draft({ id: 'all', groupId: 'all', day: 1, weekMode: 'all', weeks: [] }),
+    draft({ id: 'odd', groupId: 'odd', day: 2, weekMode: 'odd', weeks: [1, 3] }),
+    draft({ id: 'even', groupId: 'even', day: 3, weekMode: 'even', weeks: [2, 4] }),
+    draft({ id: 'custom', groupId: 'custom', day: 4, weekMode: 'custom', weeks: [2] }),
+  ]
+  const panels = timetableLayout.buildWeekPanels(courses, 2, 4)
+  const idsForWeek = (week) => panels[week - 1].daySlots.flat().map((item) => item.id).sort()
+
+  assert.deepEqual(panels.map((panel) => panel.active), [true, true, true, false])
+  assert.deepEqual(idsForWeek(1), ['all', 'odd'])
+  assert.deepEqual(idsForWeek(2), ['all', 'custom', 'even'])
+  assert.deepEqual(idsForWeek(3), ['all', 'odd'])
+  assert.deepEqual(panels[1].disabledKeys.sort(), ['1-1', '3-1', '4-1'])
+  assert.deepEqual(panels[3].daySlots, [])
+  assert.deepEqual(panels[3].disabledKeys, [])
+})
+
+test('周面板在学期边界和未设置学期时不生成越界内容', () => {
+  const course = draft({ id: 'week-two', groupId: 'week-two', day: 5, weeks: [2] })
+  const oneWeek = timetableLayout.buildWeekPanels([course], 1, 1)
+  const twoWeeks = timetableLayout.buildWeekPanels([course], 2, 2)
+  const withoutTerm = timetableLayout.buildWeekPanels([course], 1)
+
+  assert.deepEqual(oneWeek.map((panel) => panel.week), [1])
+  assert.deepEqual(twoWeeks.map((panel) => panel.week), [1, 2])
+  assert.ok(twoWeeks.every((panel) => panel.active))
+  assert.equal(twoWeeks[1].daySlots[4][0].id, 'week-two')
+  assert.deepEqual(withoutTerm.map((panel) => panel.week), [1])
+  assert.equal(withoutTerm[0].daySlots[4][0].id, 'week-two')
 })
 
 test('任意格子去重排序并仅合并同一天连续节次', () => {

@@ -1,17 +1,9 @@
-import type { Course, CourseRange } from '../../models/course'
-import { DAYS } from '../../constants/timetable'
+import type { CourseRange } from '../../models/course'
 import { getCourses } from '../../services/course-storage'
 import { weeksOverlap } from '../../utils/course-validator'
-import { getContrastText } from '../../utils/color'
-import { computeCardStyle } from '../../utils/timetable-layout'
+import { buildDaySlots } from '../../utils/timetable-layout'
+import type { TimetableCardItem } from '../../utils/timetable-layout'
 import { formatRanges, keysToRanges, rangesToKeys } from '../../utils/grid-selection'
-
-interface CardItem {
-  id: string
-  course: Course
-  style: string
-  textColor: string
-}
 
 interface SlotSelectorInit {
   ranges: CourseRange[]
@@ -22,7 +14,7 @@ interface SlotSelectorInit {
 Page({
   data: {
     ready: false,
-    daySlots: [] as CardItem[][],
+    daySlots: [] as TimetableCardItem[][],
     selectedKeys: [] as string[],
     disabledKeys: [] as string[],
     selectedCount: 0,
@@ -39,7 +31,7 @@ Page({
       )
       this.setData({
         ready: true,
-        daySlots: this.buildSlots(occupied),
+        daySlots: buildDaySlots(occupied),
         disabledKeys: rangesToKeys(occupied.map((course) => ({
           day: course.day,
           startPeriod: course.startPeriod,
@@ -48,20 +40,6 @@ Page({
       })
       this.updateSelection(rangesToKeys(Array.isArray(init.ranges) ? init.ranges : []))
     })
-  },
-
-  buildSlots(courses: Course[]): CardItem[][] {
-    const slots: CardItem[][] = DAYS.map(() => [])
-    for (const course of courses) {
-      if (course.day < 1 || course.day > DAYS.length) continue
-      slots[course.day - 1].push({
-        id: course.id,
-        course,
-        style: computeCardStyle(course),
-        textColor: getContrastText(course.color),
-      })
-    }
-    return slots
   },
 
   updateSelection(keys: string[]) {
