@@ -29,6 +29,7 @@ const ALL_WEEKS = Array.from({ length: TERM.totalWeeks }, (_, index) => index + 
 let storage = new Map()
 let timetableWrites = 0
 let timetableWriteFailures = 0
+let timetablePage
 
 function clone(value) {
   return value === undefined ? undefined : structuredClone(value)
@@ -50,10 +51,15 @@ globalThis.wx = {
   },
 }
 
+globalThis.Page = (definition) => {
+  timetablePage = definition
+}
+
 const selection = await import('../miniprogram/utils/grid-selection.ts')
 const courseStorage = await import('../miniprogram/services/course-storage.ts')
 const timetableConstants = await import('../miniprogram/constants/timetable.ts')
 const timetableLayout = await import('../miniprogram/utils/timetable-layout.ts')
+await import('../miniprogram/pages/timetable/index.ts')
 const timetablePageMarkup = readFileSync(
   new URL('../miniprogram/pages/timetable/index.wxml', import.meta.url),
   'utf8',
@@ -92,6 +98,37 @@ test('多选模式使用静态课表，避免 swiper 继续响应横向拖动', 
   assert.match(timetablePageMarkup, /<swiper\s+wx:if="{{!selectionMode}}"/)
   assert.match(timetablePageMarkup, /<view wx:else class="week-static"/)
   assert.match(timetablePageMarkup, /wx:if="{{item\.week === currentWeek}}"/)
+})
+
+test('每次点击课程都重新询问编辑范围，不沿用上一次选择', () => {
+  reset()
+  courseStorage.createCourseGroup(draft(), [
+    { day: 1, startPeriod: 1, endPeriod: 1 },
+    { day: 3, startPeriod: 5, endPeriod: 5 },
+  ])
+  const target = storage.get(TIMETABLE_KEY).courses[0]
+  courseStorage.detachCourseSegment({ ...target, name: '高数习题课' })
+  const openedUrls = []
+  const choices = [0, 1]
+  let promptCount = 0
+  globalThis.wx.showActionSheet = (options) => {
+    options.success({ tapIndex: choices[promptCount++] })
+  }
+  const page = {
+    data: { currentWeek: 2 },
+    openCourseEditor(url) {
+      openedUrls.push(url)
+    },
+  }
+
+  timetablePage.onCourseTap.call(page, { detail: { id: target.id } })
+  timetablePage.onCourseTap.call(page, { detail: { id: target.id } })
+
+  assert.equal(promptCount, 2)
+  assert.deepEqual(openedUrls, [
+    `/pages/course-edit/index?id=${target.id}&mode=segment-edit&sourceWeek=2`,
+    `/pages/course-edit/index?id=${target.id}&mode=group-edit&sourceWeek=2`,
+  ])
 })
 
 test('课程卡片按星期分组并复用统一布局信息', () => {
