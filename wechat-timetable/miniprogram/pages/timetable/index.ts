@@ -1,7 +1,7 @@
 // pages/timetable/index.ts
 import type { CourseRange, TermSettings } from '../../models/course'
 import { DAYS } from '../../constants/timetable'
-import { getCourseGroupByCourseId, getCourses, getTerm, needsMigration } from '../../services/course-storage'
+import { getCourses, getTerm, needsMigration } from '../../services/course-storage'
 import { calcCurrentWeek } from '../../utils/term'
 import {
   buildWeekPanels,
@@ -158,11 +158,6 @@ Page({
 
   onCourseTap(e: WechatMiniprogram.CustomEvent) {
     const id = e.detail.id as string
-    const group = getCourseGroupByCourseId(id)
-    if (group.length <= 1) {
-      this.openCourseEditor(`/pages/course-edit/index?id=${id}&mode=segment-edit&sourceWeek=${this.data.currentWeek}`)
-      return
-    }
     wx.showActionSheet({
       itemList: ['仅编辑本时段', '编辑整门课程'],
       success: (result) => {
