@@ -1,5 +1,5 @@
 // models/course.ts
-// 课程、学期、课程作息与本地存储根数据的数据类型（V4）
+// 课程、学期、课程作息与本地存储根数据的数据类型（V5）
 
 /** V1 课程字段（迁移前旧课程，无周次信息）。 */
 export interface CourseV1 {
@@ -55,14 +55,25 @@ export interface PeriodTime {
   end: string
 }
 
-/** 全局课程作息。时长和课间只用于新增节次及显式重新生成。 */
+/** 单节课程对全局作息规则的显式覆盖。period 使用 1 起始节次。 */
+export interface PeriodOverride {
+  period: number
+  /** 第 2 节起可固定绝对开始时间，用于午休等不规则间隔。 */
+  start?: string
+  /** 本节独立时长；未设置时使用全局 durationMinutes。 */
+  durationMinutes?: number
+}
+
+/** 全局课程作息。periods 是根据规则与 overrides 计算后的完整结果。 */
 export interface PeriodSettings {
   durationMinutes: number
   breakMinutes: number
+  firstStart: string
+  overrides: PeriodOverride[]
   periods: PeriodTime[]
 }
 
-/** 整个课表存在一个 Storage key 下的根对象结构（当前为 V4）。 */
+/** 整个课表存在一个 Storage key 下的根对象结构（当前为 V5）。 */
 export interface TimetableStorage {
   schemaVersion: number
   term: TermSettings | null

@@ -1,10 +1,11 @@
-import type { PeriodSettings, PeriodTime } from '../../models/course'
+import type { PeriodSettings } from '../../models/course'
 import { MAX_PERIODS, MIN_PERIODS } from '../../constants/timetable'
 import { getMaxUsedPeriod, getPeriodSettings, savePeriodSettings } from '../../services/course-storage'
 import {
   buildPeriodViews,
+  clearPeriodOverrides,
   clonePeriodSettings,
-  generatePeriods,
+  reflowPeriodSettings,
   resizePeriods,
   validatePeriodSettings,
 } from '../../utils/period-settings'
@@ -25,8 +26,7 @@ Page({
   },
 
   onLoad() {
-    const settings = getPeriodSettings()
-    this.updateDraft(settings)
+    this.updateDraft(getPeriodSettings())
     this.setData({ maxUsedPeriod: getMaxUsedPeriod() })
   },
 
@@ -40,16 +40,34 @@ Page({
     })
   },
 
+  showReflowError(reason?: string) {
+    wx.showModal({
+      title: '无法自动更新',
+      content: reason || '按当前设置无法生成有效的课程时间',
+      showCancel: false,
+      confirmText: '知道了',
+    })
+  },
+
+  applyRuleChange(changes: Partial<Pick<PeriodSettings, 'durationMinutes' | 'breakMinutes'>>) {
+    const current = this.data.settings
+    if (!current) return
+    const result = reflowPeriodSettings({ ...clonePeriodSettings(current), ...changes })
+    if (!result.ok || !result.settings) {
+      this.showReflowError(result.reason)
+      return
+    }
+    this.updateDraft(result.settings)
+  },
+
   onDurationChange(e: WechatMiniprogram.PickerChange) {
-    if (!this.data.settings) return
     const durationIndex = Number(e.detail.value)
-    this.updateDraft({ ...this.data.settings, durationMinutes: durationOptions[durationIndex] })
+    this.applyRuleChange({ durationMinutes: durationOptions[durationIndex] })
   },
 
   onBreakChange(e: WechatMiniprogram.PickerChange) {
-    if (!this.data.settings) return
     const breakIndex = Number(e.detail.value)
-    this.updateDraft({ ...this.data.settings, breakMinutes: breakOptions[breakIndex] })
+    this.applyRuleChange({ breakMinutes: breakOptions[breakIndex] })
   },
 
   changeCount(delta: number) {
@@ -68,12 +86,7 @@ Page({
     }
     const resized = resizePeriods(current, count)
     if (!resized) {
-      wx.showModal({
-        title: '无法增加课程数',
-        content: '按当前时长和课间继续生成会跨越当天 24:00，请先调整规则或已有节次时间。',
-        showCancel: false,
-        confirmText: '知道了',
-      })
+      this.showReflowError('增加节次后会跨越当天 24:00，请先缩短课程时长或课间休息。')
       return
     }
     this.updateDraft(resized)
@@ -96,51 +109,36 @@ Page({
       success: (result) => {
         result.eventChannel.emit('periodTimeEditInit', {
           index,
-          period: settings.periods[index],
-          previousEnd: index > 0 ? settings.periods[index - 1].end : '',
-          nextStart: index < settings.periods.length - 1 ? settings.periods[index + 1].start : '',
+          settings: clonePeriodSettings(settings),
         })
-        result.eventChannel.on('periodTimeEditDone', (payload: { index: number; period: PeriodTime }) => {
-          const current = this.data.settings
-          if (!current || payload.index < 0 || payload.index >= current.periods.length) return
-          const next = clonePeriodSettings(current)
-          next.periods[payload.index] = { ...payload.period }
-          const check = validatePeriodSettings(next)
+        result.eventChannel.on('periodTimeEditDone', (payload: { settings: PeriodSettings }) => {
+          const check = validatePeriodSettings(payload.settings)
           if (!check.ok) {
-            wx.showToast({ title: check.reason || '时间无效', icon: 'none' })
+            this.showReflowError(check.reason)
             return
           }
-          this.updateDraft(next)
+          this.updateDraft(payload.settings)
         })
       },
     })
   },
 
-  onRegenerate() {
+  onClearOverrides() {
     const settings = this.data.settings
     if (!settings) return
     wx.showModal({
-      title: '重新生成全部节次？',
-      content: '将以第一节开始时间为起点，按当前课时时长和课间休息重建全部课程时间。手动调整的时间会被覆盖。',
-      confirmText: '重新生成',
+      title: '清除全部自定义时间？',
+      content: '将保留第一节开始时间，清除午休锚点和单节自定义时长，再按当前规则连续排布全部节次。',
+      confirmText: '清除并重排',
       confirmColor: '#267d78',
       success: (result) => {
         if (!result.confirm) return
-        const periods = generatePeriods(
-          settings.periods[0].start,
-          settings.periods.length,
-          settings.durationMinutes,
-          settings.breakMinutes,
-        )
-        if (!periods) {
-          wx.showModal({
-            title: '无法重新生成',
-            content: '按当前规则生成会跨越当天 24:00，请缩短时长、课间或课程数。',
-            showCancel: false,
-          })
+        const cleared = clearPeriodOverrides(settings)
+        if (!cleared.ok || !cleared.settings) {
+          this.showReflowError(cleared.reason)
           return
         }
-        this.updateDraft({ ...settings, periods })
+        this.updateDraft(cleared.settings)
       },
     })
   },

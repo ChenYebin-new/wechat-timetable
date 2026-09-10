@@ -51,6 +51,31 @@
   font-variant-numeric: tabular-nums;
 }
 
+.period-value {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10rpx;
+  color: #71837e;
+  font-size: 25rpx;
+  font-variant-numeric: tabular-nums;
+}
+
+.period-time {
+  white-space: nowrap;
+}
+
+.custom-badge {
+  padding: 4rpx 10rpx;
+  border-radius: 10rpx;
+  color: #267d78;
+  background: #e8f3f1;
+  font-size: 19rpx;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .chevron {
   color: #a5b2ae;
   font-size: 42rpx;

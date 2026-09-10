@@ -4,7 +4,7 @@
 import type { PeriodSettings, WeekMode } from '../models/course'
 
 export const STORAGE_KEY = 'timetable_courses'
-export const SCHEMA_VERSION = 4
+export const SCHEMA_VERSION = 5
 export const GRID_HOLD_DURATION_MS = 1200
 export const MIN_PERIODS = 1
 export const MAX_PERIODS = 14
@@ -41,12 +41,16 @@ export interface PeriodView {
   time: string // 完整时段，用于编辑页选择器显示
   start: string // 开始时间
   end: string // 结束时间
+  isCustom: boolean
+  customLabel: string
 }
 
-/** V1–V3 使用的九节课原始时间，迁移时必须原样保留。 */
+/** V1–V3 使用的九节课原始时间；第 5 节保留原有午休锚点。 */
 export const DEFAULT_PERIOD_SETTINGS: PeriodSettings = {
   durationMinutes: DEFAULT_PERIOD_DURATION_MINUTES,
   breakMinutes: DEFAULT_BREAK_MINUTES,
+  firstStart: '08:00',
+  overrides: [{ period: 5, start: '14:00' }],
   periods: [
     { start: '08:00', end: '08:50' },
     { start: '09:00', end: '09:50' },

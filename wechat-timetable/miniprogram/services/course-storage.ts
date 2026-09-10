@@ -1,5 +1,5 @@
 // services/course-storage.ts
-// 统一管理本地 Storage 里的课表数据：V4 读写、旧数据迁移、学期与课程作息读写。
+// 统一管理本地 Storage 里的课表数据：V5 读写、旧数据迁移、学期与课程作息读写。
 // 页面不要直接调用 wx.getStorageSync / setStorageSync 操作课表。
 
 import type { Course, CourseRange, PeriodSettings, TermSettings, TimetableStorage, WeekMode } from '../models/course'
@@ -8,7 +8,7 @@ import { expandWeeks, normalizeWeeks, validateTerm } from '../utils/term'
 import { isOverlapping, validate } from '../utils/course-validator'
 import { APP_ID, BACKUP_VERSION, RECENT_BACKUP_KEY } from '../models/backup'
 import { cellsToRanges, rangesToCells } from '../utils/grid-selection'
-import { clonePeriodSettings, validatePeriodSettings } from '../utils/period-settings'
+import { clonePeriodSettings, migrateV4PeriodSettings, validatePeriodSettings } from '../utils/period-settings'
 
 interface LoadedStorage extends TimetableStorage {
   /** 仅存在于内存中，不会写入 Storage。 */
@@ -97,12 +97,13 @@ function load(): TimetableStorage {
     const totalWeeks = term ? term.totalWeeks : 0
     const rawCourses = Array.isArray(data.courses) ? (data.courses as unknown[]) : []
     const periodCheck = validatePeriodSettings(data.periodSettings)
+    const migratedV4Settings = schemaVersion === 4 ? migrateV4PeriodSettings(data.periodSettings) : null
     const periodSettings = schemaVersion === SCHEMA_VERSION && periodCheck.ok
       ? clonePeriodSettings(data.periodSettings as PeriodSettings)
-      : clonePeriodSettings(DEFAULT_PERIOD_SETTINGS)
-    const maxPeriod = schemaVersion === SCHEMA_VERSION && !periodCheck.ok
-      ? MAX_PERIODS
-      : periodSettings.periods.length
+      : migratedV4Settings || clonePeriodSettings(DEFAULT_PERIOD_SETTINGS)
+    const periodSettingsInvalid =
+      (schemaVersion === SCHEMA_VERSION && !periodCheck.ok) || (schemaVersion === 4 && !migratedV4Settings)
+    const maxPeriod = periodSettingsInvalid ? MAX_PERIODS : periodSettings.periods.length
     const courses: Course[] = []
     for (const r of rawCourses) {
       const course = sanitizeCourse(r, totalWeeks, schemaVersion, maxPeriod)
@@ -114,20 +115,25 @@ function load(): TimetableStorage {
     }
 
     if (schemaVersion === SCHEMA_VERSION) {
-      // V4：作息缺失或无效时保持只读语义，不静默覆盖；只清理课程数组中的无效项。
+      // V5：作息缺失或无效时保持只读语义，不静默覆盖；只清理课程数组中的无效项。
       if (periodCheck.ok && rawCourses.length !== courses.length) {
         persist(storage)
       }
       return storage
     }
 
-    if ((schemaVersion === 2 || schemaVersion === 3) && term && rawCourses.length === courses.length) {
+    if (
+      (schemaVersion === 2 || schemaVersion === 3 || schemaVersion === 4) &&
+      term &&
+      rawCourses.length === courses.length &&
+      !periodSettingsInvalid
+    ) {
       if (!snapshotCurrentRaw()) return storage
       const migrated: TimetableStorage = {
         schemaVersion: SCHEMA_VERSION,
         term,
         courses: courses.map((course) => ({ ...course, groupId: schemaVersion === 2 ? course.id : course.groupId })),
-        periodSettings: clonePeriodSettings(DEFAULT_PERIOD_SETTINGS),
+        periodSettings: clonePeriodSettings(periodSettings),
       }
       try {
         persist(migrated)
@@ -172,7 +178,7 @@ function assertWritableStorage(data: TimetableStorage): void {
     )
   }
   if ((data as LoadedStorage).periodSettingsInvalid) {
-    throw new Error('当前 V4 课程时间设置缺失或损坏，为保护课程数据已停止写入；请从有效备份恢复')
+    throw new Error('当前 V5 课程时间设置缺失或损坏，为保护课程数据已停止写入；请从有效备份恢复')
   }
 }
 
@@ -238,7 +244,7 @@ export function getStorageProblem(data: TimetableStorage = load()): string | nul
   }
 }
 
-/** 一次性写入课表根数据。调用方须自行完成校验；仅支持写 V4。 */
+/** 一次性写入课表根数据。调用方须自行完成校验；仅支持写 V5。 */
 export function writeStorage(data: TimetableStorage): void {
   assertWritableStorage(data)
   const periodCheck = validatePeriodSettings(data.periodSettings)
@@ -504,8 +510,8 @@ export function removeCourseGroup(groupId: string): void {
 
 /**
  * 设置/修改学期。
- * - V1 数据：补齐周次、groupId 与默认作息后直接迁移为 V4。
- * - V2/V3/V4 数据：重新计算全部课程周次，旧版同时补齐默认作息。
+ * - V1 数据：补齐周次、groupId 与默认作息后直接迁移为 V5。
+ * - V2/V3/V4/V5 数据：重新计算全部课程周次，旧版同时补齐或迁移作息。
  * 操作前先生成最近自动备份；任一校验失败或写入失败时不修改原数据。
  */
 export function applyTerm(term: TermSettings): { ok: boolean; reason?: string; migrated?: boolean } {
@@ -515,10 +521,13 @@ export function applyTerm(term: TermSettings): { ok: boolean; reason?: string; m
   const current = load()
   const currentProblem = current.schemaVersion === SCHEMA_VERSION ? getStorageProblem(current) : null
   if (currentProblem) return { ok: false, reason: currentProblem }
-  if (![1, 2, 3, SCHEMA_VERSION].includes(current.schemaVersion)) {
+  if (current.schemaVersion === 4) {
+    return { ok: false, reason: '当前 V4 课程时间设置无法安全迁移，请从有效备份恢复后再修改学期' }
+  }
+  if (![1, 2, 3, 4, SCHEMA_VERSION].includes(current.schemaVersion)) {
     return {
       ok: false,
-      reason: `当前课表数据版本为 V${current.schemaVersion}，不能按 V1–V4 猜测迁移。请使用更新版本处理课表。`,
+      reason: `当前课表数据版本为 V${current.schemaVersion}，不能按 V1–V5 猜测迁移。请使用更新版本处理课表。`,
     }
   }
 
@@ -558,7 +567,9 @@ export function applyTerm(term: TermSettings): { ok: boolean; reason?: string; m
     courses: newCourses,
     periodSettings: current.schemaVersion === SCHEMA_VERSION
       ? clonePeriodSettings(current.periodSettings)
-      : clonePeriodSettings(DEFAULT_PERIOD_SETTINGS),
+      : current.schemaVersion === 4
+        ? migrateV4PeriodSettings(current.periodSettings) || clonePeriodSettings(DEFAULT_PERIOD_SETTINGS)
+        : clonePeriodSettings(DEFAULT_PERIOD_SETTINGS),
   }
 
   if (!snapshotCurrentRaw()) return { ok: false, reason: '无法创建操作前自动备份' }

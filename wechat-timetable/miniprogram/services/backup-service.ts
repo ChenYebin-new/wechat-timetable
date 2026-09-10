@@ -1,5 +1,5 @@
 // services/backup-service.ts
-// 课表数据的导出、导入校验、预览、覆盖、合并与最近自动备份（V4，兼容 V1–V3）。
+// 课表数据的导出、导入校验、预览、覆盖、合并与最近自动备份（V5，兼容 V1–V4）。
 
 import type { Course, PeriodSettings, TermSettings, TimetableStorage, WeekMode } from '../models/course'
 import { COLOR_PALETTE, DEFAULT_PERIOD_SETTINGS, SCHEMA_VERSION } from '../constants/timetable'
@@ -13,7 +13,12 @@ import type { ImportPreview, RecentBackup, TimetableBackupEnvelope } from '../mo
 import { getStorage, getStorageProblem, writeStorage } from './course-storage'
 import { isOverlapping } from '../utils/course-validator'
 import { expandWeeks, normalizeWeeks, validateTerm } from '../utils/term'
-import { clonePeriodSettings, samePeriodSettings, validatePeriodSettings } from '../utils/period-settings'
+import {
+  clonePeriodSettings,
+  migrateV4PeriodSettings,
+  samePeriodSettings,
+  validatePeriodSettings,
+} from '../utils/period-settings'
 
 // ---------- 基础工具 ----------
 
@@ -165,7 +170,7 @@ function validateBackupCourse(raw: unknown, schemaVersion: number, maxPeriod: nu
 /** 导出当前课表为备份 JSON 文本。 */
 export function exportBackup(): string {
   const storage = getStorage()
-  if (![1, 2, 3, SCHEMA_VERSION].includes(storage.schemaVersion)) {
+  if (![1, 2, 3, 4, SCHEMA_VERSION].includes(storage.schemaVersion)) {
     throw new Error(unsupportedStorageReason(storage.schemaVersion))
   }
   if (storage.schemaVersion === SCHEMA_VERSION) {
@@ -258,14 +263,14 @@ export function analyzeBackup(envelope: TimetableBackupEnvelope): AnalyzeResult 
   const schemaVersion = envelope.data.schemaVersion
   if (!Number.isInteger(schemaVersion)) {
     errors.push('备份数据版本缺失或格式不正确')
-  } else if (![1, 2, 3, SCHEMA_VERSION].includes(schemaVersion)) {
+  } else if (![1, 2, 3, 4, SCHEMA_VERSION].includes(schemaVersion)) {
     errors.push(`不支持的课表数据版本：${schemaVersion}`)
   }
 
-  // V2–V4 备份必须带有效学期；V1 备份无学期。
+  // V2–V5 备份必须带有效学期；V1 备份无学期。
   let term: TermSettings | null = null
   const needsTerm = schemaVersion === 1
-  if (schemaVersion === 2 || schemaVersion === 3 || schemaVersion === SCHEMA_VERSION) {
+  if (schemaVersion === 2 || schemaVersion === 3 || schemaVersion === 4 || schemaVersion === SCHEMA_VERSION) {
     const termCheck = validateTerm(envelope.data.term as TermSettings | null)
     if (!termCheck.ok) {
       errors.push(`备份学期设置无效：${termCheck.reason || '缺少学期设置'}`)
@@ -280,6 +285,10 @@ export function analyzeBackup(envelope: TimetableBackupEnvelope): AnalyzeResult 
     const periodCheck = validatePeriodSettings(envelope.data.periodSettings)
     if (!periodCheck.ok) errors.push(`备份课程时间设置无效：${periodCheck.reason || '字段不完整'}`)
     else periodSettings = clonePeriodSettings(envelope.data.periodSettings)
+  } else if (schemaVersion === 4) {
+    const migrated = migrateV4PeriodSettings(envelope.data.periodSettings)
+    if (!migrated) errors.push('备份课程时间设置无效：无法识别 V4 作息')
+    else periodSettings = migrated
   }
   const maxPeriod = periodSettings.periods.length
 
@@ -289,7 +298,7 @@ export function analyzeBackup(envelope: TimetableBackupEnvelope): AnalyzeResult 
     for (let index = 0; index < envelope.data.courses.length; index++) {
       const rawCourse = envelope.data.courses[index]
       if (
-        (schemaVersion === 2 || schemaVersion === 3 || schemaVersion === SCHEMA_VERSION) &&
+        (schemaVersion === 2 || schemaVersion === 3 || schemaVersion === 4 || schemaVersion === SCHEMA_VERSION) &&
         (!rawCourse ||
           typeof rawCourse !== 'object' ||
           Array.isArray(rawCourse) ||
@@ -710,7 +719,7 @@ export function restoreRecentBackup(): MutationResult {
     targetTerm = current.term
     targetCourses = expandV1CoursesWithTerm(rb.export.data.courses, targetTerm)
   } else if (
-    ([2, 3, SCHEMA_VERSION].includes(rb.export.data.schemaVersion)) &&
+    ([2, 3, 4, SCHEMA_VERSION].includes(rb.export.data.schemaVersion)) &&
     rb.export.data.term
   ) {
     targetTerm = rb.export.data.term

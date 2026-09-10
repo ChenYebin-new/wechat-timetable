@@ -26,6 +26,13 @@
   line-height: 1.5;
 }
 
+.custom-state {
+  margin-top: 4rpx;
+  color: #267d78;
+  font-size: 21rpx;
+  font-weight: 600;
+}
+
 .time-card {
   padding: 0 26rpx;
   background: #ffffff;
@@ -38,6 +45,19 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.duration-row {
+  min-height: 96rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.duration-value {
+  color: #58706a;
+  font-size: 25rpx;
+  font-variant-numeric: tabular-nums;
 }
 
 .row-title {
@@ -67,13 +87,11 @@
   background: #eef2f1;
 }
 
-.bounds {
+.impact {
   margin: 18rpx 6rpx 28rpx;
-  display: flex;
-  flex-direction: column;
-  gap: 6rpx;
   color: #71837e;
   font-size: 22rpx;
+  line-height: 1.55;
 }
 
 .save-btn {
