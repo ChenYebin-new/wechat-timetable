@@ -1,0 +1,29 @@
+<view class="page" wx:if="{{ready}}">
+  <view class="intro">
+    <text class="intro-title">{{title}}</text>
+    <text class="intro-desc">自定义本节课时间。可以保留午休等任意长度间隔，但不能与相邻节次重叠。返回上一级后仍需点击总保存。</text>
+  </view>
+
+  <view class="time-card">
+    <picker mode="time" value="{{start}}" bindchange="onStartChange" aria-label="选择开始时间">
+      <view class="time-row">
+        <text class="row-title">开始时间</text>
+        <view class="row-value"><text>{{start}}</text><text class="chevron">›</text></view>
+      </view>
+    </picker>
+    <view class="divider"></view>
+    <picker mode="time" value="{{end}}" bindchange="onEndChange" aria-label="选择结束时间">
+      <view class="time-row">
+        <text class="row-title">结束时间</text>
+        <view class="row-value"><text>{{end}}</text><text class="chevron">›</text></view>
+      </view>
+    </picker>
+  </view>
+
+  <view class="bounds" wx:if="{{previousEnd || nextStart}}">
+    <text wx:if="{{previousEnd}}">上一节结束：{{previousEnd}}</text>
+    <text wx:if="{{nextStart}}">下一节开始：{{nextStart}}</text>
+  </view>
+
+  <button class="save-btn" bindtap="onSave" hover-class="save-btn-pressed">保存本节时间</button>
+</view>

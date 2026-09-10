@@ -1,8 +1,8 @@
 // services/backup-service.ts
-// 课表数据的导出、导入校验、预览、覆盖、合并与最近自动备份（V3，兼容 V1/V2）。
+// 课表数据的导出、导入校验、预览、覆盖、合并与最近自动备份（V4，兼容 V1–V3）。
 
-import type { Course, TermSettings, TimetableStorage, WeekMode } from '../models/course'
-import { COLOR_PALETTE, MAX_PERIOD, SCHEMA_VERSION } from '../constants/timetable'
+import type { Course, PeriodSettings, TermSettings, TimetableStorage, WeekMode } from '../models/course'
+import { COLOR_PALETTE, DEFAULT_PERIOD_SETTINGS, SCHEMA_VERSION } from '../constants/timetable'
 import {
   APP_ID,
   BACKUP_VERSION,
@@ -10,9 +10,10 @@ import {
   RECENT_BACKUP_KEY,
 } from '../models/backup'
 import type { ImportPreview, RecentBackup, TimetableBackupEnvelope } from '../models/backup'
-import { getStorage, writeStorage } from './course-storage'
+import { getStorage, getStorageProblem, writeStorage } from './course-storage'
 import { isOverlapping } from '../utils/course-validator'
 import { expandWeeks, normalizeWeeks, validateTerm } from '../utils/term'
+import { clonePeriodSettings, samePeriodSettings, validatePeriodSettings } from '../utils/period-settings'
 
 // ---------- 基础工具 ----------
 
@@ -82,7 +83,7 @@ function unsupportedStorageReason(schemaVersion: number): string {
 }
 
 /** 严格校验单门备份课程的基础字段，返回规范化结果（周次在 analyzeBackup 中按学期处理）。 */
-function validateBackupCourse(raw: unknown, schemaVersion: number): CourseValidationResult {
+function validateBackupCourse(raw: unknown, schemaVersion: number, maxPeriod: number): CourseValidationResult {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     return { reason: '课程不是有效对象' }
   }
@@ -104,17 +105,17 @@ function validateBackupCourse(raw: unknown, schemaVersion: number): CourseValida
     typeof c.startPeriod !== 'number' ||
     !Number.isInteger(c.startPeriod) ||
     c.startPeriod < 1 ||
-    c.startPeriod > MAX_PERIOD
+    c.startPeriod > maxPeriod
   ) {
-    return { reason: '开始节次必须是 1–9 的整数' }
+    return { reason: `开始节次必须是 1–${maxPeriod} 的整数` }
   }
   if (
     typeof c.endPeriod !== 'number' ||
     !Number.isInteger(c.endPeriod) ||
     c.endPeriod < 1 ||
-    c.endPeriod > MAX_PERIOD
+    c.endPeriod > maxPeriod
   ) {
-    return { reason: '结束节次必须是 1–9 的整数' }
+    return { reason: `结束节次必须是 1–${maxPeriod} 的整数` }
   }
   if (c.startPeriod > c.endPeriod) {
     return { reason: '开始节次不能晚于结束节次' }
@@ -164,8 +165,12 @@ function validateBackupCourse(raw: unknown, schemaVersion: number): CourseValida
 /** 导出当前课表为备份 JSON 文本。 */
 export function exportBackup(): string {
   const storage = getStorage()
-  if (storage.schemaVersion !== 1 && storage.schemaVersion !== 2 && storage.schemaVersion !== SCHEMA_VERSION) {
+  if (![1, 2, 3, SCHEMA_VERSION].includes(storage.schemaVersion)) {
     throw new Error(unsupportedStorageReason(storage.schemaVersion))
+  }
+  if (storage.schemaVersion === SCHEMA_VERSION) {
+    const storageProblem = getStorageProblem(storage)
+    if (storageProblem) throw new Error(storageProblem)
   }
   if (storage.schemaVersion >= 2 && storage.schemaVersion <= SCHEMA_VERSION) {
     const termCheck = validateTerm(storage.term)
@@ -181,6 +186,7 @@ export function exportBackup(): string {
       schemaVersion: storage.schemaVersion,
       term: storage.term,
       courses: storage.courses.map((c) => ({ ...c })),
+      periodSettings: clonePeriodSettings(storage.periodSettings),
     },
   }
   return JSON.stringify(envelope)
@@ -235,6 +241,7 @@ export interface AnalyzeResult {
   preview?: ImportPreview
   courses?: Course[]
   term?: TermSettings | null
+  periodSettings?: PeriodSettings
   /** 备份为 V1 旧数据，导入前需要设置学期。 */
   needsTerm?: boolean
 }
@@ -251,14 +258,14 @@ export function analyzeBackup(envelope: TimetableBackupEnvelope): AnalyzeResult 
   const schemaVersion = envelope.data.schemaVersion
   if (!Number.isInteger(schemaVersion)) {
     errors.push('备份数据版本缺失或格式不正确')
-  } else if (schemaVersion !== 1 && schemaVersion !== 2 && schemaVersion !== SCHEMA_VERSION) {
+  } else if (![1, 2, 3, SCHEMA_VERSION].includes(schemaVersion)) {
     errors.push(`不支持的课表数据版本：${schemaVersion}`)
   }
 
-  // V2/V3 备份必须带有效学期；V1 备份无学期。
+  // V2–V4 备份必须带有效学期；V1 备份无学期。
   let term: TermSettings | null = null
   const needsTerm = schemaVersion === 1
-  if (schemaVersion === 2 || schemaVersion === SCHEMA_VERSION) {
+  if (schemaVersion === 2 || schemaVersion === 3 || schemaVersion === SCHEMA_VERSION) {
     const termCheck = validateTerm(envelope.data.term as TermSettings | null)
     if (!termCheck.ok) {
       errors.push(`备份学期设置无效：${termCheck.reason || '缺少学期设置'}`)
@@ -268,6 +275,13 @@ export function analyzeBackup(envelope: TimetableBackupEnvelope): AnalyzeResult 
   }
 
   const totalWeeks = term ? term.totalWeeks : 0
+  let periodSettings = clonePeriodSettings(DEFAULT_PERIOD_SETTINGS)
+  if (schemaVersion === SCHEMA_VERSION) {
+    const periodCheck = validatePeriodSettings(envelope.data.periodSettings)
+    if (!periodCheck.ok) errors.push(`备份课程时间设置无效：${periodCheck.reason || '字段不完整'}`)
+    else periodSettings = clonePeriodSettings(envelope.data.periodSettings)
+  }
+  const maxPeriod = periodSettings.periods.length
 
   const backupCourses: Course[] = []
   const courseIds = new Set<string>()
@@ -275,7 +289,7 @@ export function analyzeBackup(envelope: TimetableBackupEnvelope): AnalyzeResult 
     for (let index = 0; index < envelope.data.courses.length; index++) {
       const rawCourse = envelope.data.courses[index]
       if (
-        (schemaVersion === 2 || schemaVersion === SCHEMA_VERSION) &&
+        (schemaVersion === 2 || schemaVersion === 3 || schemaVersion === SCHEMA_VERSION) &&
         (!rawCourse ||
           typeof rawCourse !== 'object' ||
           Array.isArray(rawCourse) ||
@@ -286,13 +300,13 @@ export function analyzeBackup(envelope: TimetableBackupEnvelope): AnalyzeResult 
         break
       }
       if (
-        schemaVersion === SCHEMA_VERSION &&
+        schemaVersion >= 3 &&
         (!rawCourse || typeof rawCourse !== 'object' || Array.isArray(rawCourse) || !('groupId' in rawCourse))
       ) {
         errors.push(`第 ${index + 1} 门课程缺少 V3 课程组字段`)
         break
       }
-      const validated = validateBackupCourse(rawCourse, schemaVersion)
+      const validated = validateBackupCourse(rawCourse, schemaVersion, maxPeriod)
       if (!validated.course) {
         errors.push(`第 ${index + 1} 门课程无效：${validated.reason || '字段不完整'}`)
         break
@@ -331,7 +345,7 @@ export function analyzeBackup(envelope: TimetableBackupEnvelope): AnalyzeResult 
   }
 
   // 同一课程组的共同字段必须一致，避免导入后出现无法整体编辑的脏数据。
-  if (!errors.length && schemaVersion === SCHEMA_VERSION) {
+  if (!errors.length && schemaVersion >= 3) {
     const groupHeads = new Map<string, Course>()
     for (const course of backupCourses) {
       const head = groupHeads.get(course.groupId)
@@ -371,9 +385,10 @@ export function analyzeBackup(envelope: TimetableBackupEnvelope): AnalyzeResult 
   return {
     ok: true,
     errors: [],
-    preview: computePreview(envelope, backupCourses, term, needsTerm),
+    preview: computePreview(envelope, backupCourses, term, periodSettings, needsTerm),
     courses: backupCourses,
     term,
+    periodSettings,
     needsTerm,
   }
 }
@@ -382,13 +397,20 @@ function computePreview(
   envelope: TimetableBackupEnvelope,
   backupCourses: Course[],
   backupTerm: TermSettings | null,
+  backupPeriodSettings: PeriodSettings,
   needsTerm: boolean,
 ): ImportPreview {
   const current = getStorage()
   const existing = current.courses
   let candidates = backupCourses
-  let mergeAllowed = current.schemaVersion === SCHEMA_VERSION
-  let mergeReason = mergeAllowed ? '' : unsupportedStorageReason(current.schemaVersion)
+  const currentProblem = getStorageProblem(current)
+  let mergeAllowed = !currentProblem
+  let mergeReason = currentProblem || ''
+
+  if (mergeAllowed && !samePeriodSettings(current.periodSettings, backupPeriodSettings)) {
+    mergeAllowed = false
+    mergeReason = '备份与当前课表的课程时间设置不同，不能直接合并；可改用覆盖导入。'
+  }
 
   if (mergeAllowed && needsTerm && current.term) {
     candidates = expandV1CoursesWithTerm(backupCourses, current.term)
@@ -449,6 +471,7 @@ function buildRecentBackup(current: TimetableStorage): RecentBackup {
         schemaVersion: current.schemaVersion,
         term: current.term,
         courses: current.courses.map((course) => ({ ...course })),
+        periodSettings: clonePeriodSettings(current.periodSettings),
       },
     },
   }
@@ -483,6 +506,7 @@ export function getRecentBackup(): RecentBackup | null {
           schemaVersion: parsed.envelope.data.schemaVersion,
           term: analyzed.term ?? null,
           courses: analyzed.courses,
+          periodSettings: clonePeriodSettings(analyzed.periodSettings || DEFAULT_PERIOD_SETTINGS),
         },
       },
     }
@@ -504,9 +528,8 @@ export interface MutationResult {
 
 function getCurrentForMutation(): { current?: TimetableStorage; reason?: string } {
   const current = getStorage()
-  if (current.schemaVersion !== SCHEMA_VERSION) {
-    return { reason: unsupportedStorageReason(current.schemaVersion) }
-  }
+  const problem = getStorageProblem(current)
+  if (problem) return { reason: problem }
   return { current }
 }
 
@@ -558,6 +581,7 @@ export function overwriteFromBackup(envelope: TimetableBackupEnvelope, term?: Te
 
   let targetTerm: TermSettings | null
   let targetCourses: Course[]
+  const targetPeriodSettings = clonePeriodSettings(analyzed.periodSettings || DEFAULT_PERIOD_SETTINGS)
   if (analyzed.needsTerm) {
     const vt = validateTerm(term)
     if (!vt.ok) return { ok: false, reason: `导入旧版备份需要先设置学期：${vt.reason || '学期设置无效'}` }
@@ -576,6 +600,7 @@ export function overwriteFromBackup(envelope: TimetableBackupEnvelope, term?: Te
       schemaVersion: SCHEMA_VERSION,
       term: targetTerm,
       courses: targetCourses,
+      periodSettings: targetPeriodSettings,
     })
     return { ok: true }
   } catch {
@@ -590,6 +615,10 @@ export function mergeFromBackup(envelope: TimetableBackupEnvelope, term?: TermSe
   const analyzed = analyzeBackup(envelope)
   if (!analyzed.ok || !analyzed.courses) return { ok: false, reason: analyzed.errors[0] }
   const current = currentResult.current
+  const incomingPeriodSettings = clonePeriodSettings(analyzed.periodSettings || DEFAULT_PERIOD_SETTINGS)
+  if (!samePeriodSettings(current.periodSettings, incomingPeriodSettings)) {
+    return { ok: false, reason: '备份与当前课表的课程时间设置不同，不能直接合并；可改用覆盖导入。' }
+  }
 
   let incoming: Course[]
   let targetTerm: TermSettings
@@ -645,7 +674,12 @@ export function mergeFromBackup(envelope: TimetableBackupEnvelope, term?: TermSe
   }
 
   try {
-    writeStorage({ schemaVersion: SCHEMA_VERSION, term: targetTerm, courses: result })
+    writeStorage({
+      schemaVersion: SCHEMA_VERSION,
+      term: targetTerm,
+      courses: result,
+      periodSettings: clonePeriodSettings(current.periodSettings),
+    })
     return {
       ok: true,
       added,
@@ -667,6 +701,7 @@ export function restoreRecentBackup(): MutationResult {
   const current = currentResult.current
   let targetTerm: TermSettings
   let targetCourses: Course[]
+  const targetPeriodSettings = clonePeriodSettings(rb.export.data.periodSettings || DEFAULT_PERIOD_SETTINGS)
   if (rb.export.data.schemaVersion === 1) {
     const termCheck = validateTerm(current.term)
     if (!termCheck.ok || !current.term) {
@@ -675,7 +710,7 @@ export function restoreRecentBackup(): MutationResult {
     targetTerm = current.term
     targetCourses = expandV1CoursesWithTerm(rb.export.data.courses, targetTerm)
   } else if (
-    (rb.export.data.schemaVersion === 2 || rb.export.data.schemaVersion === SCHEMA_VERSION) &&
+    ([2, 3, SCHEMA_VERSION].includes(rb.export.data.schemaVersion)) &&
     rb.export.data.term
   ) {
     targetTerm = rb.export.data.term
@@ -691,6 +726,7 @@ export function restoreRecentBackup(): MutationResult {
       schemaVersion: SCHEMA_VERSION,
       term: targetTerm,
       courses: targetCourses,
+      periodSettings: targetPeriodSettings,
     })
     return { ok: true }
   } catch {

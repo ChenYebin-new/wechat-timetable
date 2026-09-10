@@ -2,7 +2,7 @@
 // 课程必填、范围、周次与冲突校验（冲突 = 星期 + 节次 + 周次三者都重叠）。
 
 import type { Course } from '../models/course'
-import { DAYS, MAX_PERIOD, MAX_TOTAL_WEEKS, WEEK_MODES } from '../constants/timetable'
+import { DAYS, MAX_PERIODS, MAX_TOTAL_WEEKS, WEEK_MODES } from '../constants/timetable'
 import { compressWeeks, expandWeeks, normalizeWeeks, weeksIntersect } from './term'
 
 export interface ValidateResult {
@@ -36,6 +36,7 @@ export function validate(
   all: Course[],
   excludeId?: string,
   totalWeeks = MAX_TOTAL_WEEKS,
+  maxPeriod = MAX_PERIODS,
 ): ValidateResult {
   const errors: string[] = []
 
@@ -45,11 +46,11 @@ export function validate(
   if (!Number.isInteger(course.day) || course.day < 1 || course.day > DAYS.length) {
     errors.push('请选择星期')
   }
-  if (!Number.isInteger(course.startPeriod) || course.startPeriod < 1 || course.startPeriod > MAX_PERIOD) {
-    errors.push('开始节次需要在 1–9 之间')
+  if (!Number.isInteger(course.startPeriod) || course.startPeriod < 1 || course.startPeriod > maxPeriod) {
+    errors.push(`开始节次需要在 1–${maxPeriod} 之间`)
   }
-  if (!Number.isInteger(course.endPeriod) || course.endPeriod < 1 || course.endPeriod > MAX_PERIOD) {
-    errors.push('结束节次需要在 1–9 之间')
+  if (!Number.isInteger(course.endPeriod) || course.endPeriod < 1 || course.endPeriod > maxPeriod) {
+    errors.push(`结束节次需要在 1–${maxPeriod} 之间`)
   }
   if (course.startPeriod > course.endPeriod) {
     errors.push('开始节次不能晚于结束节次')

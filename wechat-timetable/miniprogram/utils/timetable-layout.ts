@@ -3,7 +3,7 @@
 // 说明：这里刻意不使用 CSS Grid 的 grid-row/grid-column，以避免 iOS WebView 对 Grid 的兼容问题。
 
 import type { Course } from '../models/course'
-import { CELL_HEIGHT, DAYS, MAX_PERIOD } from '../constants/timetable'
+import { CELL_HEIGHT, DAYS } from '../constants/timetable'
 import { getContrastText } from './color'
 import { rangesToKeys } from './grid-selection'
 
@@ -21,8 +21,10 @@ export interface WeekPanel {
   disabledKeys: string[]
 }
 
-/** 课表外框上下内边距 16rpx + 星期栏 80rpx + 九节课高度。 */
-export const TIMETABLE_GRID_HEIGHT_RPX = 96 + MAX_PERIOD * CELL_HEIGHT
+/** 课表外框上下内边距 16rpx + 星期栏 80rpx + 动态节次高度。 */
+export function timetableGridHeightRpx(periodCount: number): number {
+  return 96 + periodCount * CELL_HEIGHT
+}
 
 export function computeCardStyle(course: Course): string {
   const cardInset = 4

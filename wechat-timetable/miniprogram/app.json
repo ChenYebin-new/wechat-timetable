@@ -1,6 +1,9 @@
 {
   "pages": [
     "pages/timetable/index",
+    "pages/settings/index",
+    "pages/period-settings/index",
+    "pages/period-time-edit/index",
     "pages/course-edit/index",
     "pages/slot-select/index",
     "pages/data-manage/index",

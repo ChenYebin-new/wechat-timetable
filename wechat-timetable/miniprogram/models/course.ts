@@ -1,5 +1,5 @@
 // models/course.ts
-// 课程、学期与本地存储根数据的数据类型（V3）
+// 课程、学期、课程作息与本地存储根数据的数据类型（V4）
 
 /** V1 课程字段（迁移前旧课程，无周次信息）。 */
 export interface CourseV1 {
@@ -49,11 +49,25 @@ export interface TermSettings {
   totalWeeks: number // 1..30
 }
 
-/** 整个课表存在一个 Storage key 下的根对象结构（当前为 V3）。 */
+/** 单节课程的实际起止时间，同一天内使用 HH:mm。 */
+export interface PeriodTime {
+  start: string
+  end: string
+}
+
+/** 全局课程作息。时长和课间只用于新增节次及显式重新生成。 */
+export interface PeriodSettings {
+  durationMinutes: number
+  breakMinutes: number
+  periods: PeriodTime[]
+}
+
+/** 整个课表存在一个 Storage key 下的根对象结构（当前为 V4）。 */
 export interface TimetableStorage {
   schemaVersion: number
   term: TermSettings | null
   courses: Course[]
+  periodSettings: PeriodSettings
 }
 
 /** V1 旧数据结构（用于迁移识别）。 */

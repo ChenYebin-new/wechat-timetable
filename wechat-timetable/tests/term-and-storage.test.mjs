@@ -26,6 +26,12 @@ const TIMETABLE_KEY = 'timetable_courses'
 const RECENT_BACKUP_KEY = 'timetable_recent_backup'
 const TERM = { startDate: '2026-09-07', totalWeeks: 18 }
 const ALL_WEEKS = Array.from({ length: TERM.totalWeeks }, (_, index) => index + 1)
+const DEFAULT_PERIOD_SETTINGS = {
+  durationMinutes: 50,
+  breakMinutes: 10,
+  periods: ['08:00-08:50', '09:00-09:50', '10:00-10:50', '11:00-11:50', '14:00-14:50', '15:00-15:50', '16:00-16:50', '17:00-17:50', '18:00-18:50']
+    .map((value) => { const [start, end] = value.split('-'); return { start, end } }),
+}
 let storage = new Map()
 let timetableWriteFailures = 0
 
@@ -114,10 +120,10 @@ test('指定周次为空、重复或越界时不能保存', () => {
 })
 
 test('未设置学期时服务层拒绝新增课程', () => {
-  storage = new Map([[TIMETABLE_KEY, { schemaVersion: 3, term: null, courses: [] }]])
+  storage = new Map([[TIMETABLE_KEY, { schemaVersion: 4, term: null, courses: [], periodSettings: clone(DEFAULT_PERIOD_SETTINGS) }]])
   timetableWriteFailures = 0
   assert.throws(() => courseStorage.save(v2Course({ id: '' })), /学期/)
-  assert.deepEqual(storage.get(TIMETABLE_KEY), { schemaVersion: 3, term: null, courses: [] })
+  assert.deepEqual(storage.get(TIMETABLE_KEY), { schemaVersion: 4, term: null, courses: [], periodSettings: DEFAULT_PERIOD_SETTINGS })
 })
 
 test('V1 迁移完整保留课程字段并展开全部周', () => {
@@ -128,7 +134,8 @@ test('V1 迁移完整保留课程字段并展开全部周', () => {
   const result = courseStorage.applyTerm(TERM)
   assert.deepEqual(result, { ok: true, migrated: true })
   const saved = storage.get(TIMETABLE_KEY)
-  assert.equal(saved.schemaVersion, 3)
+  assert.equal(saved.schemaVersion, 4)
+  assert.deepEqual(saved.periodSettings, DEFAULT_PERIOD_SETTINGS)
   assert.deepEqual(saved.term, TERM)
   assert.deepEqual(saved.courses[0], {
     ...original,
@@ -141,9 +148,10 @@ test('V1 迁移完整保留课程字段并展开全部周', () => {
 
 test('学期调整校验失败时不覆盖原来的最近备份', () => {
   const current = {
-    schemaVersion: 3,
+    schemaVersion: 4,
     term: { startDate: '2026-09-07', totalWeeks: 20 },
     courses: [v2Course({ weekMode: 'custom', weeks: [20] })],
+    periodSettings: clone(DEFAULT_PERIOD_SETTINGS),
   }
   const previousRecent = { marker: 'keep-me' }
   storage = new Map([

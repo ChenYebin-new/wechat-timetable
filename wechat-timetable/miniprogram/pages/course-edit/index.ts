@@ -1,12 +1,13 @@
 // pages/course-edit/index.ts
 import type { Course, CourseRange, WeekMode } from '../../models/course'
-import { COLOR_PALETTE, DAYS, MAX_TOTAL_WEEKS, PERIODS, WEEK_MODES } from '../../constants/timetable'
+import { COLOR_PALETTE, DAYS, MAX_TOTAL_WEEKS, WEEK_MODES } from '../../constants/timetable'
 import {
   createCourseGroup,
   detachCourseSegment,
   getCourseById,
   getCourseGroupByCourseId,
   getCourses,
+  getPeriodSettings,
   getTerm,
   remove,
   removeCourseGroup,
@@ -16,9 +17,9 @@ import {
 import { validate } from '../../utils/course-validator'
 import { expandWeeks, rangeWeeks } from '../../utils/term'
 import { cellsToRanges, formatRanges, rangesToCells } from '../../utils/grid-selection'
+import { buildPeriodViews } from '../../utils/period-settings'
 
 const dayOptions = DAYS
-const periodOptions = PERIODS.map((p) => `${p.label} ${p.time}`)
 const weekModeLabels = WEEK_MODES.map((m) => m.label)
 
 type EditMode = 'single-create' | 'segment-edit' | 'group-create' | 'group-edit'
@@ -51,7 +52,7 @@ Page({
     rangeItems: [] as string[],
     rangeSummary: '',
     dayOptions,
-    periodOptions,
+    periodOptions: [] as string[],
     colors: COLOR_PALETTE,
     weekModeLabels,
     name: '',
@@ -70,6 +71,7 @@ Page({
 
   onLoad(options: Record<string, string | undefined>) {
     const term = getTerm()
+    const periodOptions = buildPeriodViews(getPeriodSettings()).map((period) => `${period.label} ${period.time}`)
     const totalWeeks = term ? term.totalWeeks : 0
     const id = options && options.id ? options.id : ''
     const requestedMode = options && options.mode ? options.mode : ''
@@ -82,6 +84,7 @@ Page({
     const sourceWeek = Math.max(1, Number(options.sourceWeek) || 1)
     this.setData({
       totalWeeks,
+      periodOptions,
       sourceWeek,
       editMode,
       isEdit: !!id,
@@ -260,7 +263,7 @@ Page({
     const course = this.buildCourse(firstRange)
     const totalWeeks = this.data.totalWeeks > 0 ? this.data.totalWeeks : MAX_TOTAL_WEEKS
     if (!this.data.isGroupMode) {
-      const result = validate(course, getCourses(), this.data.id || undefined, totalWeeks)
+      const result = validate(course, getCourses(), this.data.id || undefined, totalWeeks, this.data.periodOptions.length)
       if (!result.ok) {
         this.showSaveError(new Error(result.errors[0]))
         return

@@ -1,0 +1,44 @@
+<view class="page">
+  <view class="rule-card">
+    <picker mode="selector" range="{{durationOptions}}" value="{{durationIndex}}" bindchange="onDurationChange" aria-label="选择每节课默认时长">
+      <view class="rule-row">
+        <text class="row-title">每节课默认时长</text>
+        <view class="row-value"><text>{{settings.durationMinutes}} 分钟</text><text class="chevron">›</text></view>
+      </view>
+    </picker>
+    <view class="divider"></view>
+    <picker mode="selector" range="{{breakOptions}}" value="{{breakIndex}}" bindchange="onBreakChange" aria-label="选择默认课间休息">
+      <view class="rule-row">
+        <text class="row-title">默认课间休息</text>
+        <view class="row-value"><text>{{settings.breakMinutes}} 分钟</text><text class="chevron">›</text></view>
+      </view>
+    </picker>
+  </view>
+
+  <view class="helper">时长和课间只用于新增节次或重新生成，不会自动覆盖下面已手动设置的时间。</view>
+
+  <view class="count-card">
+    <text class="row-title">每日课程数</text>
+    <view class="stepper">
+      <view class="step-btn {{settings.periods.length <= 1 ? 'disabled' : ''}}" bindtap="onDecrease" aria-role="button" aria-label="减少一节">−</view>
+      <text class="step-value">{{settings.periods.length}}</text>
+      <view class="step-btn {{settings.periods.length >= 14 ? 'disabled' : ''}}" bindtap="onIncrease" aria-role="button" aria-label="增加一节">＋</view>
+    </view>
+  </view>
+
+  <view class="period-card">
+    <block wx:for="{{periods}}" wx:key="index">
+      <view class="period-row" data-index="{{index}}" bindtap="onEditPeriod" aria-role="button" aria-label="编辑{{item.label}}时间">
+        <text class="row-title">{{item.label}}课</text>
+        <view class="row-value"><text>{{item.time}}</text><text class="chevron">›</text></view>
+      </view>
+      <view wx:if="{{index < periods.length - 1}}" class="divider"></view>
+    </block>
+  </view>
+
+  <view class="regenerate" bindtap="onRegenerate" aria-role="button" aria-label="按当前规则重新生成全部节次">按当前规则重新生成</view>
+
+  <view class="save-area">
+    <button class="save-btn" loading="{{saving}}" disabled="{{saving}}" bindtap="onSave" hover-class="save-btn-pressed">保存</button>
+  </view>
+</view>

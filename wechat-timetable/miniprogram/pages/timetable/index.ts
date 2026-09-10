@@ -1,15 +1,17 @@
 // pages/timetable/index.ts
 import type { CourseRange, TermSettings } from '../../models/course'
 import { DAYS } from '../../constants/timetable'
-import { getCourses, getTerm, needsMigration } from '../../services/course-storage'
+import { getCourses, getPeriodSettings, getTerm, needsMigration } from '../../services/course-storage'
 import { calcCurrentWeek } from '../../utils/term'
 import {
   buildWeekPanels,
   coursesForWeek,
-  TIMETABLE_GRID_HEIGHT_RPX,
+  timetableGridHeightRpx,
 } from '../../utils/timetable-layout'
 import type { WeekPanel } from '../../utils/timetable-layout'
 import { formatRanges, keysToRanges, rangesToKeys } from '../../utils/grid-selection'
+import { buildPeriodViews } from '../../utils/period-settings'
+import type { PeriodView } from '../../constants/timetable'
 
 interface CourseEditorInit {
   ranges: CourseRange[]
@@ -19,7 +21,8 @@ interface CourseEditorInit {
 Page({
   data: {
     weekPanels: [] as WeekPanel[],
-    swiperHeightRpx: TIMETABLE_GRID_HEIGHT_RPX,
+    periods: [] as PeriodView[],
+    swiperHeightRpx: timetableGridHeightRpx(9),
     isEmpty: true,
     overviewText: '',
     termReady: false,
@@ -46,6 +49,7 @@ Page({
   /** 整页刷新（进入页面/返回时）：默认定位到当前自然周。 */
   refresh() {
     const term = getTerm()
+    const periods = buildPeriodViews(getPeriodSettings())
     const todayWeek = calcCurrentWeek(term, new Date())
     let currentWeek = todayWeek || 1
     const weekOptions: string[] = []
@@ -59,6 +63,8 @@ Page({
       termReady: !!term,
       needsMigration: needsMigration(),
       weekStatus,
+      periods,
+      swiperHeightRpx: timetableGridHeightRpx(periods.length),
     })
     this.renderWeek(currentWeek, term)
   },
@@ -137,9 +143,9 @@ Page({
     this.openCourseEditor('/pages/course-edit/index')
   },
 
-  onDataManage() {
+  onSettings() {
     if (this.data.selectionMode) return
-    wx.navigateTo({ url: '/pages/data-manage/index' })
+    wx.navigateTo({ url: '/pages/settings/index' })
   },
 
   onTermSettings() {

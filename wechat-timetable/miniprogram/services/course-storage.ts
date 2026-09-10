@@ -1,16 +1,27 @@
 // services/course-storage.ts
-// 统一管理本地 Storage 里的课表数据：V3 读写、旧数据迁移、学期读写与版本识别。
+// 统一管理本地 Storage 里的课表数据：V4 读写、旧数据迁移、学期与课程作息读写。
 // 页面不要直接调用 wx.getStorageSync / setStorageSync 操作课表。
 
-import type { Course, CourseRange, TermSettings, TimetableStorage, WeekMode } from '../models/course'
-import { DAYS, MAX_PERIOD, SCHEMA_VERSION, STORAGE_KEY } from '../constants/timetable'
+import type { Course, CourseRange, PeriodSettings, TermSettings, TimetableStorage, WeekMode } from '../models/course'
+import { DEFAULT_PERIOD_SETTINGS, DAYS, MAX_PERIODS, SCHEMA_VERSION, STORAGE_KEY } from '../constants/timetable'
 import { expandWeeks, normalizeWeeks, validateTerm } from '../utils/term'
 import { isOverlapping, validate } from '../utils/course-validator'
 import { APP_ID, BACKUP_VERSION, RECENT_BACKUP_KEY } from '../models/backup'
 import { cellsToRanges, rangesToCells } from '../utils/grid-selection'
+import { clonePeriodSettings, validatePeriodSettings } from '../utils/period-settings'
+
+interface LoadedStorage extends TimetableStorage {
+  /** 仅存在于内存中，不会写入 Storage。 */
+  periodSettingsInvalid?: boolean
+}
 
 function defaultStorage(): TimetableStorage {
-  return { schemaVersion: SCHEMA_VERSION, term: null, courses: [] }
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    term: null,
+    courses: [],
+    periodSettings: clonePeriodSettings(DEFAULT_PERIOD_SETTINGS),
+  }
 }
 
 function toWeekMode(v: unknown): WeekMode {
@@ -26,19 +37,19 @@ function sanitizeTerm(raw: unknown): TermSettings | null {
   return result.ok ? { startDate, totalWeeks } : null
 }
 
-function sanitizeCourse(raw: unknown, totalWeeks: number, schemaVersion: number): Course | null {
+function sanitizeCourse(raw: unknown, totalWeeks: number, schemaVersion: number, maxPeriod: number): Course | null {
   if (!raw || typeof raw !== 'object') return null
   const c = raw as Record<string, unknown>
   if (typeof c.id !== 'string' || !c.id) return null
   if (typeof c.name !== 'string' || !c.name.trim()) return null
   if (typeof c.day !== 'number' || !Number.isInteger(c.day) || c.day < 1 || c.day > DAYS.length) return null
-  if (typeof c.startPeriod !== 'number' || !Number.isInteger(c.startPeriod) || c.startPeriod < 1 || c.startPeriod > MAX_PERIOD) return null
-  if (typeof c.endPeriod !== 'number' || !Number.isInteger(c.endPeriod) || c.endPeriod < 1 || c.endPeriod > MAX_PERIOD) return null
+  if (typeof c.startPeriod !== 'number' || !Number.isInteger(c.startPeriod) || c.startPeriod < 1 || c.startPeriod > maxPeriod) return null
+  if (typeof c.endPeriod !== 'number' || !Number.isInteger(c.endPeriod) || c.endPeriod < 1 || c.endPeriod > maxPeriod) return null
   if (c.startPeriod > c.endPeriod) return null
   if (typeof c.color !== 'string' || !c.color) return null
   const weekMode = toWeekMode(c.weekMode)
   const groupId =
-    schemaVersion >= SCHEMA_VERSION
+    schemaVersion >= 3
       ? typeof c.groupId === 'string' && c.groupId.trim()
         ? c.groupId.trim()
         : ''
@@ -85,27 +96,38 @@ function load(): TimetableStorage {
     const term = sanitizeTerm(data.term)
     const totalWeeks = term ? term.totalWeeks : 0
     const rawCourses = Array.isArray(data.courses) ? (data.courses as unknown[]) : []
+    const periodCheck = validatePeriodSettings(data.periodSettings)
+    const periodSettings = schemaVersion === SCHEMA_VERSION && periodCheck.ok
+      ? clonePeriodSettings(data.periodSettings as PeriodSettings)
+      : clonePeriodSettings(DEFAULT_PERIOD_SETTINGS)
+    const maxPeriod = schemaVersion === SCHEMA_VERSION && !periodCheck.ok
+      ? MAX_PERIODS
+      : periodSettings.periods.length
     const courses: Course[] = []
     for (const r of rawCourses) {
-      const course = sanitizeCourse(r, totalWeeks, schemaVersion)
+      const course = sanitizeCourse(r, totalWeeks, schemaVersion, maxPeriod)
       if (course) courses.push(course)
     }
-    const storage: TimetableStorage = { schemaVersion, term, courses }
+    const storage: LoadedStorage = { schemaVersion, term, courses, periodSettings }
+    if (schemaVersion === SCHEMA_VERSION && !periodCheck.ok) {
+      Object.defineProperty(storage, 'periodSettingsInvalid', { value: true, enumerable: false })
+    }
 
     if (schemaVersion === SCHEMA_VERSION) {
-      // V3：仅当过滤掉无效数据时回写清理结果。
-      if (rawCourses.length !== courses.length) {
+      // V4：作息缺失或无效时保持只读语义，不静默覆盖；只清理课程数组中的无效项。
+      if (periodCheck.ok && rawCourses.length !== courses.length) {
         persist(storage)
       }
       return storage
     }
 
-    if (schemaVersion === 2 && term && rawCourses.length === courses.length) {
+    if ((schemaVersion === 2 || schemaVersion === 3) && term && rawCourses.length === courses.length) {
       if (!snapshotCurrentRaw()) return storage
       const migrated: TimetableStorage = {
         schemaVersion: SCHEMA_VERSION,
         term,
-        courses: courses.map((course) => ({ ...course, groupId: course.id })),
+        courses: courses.map((course) => ({ ...course, groupId: schemaVersion === 2 ? course.id : course.groupId })),
+        periodSettings: clonePeriodSettings(DEFAULT_PERIOD_SETTINGS),
       }
       try {
         persist(migrated)
@@ -114,6 +136,7 @@ function load(): TimetableStorage {
         if (
           written &&
           written.schemaVersion === SCHEMA_VERSION &&
+          validatePeriodSettings(written.periodSettings).ok &&
           writtenCourses.length === migrated.courses.length &&
           writtenCourses.every(
             (course) =>
@@ -125,7 +148,7 @@ function load(): TimetableStorage {
           return migrated
         }
       } catch {
-        // 下方统一恢复 V2 原数据。
+        // 下方统一恢复旧版原数据。
       }
       try {
         wx.setStorageSync(STORAGE_KEY, raw)
@@ -135,7 +158,7 @@ function load(): TimetableStorage {
       return storage
     }
 
-    // V1（待设置学期）、无法迁移的 V2 或未知更高版本：不降级写回。
+    // V1（待设置学期）、无法迁移的旧版或未知更高版本：不降级写回。
     return storage
   } catch {
     return defaultStorage()
@@ -147,6 +170,9 @@ function assertWritableStorage(data: TimetableStorage): void {
     throw new Error(
       `当前课表数据版本为 V${data.schemaVersion}，此版本小程序仅支持修改 V${SCHEMA_VERSION}。请先完成数据升级或使用更新版本。`,
     )
+  }
+  if ((data as LoadedStorage).periodSettingsInvalid) {
+    throw new Error('当前 V4 课程时间设置缺失或损坏，为保护课程数据已停止写入；请从有效备份恢复')
   }
 }
 
@@ -202,9 +228,24 @@ export function getStorage(): TimetableStorage {
   return load()
 }
 
-/** 一次性写入课表根数据。调用方须自行完成校验；仅支持写 V3。 */
+/** 当前根数据无法安全修改或导出时返回原因。 */
+export function getStorageProblem(data: TimetableStorage = load()): string | null {
+  try {
+    assertWritableStorage(data)
+    return null
+  } catch (error) {
+    return error instanceof Error ? error.message : '当前课表数据不可安全写入'
+  }
+}
+
+/** 一次性写入课表根数据。调用方须自行完成校验；仅支持写 V4。 */
 export function writeStorage(data: TimetableStorage): void {
   assertWritableStorage(data)
+  const periodCheck = validatePeriodSettings(data.periodSettings)
+  if (!periodCheck.ok) throw new Error(periodCheck.reason || '课程时间设置无效')
+  if (data.courses.some((course) => course.endPeriod > data.periodSettings.periods.length)) {
+    throw new Error('课程引用了超出每日课程数的节次')
+  }
   persist(data)
 }
 
@@ -226,6 +267,53 @@ export function needsMigration(): boolean {
 /** 读取全部课程（周次已展开）。 */
 export function getCourses(): Course[] {
   return load().courses
+}
+
+/** 读取全局课程作息草稿副本。 */
+export function getPeriodSettings(): PeriodSettings {
+  return clonePeriodSettings(load().periodSettings)
+}
+
+/** 当前课程实际占用的最高节次；没有课程时为 0。 */
+export function getMaxUsedPeriod(): number {
+  return load().courses.reduce((highest, course) => Math.max(highest, course.endPeriod), 0)
+}
+
+/**
+ * 保存全局课程作息。写入前创建最近自动备份，写入后重读校验；失败则恢复原数据。
+ */
+export function savePeriodSettings(settings: PeriodSettings): { ok: boolean; reason?: string } {
+  const check = validatePeriodSettings(settings)
+  if (!check.ok) return { ok: false, reason: check.reason }
+  const current = load()
+  try {
+    assertWritableStorage(current)
+  } catch (error) {
+    return { ok: false, reason: error instanceof Error ? error.message : '当前数据不可写入' }
+  }
+  const maxUsed = current.courses.reduce((highest, course) => Math.max(highest, course.endPeriod), 0)
+  if (settings.periods.length < maxUsed) {
+    return { ok: false, reason: `已有课程使用到第 ${maxUsed} 节，不能减少到 ${settings.periods.length} 节` }
+  }
+  if (!snapshotCurrentRaw()) return { ok: false, reason: '无法创建操作前自动备份，已停止保存' }
+  const next: TimetableStorage = {
+    ...current,
+    periodSettings: clonePeriodSettings(settings),
+  }
+  try {
+    writeStorage(next)
+    const reread = load()
+    const rereadCheck = validatePeriodSettings(reread.periodSettings)
+    const expected = JSON.stringify(next.periodSettings)
+    if (!rereadCheck.ok || JSON.stringify(reread.periodSettings) !== expected) {
+      const restored = restoreFromRecentRaw()
+      return { ok: false, reason: restored ? '写入后校验失败，原数据已恢复' : '写入后校验失败，无法确认原数据状态' }
+    }
+    return { ok: true }
+  } catch {
+    const restored = restoreFromRecentRaw()
+    return { ok: false, reason: restored ? '写入失败，原数据已恢复' : '写入失败，无法确认原数据状态' }
+  }
 }
 
 /** 按 id 查询课程。 */
@@ -254,17 +342,18 @@ function validateCandidates(
   all: Course[],
   excludedIds: string[],
   totalWeeks: number,
+  maxPeriod: number,
 ): void {
   const excluded = new Set(excludedIds)
   const comparison = all.filter((course) => !excluded.has(course.id))
   for (const candidate of candidates) {
-    const result = validate(candidate, comparison, undefined, totalWeeks)
+    const result = validate(candidate, comparison, undefined, totalWeeks, maxPeriod)
     if (!result.ok) throw new Error(result.errors[0])
     comparison.push(candidate)
   }
 }
 
-function canonicalRanges(ranges: CourseRange[]): CourseRange[] {
+function canonicalRanges(ranges: CourseRange[], maxPeriod: number): CourseRange[] {
   for (const range of ranges) {
     if (
       !Number.isInteger(range.day) ||
@@ -273,7 +362,7 @@ function canonicalRanges(ranges: CourseRange[]): CourseRange[] {
       !Number.isInteger(range.startPeriod) ||
       !Number.isInteger(range.endPeriod) ||
       range.startPeriod < 1 ||
-      range.endPeriod > MAX_PERIOD ||
+      range.endPeriod > maxPeriod ||
       range.startPeriod > range.endPeriod
     ) {
       throw new Error('上课时段超出课表范围')
@@ -306,7 +395,7 @@ export function save(course: Course): void {
       createdAt: existing.createdAt,
       updatedAt: now,
     }
-    validateCandidates([candidate], data.courses, [existing.id], totalWeeks)
+    validateCandidates([candidate], data.courses, [existing.id], totalWeeks, data.periodSettings.periods.length)
     data.courses = data.courses.map((item) => (item.id === existing.id ? candidate : item))
   } else {
     const candidate: Course = {
@@ -316,7 +405,7 @@ export function save(course: Course): void {
       createdAt: now,
       updatedAt: now,
     }
-    validateCandidates([candidate], data.courses, [], totalWeeks)
+    validateCandidates([candidate], data.courses, [], totalWeeks, data.periodSettings.periods.length)
     data.courses = [...data.courses, candidate]
   }
   persist(data)
@@ -330,7 +419,7 @@ export function createCourseGroup(course: Course, ranges: CourseRange[]): string
   const normalized = normalizeForWrite(course, data.term.totalWeeks)
   const groupId = generateId()
   const now = Date.now()
-  const candidates = canonicalRanges(ranges).map((range) => ({
+  const candidates = canonicalRanges(ranges, data.periodSettings.periods.length).map((range) => ({
     ...normalized,
     ...range,
     id: generateId(),
@@ -338,7 +427,7 @@ export function createCourseGroup(course: Course, ranges: CourseRange[]): string
     createdAt: now,
     updatedAt: now,
   }))
-  validateCandidates(candidates, data.courses, [], data.term.totalWeeks)
+  validateCandidates(candidates, data.courses, [], data.term.totalWeeks, data.periodSettings.periods.length)
   data.courses = [...data.courses, ...candidates]
   persist(data)
   return groupId
@@ -356,7 +445,7 @@ export function updateCourseGroup(groupId: string, course: Course, ranges: Cours
   )
   const normalized = normalizeForWrite(course, data.term.totalWeeks)
   const now = Date.now()
-  const candidates = canonicalRanges(ranges).map((range) => {
+  const candidates = canonicalRanges(ranges, data.periodSettings.periods.length).map((range) => {
     const previous = existingByRange.get(`${range.day}-${range.startPeriod}-${range.endPeriod}`)
     return {
       ...normalized,
@@ -367,7 +456,7 @@ export function updateCourseGroup(groupId: string, course: Course, ranges: Cours
       updatedAt: now,
     }
   })
-  validateCandidates(candidates, data.courses, existing.map((item) => item.id), data.term.totalWeeks)
+  validateCandidates(candidates, data.courses, existing.map((item) => item.id), data.term.totalWeeks, data.periodSettings.periods.length)
   data.courses = [
     ...data.courses.filter((item) => item.groupId !== groupId),
     ...candidates,
@@ -392,7 +481,7 @@ export function detachCourseSegment(course: Course): void {
     createdAt: existing.createdAt,
     updatedAt: Date.now(),
   }
-  validateCandidates([candidate], data.courses, [existing.id], data.term.totalWeeks)
+  validateCandidates([candidate], data.courses, [existing.id], data.term.totalWeeks, data.periodSettings.periods.length)
   data.courses = data.courses.map((item) => (item.id === existing.id ? candidate : item))
   persist(data)
 }
@@ -415,8 +504,8 @@ export function removeCourseGroup(groupId: string): void {
 
 /**
  * 设置/修改学期。
- * - V1 数据：补齐周次与 groupId 后直接迁移为 V3。
- * - V2/V3 数据：重新计算全部课程周次，V2 同时补齐 groupId。
+ * - V1 数据：补齐周次、groupId 与默认作息后直接迁移为 V4。
+ * - V2/V3/V4 数据：重新计算全部课程周次，旧版同时补齐默认作息。
  * 操作前先生成最近自动备份；任一校验失败或写入失败时不修改原数据。
  */
 export function applyTerm(term: TermSettings): { ok: boolean; reason?: string; migrated?: boolean } {
@@ -424,10 +513,12 @@ export function applyTerm(term: TermSettings): { ok: boolean; reason?: string; m
   if (!vt.ok) return { ok: false, reason: vt.reason }
 
   const current = load()
-  if (current.schemaVersion !== 1 && current.schemaVersion !== 2 && current.schemaVersion !== SCHEMA_VERSION) {
+  const currentProblem = current.schemaVersion === SCHEMA_VERSION ? getStorageProblem(current) : null
+  if (currentProblem) return { ok: false, reason: currentProblem }
+  if (![1, 2, 3, SCHEMA_VERSION].includes(current.schemaVersion)) {
     return {
       ok: false,
-      reason: `当前课表数据版本为 V${current.schemaVersion}，不能按 V1、V2 或 V3 猜测迁移。请使用更新版本处理课表。`,
+      reason: `当前课表数据版本为 V${current.schemaVersion}，不能按 V1–V4 猜测迁移。请使用更新版本处理课表。`,
     }
   }
 
@@ -465,6 +556,9 @@ export function applyTerm(term: TermSettings): { ok: boolean; reason?: string; m
     schemaVersion: SCHEMA_VERSION,
     term: { startDate: term.startDate, totalWeeks: term.totalWeeks },
     courses: newCourses,
+    periodSettings: current.schemaVersion === SCHEMA_VERSION
+      ? clonePeriodSettings(current.periodSettings)
+      : clonePeriodSettings(DEFAULT_PERIOD_SETTINGS),
   }
 
   if (!snapshotCurrentRaw()) return { ok: false, reason: '无法创建操作前自动备份' }
@@ -477,7 +571,8 @@ export function applyTerm(term: TermSettings): { ok: boolean; reason?: string; m
       !reread.term ||
       reread.term.startDate !== storage.term!.startDate ||
       reread.term.totalWeeks !== storage.term!.totalWeeks ||
-      reread.courses.length !== storage.courses.length
+      reread.courses.length !== storage.courses.length ||
+      JSON.stringify(reread.periodSettings) !== JSON.stringify(storage.periodSettings)
     ) {
       const restored = restoreFromRecentRaw()
       return {

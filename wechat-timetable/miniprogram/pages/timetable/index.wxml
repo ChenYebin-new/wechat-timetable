@@ -3,7 +3,7 @@
   <view class="overview">
     <text class="overview-text">{{overviewText}}</text>
     <view class="overview-actions {{selectionMode ? 'actions-disabled' : ''}}">
-      <view class="action-btn" bindtap="onDataManage" aria-role="button" aria-label="数据管理">数据</view>
+      <view class="action-btn" bindtap="onSettings" aria-role="button" aria-label="设置">设置</view>
       <view class="action-btn action-primary" bindtap="onAdd" aria-role="button" aria-label="新增课程">＋新增</view>
     </view>
   </view>
@@ -52,6 +52,7 @@
       <swiper-item wx:for="{{weekPanels}}" wx:key="week">
         <view wx:if="{{item.active}}" class="grid-frame">
           <timetable-grid
+            periods="{{periods}}"
             day-slots="{{item.daySlots}}"
             selection-mode="{{selectionMode}}"
             selected-keys="{{selectedKeys}}"
@@ -69,6 +70,7 @@
       <block wx:for="{{weekPanels}}" wx:key="week">
         <view wx:if="{{item.week === currentWeek}}" class="grid-frame">
           <timetable-grid
+            periods="{{periods}}"
             day-slots="{{item.daySlots}}"
             selection-mode="{{true}}"
             selected-keys="{{selectedKeys}}"
