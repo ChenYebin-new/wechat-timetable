@@ -27,6 +27,14 @@ const RECENT_BACKUP_KEY = 'timetable_recent_backup'
 const DEFAULT_COLOR = '#0ea5a4'
 const TERM = { startDate: '2026-09-07', totalWeeks: 18 }
 const ALL_WEEKS = Array.from({ length: TERM.totalWeeks }, (_, index) => index + 1)
+const DEFAULT_PERIOD_SETTINGS = {
+  durationMinutes: 50,
+  breakMinutes: 10,
+  firstStart: '08:00',
+  overrides: [{ period: 5, start: '14:00' }],
+  periods: ['08:00-08:50', '09:00-09:50', '10:00-10:50', '11:00-11:50', '14:00-14:50', '15:00-15:50', '16:00-16:50', '17:00-17:50', '18:00-18:50']
+    .map((value) => { const [start, end] = value.split('-'); return { start, end } }),
+}
 let storage = new Map()
 let timetableWriteFailures = 0
 
@@ -109,7 +117,7 @@ function v2Envelope(courses = [v2Course()], overrides = {}) {
 
 function reset(currentCourses = []) {
   storage = new Map([
-    [TIMETABLE_KEY, { schemaVersion: 3, term: clone(TERM), courses: clone(currentCourses) }],
+    [TIMETABLE_KEY, { schemaVersion: 5, term: clone(TERM), courses: clone(currentCourses), periodSettings: clone(DEFAULT_PERIOD_SETTINGS) }],
   ])
   timetableWriteFailures = 0
 }
@@ -268,7 +276,7 @@ test('不同学期的新版备份不能直接合并', () => {
   assert.deepEqual(storage.get(TIMETABLE_KEY).courses, current)
 })
 
-test('V1 备份设置学期后可以覆盖为完整 V3 数据', () => {
+test('V1 备份设置学期后可以覆盖为完整 V5 数据', () => {
   reset()
   const result = backupService.overwriteFromBackup(
     v1Envelope([v1Course({ name: '  高等数学  ' })]),
@@ -276,7 +284,8 @@ test('V1 备份设置学期后可以覆盖为完整 V3 数据', () => {
   )
   assert.equal(result.ok, true)
   const saved = storage.get(TIMETABLE_KEY)
-  assert.equal(saved.schemaVersion, 3)
+  assert.equal(saved.schemaVersion, 5)
+  assert.deepEqual(saved.periodSettings, DEFAULT_PERIOD_SETTINGS)
   assert.equal(saved.courses[0].groupId, saved.courses[0].id)
   assert.deepEqual(saved.term, TERM)
   assert.equal(saved.courses[0].name, '高等数学')
@@ -292,7 +301,8 @@ test('V2 备份覆盖时为每个旧课程补齐独立课程组', () => {
   ]))
   assert.equal(result.ok, true)
   const saved = storage.get(TIMETABLE_KEY)
-  assert.equal(saved.schemaVersion, 3)
+  assert.equal(saved.schemaVersion, 5)
+  assert.deepEqual(saved.periodSettings, DEFAULT_PERIOD_SETTINGS)
   assert.deepEqual(saved.courses.map((item) => item.groupId), ['old-1', 'old-2'])
 })
 
@@ -358,11 +368,11 @@ test('迁移生成的 V1 最近备份可以按当前学期恢复', () => {
   assert.equal(courseStorage.applyTerm(TERM).ok, true)
 
   const replacement = [course({ id: 'course-2', name: '英语', day: 2 })]
-  storage.set(TIMETABLE_KEY, { schemaVersion: 3, term: clone(TERM), courses: replacement })
+  storage.set(TIMETABLE_KEY, { schemaVersion: 5, term: clone(TERM), courses: replacement, periodSettings: clone(DEFAULT_PERIOD_SETTINGS) })
   assert.equal(backupService.restoreRecentBackup().ok, true)
 
   const restored = storage.get(TIMETABLE_KEY)
-  assert.equal(restored.schemaVersion, 3)
+  assert.equal(restored.schemaVersion, 5)
   assert.deepEqual(restored.term, TERM)
   assert.equal(restored.courses[0].id, original[0].id)
   assert.deepEqual(restored.courses[0].weeks, ALL_WEEKS)
@@ -374,15 +384,15 @@ test('迁移生成的 V1 最近备份可以按当前学期恢复', () => {
 
 test('未知高版本数据不能被编辑、删除、导出或覆盖', () => {
   const futureStorage = {
-    schemaVersion: 4,
+    schemaVersion: 6,
     term: { startDate: '2026-09-07', totalWeeks: 18 },
     courses: [course({ futureField: 'keep-me' })],
   }
   storage = new Map([[TIMETABLE_KEY, clone(futureStorage)]])
 
-  assert.throws(() => courseStorage.save(course({ name: '修改后' })), /仅支持修改 V3/)
-  assert.throws(() => courseStorage.remove('course-1'), /仅支持修改 V3/)
-  assert.throws(() => backupService.exportBackup(), /仅支持 V3/)
+  assert.throws(() => courseStorage.save(course({ name: '修改后' })), /仅支持修改 V5/)
+  assert.throws(() => courseStorage.remove('course-1'), /仅支持修改 V5/)
+  assert.throws(() => backupService.exportBackup(), /仅支持 V5/)
   assert.equal(backupService.overwriteFromBackup(envelope()).ok, false)
   assert.equal(courseStorage.applyTerm(TERM).ok, false)
   assert.deepEqual(storage.get(TIMETABLE_KEY), futureStorage)

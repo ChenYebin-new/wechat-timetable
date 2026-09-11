@@ -26,6 +26,14 @@ const TIMETABLE_KEY = 'timetable_courses'
 const RECENT_BACKUP_KEY = 'timetable_recent_backup'
 const TERM = { startDate: '2026-09-07', totalWeeks: 18 }
 const ALL_WEEKS = Array.from({ length: TERM.totalWeeks }, (_, index) => index + 1)
+const DEFAULT_PERIOD_SETTINGS = {
+  durationMinutes: 50,
+  breakMinutes: 10,
+  firstStart: '08:00',
+  overrides: [{ period: 5, start: '14:00' }],
+  periods: ['08:00-08:50', '09:00-09:50', '10:00-10:50', '11:00-11:50', '14:00-14:50', '15:00-15:50', '16:00-16:50', '17:00-17:50', '18:00-18:50']
+    .map((value) => { const [start, end] = value.split('-'); return { start, end } }),
+}
 let storage = new Map()
 let timetableWrites = 0
 let timetableWriteFailures = 0
@@ -85,7 +93,7 @@ function draft(overrides = {}) {
 }
 
 function reset(courses = []) {
-  storage = new Map([[TIMETABLE_KEY, { schemaVersion: 3, term: clone(TERM), courses: clone(courses) }]])
+  storage = new Map([[TIMETABLE_KEY, { schemaVersion: 5, term: clone(TERM), courses: clone(courses), periodSettings: clone(DEFAULT_PERIOD_SETTINGS) }]])
   timetableWrites = 0
   timetableWriteFailures = 0
 }
@@ -195,7 +203,7 @@ test('任意格子去重排序并仅合并同一天连续节次', () => {
   assert.deepEqual(selection.keysToRanges(selection.rangesToKeys(ranges)), ranges)
 })
 
-test('V2 数据自动升级为 V3，并保留一份升级前备份', () => {
+test('V2 数据自动升级为 V5，并保留一份升级前备份', () => {
   const legacy = draft({ id: 'legacy-1' })
   delete legacy.groupId
   storage = new Map([[TIMETABLE_KEY, { schemaVersion: 2, term: clone(TERM), courses: [legacy] }]])
@@ -203,7 +211,8 @@ test('V2 数据自动升级为 V3，并保留一份升级前备份', () => {
   timetableWriteFailures = 0
 
   const migrated = courseStorage.getStorage()
-  assert.equal(migrated.schemaVersion, 3)
+  assert.equal(migrated.schemaVersion, 5)
+  assert.deepEqual(migrated.periodSettings, DEFAULT_PERIOD_SETTINGS)
   assert.equal(migrated.courses[0].groupId, 'legacy-1')
   assert.equal(storage.get(RECENT_BACKUP_KEY).export.data.schemaVersion, 2)
   assert.equal(timetableWrites, 1)

@@ -1,5 +1,5 @@
 import type { CourseRange, GridCell } from '../models/course'
-import { DAYS, MAX_PERIOD } from '../constants/timetable'
+import { DAYS, MAX_PERIODS } from '../constants/timetable'
 
 export function cellKey(day: number, period: number): string {
   return `${day}-${period}`
@@ -11,7 +11,7 @@ export function parseCellKey(key: string): GridCell | null {
   const day = Number(match[1])
   const period = Number(match[2])
   if (!Number.isInteger(day) || day < 1 || day > DAYS.length) return null
-  if (!Number.isInteger(period) || period < 1 || period > MAX_PERIOD) return null
+  if (!Number.isInteger(period) || period < 1 || period > MAX_PERIODS) return null
   return { day, period }
 }
 
@@ -24,7 +24,7 @@ export function cellsToRanges(cells: GridCell[]): CourseRange[] {
       cell.day <= DAYS.length &&
       Number.isInteger(cell.period) &&
       cell.period >= 1 &&
-      cell.period <= MAX_PERIOD
+      cell.period <= MAX_PERIODS
     ) {
       unique.set(cellKey(cell.day, cell.period), { day: cell.day, period: cell.period })
     }
@@ -53,7 +53,7 @@ export function rangesToCells(ranges: CourseRange[]): GridCell[] {
       !Number.isInteger(range.startPeriod) ||
       !Number.isInteger(range.endPeriod) ||
       range.startPeriod < 1 ||
-      range.endPeriod > MAX_PERIOD ||
+      range.endPeriod > MAX_PERIODS ||
       range.startPeriod > range.endPeriod
     ) {
       continue

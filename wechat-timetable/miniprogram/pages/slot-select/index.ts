@@ -1,9 +1,11 @@
 import type { CourseRange } from '../../models/course'
-import { getCourses } from '../../services/course-storage'
+import { getCourses, getPeriodSettings } from '../../services/course-storage'
 import { weeksOverlap } from '../../utils/course-validator'
 import { buildDaySlots } from '../../utils/timetable-layout'
 import type { TimetableCardItem } from '../../utils/timetable-layout'
 import { formatRanges, keysToRanges, rangesToKeys } from '../../utils/grid-selection'
+import { buildPeriodViews } from '../../utils/period-settings'
+import type { PeriodView } from '../../constants/timetable'
 
 interface SlotSelectorInit {
   ranges: CourseRange[]
@@ -14,6 +16,7 @@ interface SlotSelectorInit {
 Page({
   data: {
     ready: false,
+    periods: [] as PeriodView[],
     daySlots: [] as TimetableCardItem[][],
     selectedKeys: [] as string[],
     disabledKeys: [] as string[],
@@ -31,6 +34,7 @@ Page({
       )
       this.setData({
         ready: true,
+        periods: buildPeriodViews(getPeriodSettings()),
         daySlots: buildDaySlots(occupied),
         disabledKeys: rangesToKeys(occupied.map((course) => ({
           day: course.day,

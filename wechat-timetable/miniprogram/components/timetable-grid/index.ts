@@ -1,5 +1,6 @@
 // components/timetable-grid/index.ts
-import { DAYS, GRID_HOLD_DURATION_MS, PERIODS } from '../../constants/timetable'
+import { DAYS, GRID_HOLD_DURATION_MS } from '../../constants/timetable'
+import type { PeriodView } from '../../constants/timetable'
 import { cellKey } from '../../utils/grid-selection'
 import type { TimetableCardItem } from '../../utils/timetable-layout'
 
@@ -47,6 +48,11 @@ function clearHoldTimer(instance: object): void {
 
 Component({
   properties: {
+    periods: {
+      type: Array,
+      value: [] as PeriodView[],
+      observer: 'rebuildColumns',
+    },
     daySlots: {
       type: Array,
       value: [] as TimetableCardItem[][],
@@ -74,7 +80,6 @@ Component({
 
   data: {
     days: DAYS,
-    periods: PERIODS,
     columns: [] as GridColumnItem[],
     pressingKey: '',
   },
@@ -97,7 +102,7 @@ Component({
       const columns = DAYS.map((_, dayIndex) => ({
         day: dayIndex + 1,
         slots: daySlots[dayIndex] || [],
-        cells: PERIODS.map((period) => {
+        cells: (this.properties.periods as PeriodView[]).map((period) => {
           const key = cellKey(dayIndex + 1, period.index)
           return {
             key,

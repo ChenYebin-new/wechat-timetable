@@ -1,0 +1,112 @@
+.page {
+  min-height: 100vh;
+  padding: 24rpx 24rpx calc(32rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  padding: 24rpx;
+  margin-bottom: 22rpx;
+  background: #dcecea;
+  border-radius: 20rpx;
+}
+
+.intro-title {
+  color: #213b36;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.intro-desc {
+  color: #58706a;
+  font-size: 23rpx;
+  line-height: 1.5;
+}
+
+.custom-state {
+  margin-top: 4rpx;
+  color: #267d78;
+  font-size: 21rpx;
+  font-weight: 600;
+}
+
+.time-card {
+  padding: 0 26rpx;
+  background: #ffffff;
+  border-radius: 20rpx;
+  box-shadow: 0 8rpx 20rpx rgba(52, 83, 77, 0.06);
+}
+
+.time-row {
+  min-height: 116rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.duration-row {
+  min-height: 96rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.duration-value {
+  color: #58706a;
+  font-size: 25rpx;
+  font-variant-numeric: tabular-nums;
+}
+
+.row-title {
+  color: #263d38;
+  font-size: 28rpx;
+  font-weight: 500;
+}
+
+.row-value {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  color: #267d78;
+  font-size: 29rpx;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.chevron {
+  color: #a5b2ae;
+  font-size: 42rpx;
+  font-weight: 300;
+}
+
+.divider {
+  height: 2rpx;
+  background: #eef2f1;
+}
+
+.impact {
+  margin: 18rpx 6rpx 28rpx;
+  color: #71837e;
+  font-size: 22rpx;
+  line-height: 1.55;
+}
+
+.save-btn {
+  margin-top: 32rpx;
+  border-radius: 44rpx;
+  background: #267d78;
+  color: #ffffff;
+  font-size: 30rpx;
+}
+
+.save-btn::after {
+  border: 0;
+}
+
+.save-btn-pressed {
+  background: #1d5f5b;
+  transform: scale(0.98);
+}

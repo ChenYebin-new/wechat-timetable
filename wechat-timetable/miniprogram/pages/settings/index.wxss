@@ -1,0 +1,72 @@
+.page {
+  min-height: 100vh;
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  padding: 24rpx;
+  margin-bottom: 22rpx;
+  background: #dcecea;
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 12rpx rgba(52, 83, 77, 0.08);
+}
+
+.intro-title {
+  color: #213b36;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.intro-desc {
+  color: #58706a;
+  font-size: 23rpx;
+  line-height: 1.5;
+}
+
+.menu-card {
+  padding: 0 26rpx;
+  background: #ffffff;
+  border-radius: 20rpx;
+  box-shadow: 0 8rpx 20rpx rgba(52, 83, 77, 0.06);
+}
+
+.menu-row {
+  min-height: 132rpx;
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.menu-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.menu-title {
+  color: #223b36;
+  font-size: 29rpx;
+  font-weight: 600;
+}
+
+.menu-desc {
+  color: #71837e;
+  font-size: 22rpx;
+}
+
+.chevron {
+  color: #9aaba6;
+  font-size: 46rpx;
+  font-weight: 300;
+}
+
+.divider {
+  height: 2rpx;
+  background: #eef2f1;
+}

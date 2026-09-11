@@ -1,0 +1,32 @@
+<view class="page">
+  <view class="intro">
+    <text class="intro-title">课表设置</text>
+    <text class="intro-desc">管理学期、每日课程时间和本地备份。所有数据仍只保存在当前设备。</text>
+  </view>
+
+  <view class="menu-card">
+    <view class="menu-row" bindtap="onTermSettings" aria-role="button" aria-label="学期设置">
+      <view class="menu-copy">
+        <text class="menu-title">学期设置</text>
+        <text class="menu-desc">第一教学周、总周数</text>
+      </view>
+      <text class="chevron">›</text>
+    </view>
+    <view class="divider"></view>
+    <view class="menu-row" bindtap="onPeriodSettings" aria-role="button" aria-label="课程时间设置">
+      <view class="menu-copy">
+        <text class="menu-title">课程时间设置</text>
+        <text class="menu-desc">每日节数、课时时长和具体时间</text>
+      </view>
+      <text class="chevron">›</text>
+    </view>
+    <view class="divider"></view>
+    <view class="menu-row" bindtap="onDataManage" aria-role="button" aria-label="数据管理">
+      <view class="menu-copy">
+        <text class="menu-title">数据管理</text>
+        <text class="menu-desc">导出、导入与最近自动备份</text>
+      </view>
+      <text class="chevron">›</text>
+    </view>
+  </view>
+</view>

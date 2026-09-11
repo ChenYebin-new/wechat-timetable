@@ -1,0 +1,32 @@
+<view class="page" wx:if="{{ready}}">
+  <view class="intro">
+    <text class="intro-title">{{title}}</text>
+    <text class="intro-desc">修改开始时间会自动计算结束时间；修改结束时间会保存为本节专属时长。返回上一级后仍需点击总保存。</text>
+    <text class="custom-state">{{customText}}</text>
+  </view>
+
+  <view class="time-card">
+    <picker mode="time" value="{{start}}" bindchange="onStartChange" aria-label="选择开始时间">
+      <view class="time-row">
+        <text class="row-title">开始时间</text>
+        <view class="row-value"><text>{{start}}</text><text class="chevron">›</text></view>
+      </view>
+    </picker>
+    <view class="divider"></view>
+    <picker mode="time" value="{{end}}" bindchange="onEndChange" aria-label="选择结束时间">
+      <view class="time-row">
+        <text class="row-title">结束时间</text>
+        <view class="row-value"><text>{{end}}</text><text class="chevron">›</text></view>
+      </view>
+    </picker>
+    <view class="divider"></view>
+    <view class="duration-row">
+      <text class="row-title">本节时长</text>
+      <text class="duration-value">{{durationText}}</text>
+    </view>
+  </view>
+
+  <view class="impact">{{impactText}}</view>
+
+  <button class="save-btn" bindtap="onSave" hover-class="save-btn-pressed">保存本节时间</button>
+</view>

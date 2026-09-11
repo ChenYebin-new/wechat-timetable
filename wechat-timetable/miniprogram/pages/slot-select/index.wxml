@@ -6,6 +6,7 @@
 
   <view wx:if="{{ready}}" class="grid-frame">
     <timetable-grid
+      periods="{{periods}}"
       day-slots="{{daySlots}}"
       selection-mode="{{true}}"
       selected-keys="{{selectedKeys}}"
