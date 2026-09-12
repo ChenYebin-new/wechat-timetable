@@ -30,6 +30,12 @@ export function formatLocalDate(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
+/** 返回指定日期所在周的星期一（本地自然日）。 */
+export function currentMonday(now: Date = new Date()): string {
+  const day = now.getDay() === 0 ? 7 : now.getDay()
+  return formatLocalDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - (day - 1)))
+}
+
 /**
  * 计算指定日期处于第几教学周。
  * 返回 1..totalWeeks；早于开始日或晚于学期最后一天返回 null。

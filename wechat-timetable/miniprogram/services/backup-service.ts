@@ -1,8 +1,8 @@
 // services/backup-service.ts
 // 课表数据的导出、导入校验、预览、覆盖、合并与最近自动备份（V5，兼容 V1–V4）。
 
-import type { Course, PeriodSettings, TermSettings, TimetableStorage, WeekMode } from '../models/course'
-import { COLOR_PALETTE, DEFAULT_PERIOD_SETTINGS, SCHEMA_VERSION } from '../constants/timetable'
+import type { Course, PeriodSettings, SupportedTimetableStorage, TermSettings, TimetableStorage, WeekMode } from '../models/course'
+import { DEFAULT_PERIOD_SETTINGS, SCHEMA_VERSION } from '../constants/timetable'
 import {
   APP_ID,
   BACKUP_VERSION,
@@ -11,14 +11,16 @@ import {
 } from '../models/backup'
 import type { ImportPreview, RecentBackup, TimetableBackupEnvelope } from '../models/backup'
 import { getStorage, getStorageProblem, writeStorage } from './course-storage'
+import type { TimetableStorageView } from './storage-codec'
 import { isOverlapping } from '../utils/course-validator'
 import { expandWeeks, normalizeWeeks, validateTerm } from '../utils/term'
 import {
   clonePeriodSettings,
   migrateV4PeriodSettings,
   samePeriodSettings,
-  validatePeriodSettings,
 } from '../utils/period-settings'
+import { isSupportedSchemaVersion, isValidCourseColor, validateCurrentStorage } from './storage-codec'
+import { courseGroupCount, planCourseGroupMerge } from '../utils/course-groups'
 
 // ---------- 基础工具 ----------
 
@@ -64,18 +66,6 @@ function sameWeeks(a: number[], b: number[]): boolean {
 
 function sameTerm(a: TermSettings, b: TermSettings): boolean {
   return a.startDate === b.startDate && a.totalWeeks === b.totalWeeks
-}
-
-/** 判断两门课程是否属于重复：ID 相同，或名称、时间与实际周次都相同。 */
-function isDuplicateCourse(a: Course, b: Course): boolean {
-  if (a.id === b.id) return true
-  return (
-    a.name.trim() === b.name.trim() &&
-    a.day === b.day &&
-    a.startPeriod === b.startPeriod &&
-    a.endPeriod === b.endPeriod &&
-    sameWeeks(a.weeks, b.weeks)
-  )
 }
 
 interface CourseValidationResult {
@@ -125,8 +115,8 @@ function validateBackupCourse(raw: unknown, schemaVersion: number, maxPeriod: nu
   if (c.startPeriod > c.endPeriod) {
     return { reason: '开始节次不能晚于结束节次' }
   }
-  if (typeof c.color !== 'string' || !COLOR_PALETTE.includes(c.color)) {
-    return { reason: '课程颜色不在支持的色板中' }
+  if (!isValidCourseColor(c.color)) {
+    return { reason: '课程颜色必须是六位十六进制颜色' }
   }
   if (typeof c.createdAt !== 'number' || !Number.isSafeInteger(c.createdAt) || c.createdAt < 0) {
     return { reason: '创建时间戳必须是非负安全整数' }
@@ -170,7 +160,7 @@ function validateBackupCourse(raw: unknown, schemaVersion: number, maxPeriod: nu
 /** 导出当前课表为备份 JSON 文本。 */
 export function exportBackup(): string {
   const storage = getStorage()
-  if (![1, 2, 3, 4, SCHEMA_VERSION].includes(storage.schemaVersion)) {
+  if (!isSupportedSchemaVersion(storage.schemaVersion)) {
     throw new Error(unsupportedStorageReason(storage.schemaVersion))
   }
   if (storage.schemaVersion === SCHEMA_VERSION) {
@@ -192,7 +182,7 @@ export function exportBackup(): string {
       term: storage.term,
       courses: storage.courses.map((c) => ({ ...c })),
       periodSettings: clonePeriodSettings(storage.periodSettings),
-    },
+    } as unknown as SupportedTimetableStorage,
   }
   return JSON.stringify(envelope)
 }
@@ -252,7 +242,7 @@ export interface AnalyzeResult {
 }
 
 /** 深度校验备份并计算导入预览。出现任何错误则整体拒绝导入。 */
-export function analyzeBackup(envelope: TimetableBackupEnvelope): AnalyzeResult {
+export function analyzeBackup(envelope: TimetableBackupEnvelope, currentSnapshot?: TimetableStorageView): AnalyzeResult {
   const parsed = validateEnvelopeObject(envelope)
   if (!parsed.ok || !parsed.envelope) {
     return { ok: false, errors: [parsed.reason || '备份外层结构不正确'] }
@@ -263,14 +253,25 @@ export function analyzeBackup(envelope: TimetableBackupEnvelope): AnalyzeResult 
   const schemaVersion = envelope.data.schemaVersion
   if (!Number.isInteger(schemaVersion)) {
     errors.push('备份数据版本缺失或格式不正确')
-  } else if (![1, 2, 3, 4, SCHEMA_VERSION].includes(schemaVersion)) {
+  } else if (!isSupportedSchemaVersion(schemaVersion)) {
     errors.push(`不支持的课表数据版本：${schemaVersion}`)
+  }
+
+  let checkedV5: TimetableStorage | undefined
+  if (!errors.length && schemaVersion === SCHEMA_VERSION) {
+    const checked = validateCurrentStorage(envelope.data)
+    if (!checked.ok || !checked.data) {
+      return { ok: false, errors: [`备份 V5 快照无效：${checked.reason || '字段不完整'}`] }
+    }
+    checkedV5 = checked.data
   }
 
   // V2–V5 备份必须带有效学期；V1 备份无学期。
   let term: TermSettings | null = null
   const needsTerm = schemaVersion === 1
-  if (schemaVersion === 2 || schemaVersion === 3 || schemaVersion === 4 || schemaVersion === SCHEMA_VERSION) {
+  if (schemaVersion === SCHEMA_VERSION) {
+    term = checkedV5 ? checkedV5.term : null
+  } else if (schemaVersion === 2 || schemaVersion === 3 || schemaVersion === 4) {
     const termCheck = validateTerm(envelope.data.term as TermSettings | null)
     if (!termCheck.ok) {
       errors.push(`备份学期设置无效：${termCheck.reason || '缺少学期设置'}`)
@@ -282,9 +283,7 @@ export function analyzeBackup(envelope: TimetableBackupEnvelope): AnalyzeResult 
   const totalWeeks = term ? term.totalWeeks : 0
   let periodSettings = clonePeriodSettings(DEFAULT_PERIOD_SETTINGS)
   if (schemaVersion === SCHEMA_VERSION) {
-    const periodCheck = validatePeriodSettings(envelope.data.periodSettings)
-    if (!periodCheck.ok) errors.push(`备份课程时间设置无效：${periodCheck.reason || '字段不完整'}`)
-    else periodSettings = clonePeriodSettings(envelope.data.periodSettings)
+    if (checkedV5) periodSettings = clonePeriodSettings(checkedV5.periodSettings)
   } else if (schemaVersion === 4) {
     const migrated = migrateV4PeriodSettings(envelope.data.periodSettings)
     if (!migrated) errors.push('备份课程时间设置无效：无法识别 V4 作息')
@@ -394,7 +393,7 @@ export function analyzeBackup(envelope: TimetableBackupEnvelope): AnalyzeResult 
   return {
     ok: true,
     errors: [],
-    preview: computePreview(envelope, backupCourses, term, periodSettings, needsTerm),
+    preview: computePreview(envelope, backupCourses, term, periodSettings, needsTerm, currentSnapshot),
     courses: backupCourses,
     term,
     periodSettings,
@@ -408,8 +407,9 @@ function computePreview(
   backupTerm: TermSettings | null,
   backupPeriodSettings: PeriodSettings,
   needsTerm: boolean,
+  currentSnapshot?: TimetableStorageView,
 ): ImportPreview {
-  const current = getStorage()
+  const current = currentSnapshot || getStorage()
   const existing = current.courses
   let candidates = backupCourses
   const currentProblem = getStorageProblem(current)
@@ -436,20 +436,13 @@ function computePreview(
     }
   }
 
-  let duplicateCount = 0
-  let conflictCount = 0
-  let addCount = 0
-  for (const bc of candidates) {
-    if (existing.some((e) => isDuplicateCourse(bc, e))) {
-      duplicateCount++
-      continue
-    }
-    if (existing.some((e) => isOverlapping(bc, e))) {
-      conflictCount++
-      continue
-    }
-    addCount++
-  }
+  const decisions = mergeAllowed ? planCourseGroupMerge(candidates, existing) : []
+  const duplicateGroups = decisions.filter((decision) => decision.kind === 'duplicate')
+  const conflictGroups = decisions.filter((decision) => decision.kind === 'conflict')
+  const addGroups = decisions.filter((decision) => decision.kind === 'add')
+  const duplicateCount = duplicateGroups.reduce((count, decision) => count + decision.courses.length, 0)
+  const conflictCount = conflictGroups.reduce((count, decision) => count + decision.courses.length, 0)
+  const addCount = addGroups.reduce((count, decision) => count + decision.courses.length, 0)
   return {
     exportedAt: envelope.exportedAt,
     schemaVersion: envelope.data.schemaVersion,
@@ -464,6 +457,13 @@ function computePreview(
     mergeFinalCount: existing.length + addCount,
     mergeAllowed,
     mergeReason: mergeReason || undefined,
+    backupGroupCount: courseGroupCount(backupCourses),
+    currentGroupCount: courseGroupCount(existing),
+    mergeAddGroupCount: addGroups.length,
+    mergeSkipDuplicateGroupCount: duplicateGroups.length,
+    mergeSkipConflictGroupCount: conflictGroups.length,
+    mergeFinalGroupCount: courseGroupCount(existing) + addGroups.length,
+    skippedGroupReasons: decisions.flatMap((decision) => decision.reason ? [decision.reason] : []),
   }
 }
 
@@ -516,7 +516,7 @@ export function getRecentBackup(): RecentBackup | null {
           term: analyzed.term ?? null,
           courses: analyzed.courses,
           periodSettings: clonePeriodSettings(analyzed.periodSettings || DEFAULT_PERIOD_SETTINGS),
-        },
+        } as unknown as SupportedTimetableStorage,
       },
     }
   } catch {
@@ -533,13 +533,19 @@ export interface MutationResult {
   skippedDuplicate?: number
   skippedConflict?: number
   finalCount?: number
+  addedGroups?: number
+  skippedDuplicateGroups?: number
+  skippedConflictGroups?: number
+  finalGroupCount?: number
+  skippedGroupReasons?: string[]
 }
 
 function getCurrentForMutation(): { current?: TimetableStorage; reason?: string } {
   const current = getStorage()
   const problem = getStorageProblem(current)
   if (problem) return { reason: problem }
-  return { current }
+  if (current.schemaVersion !== SCHEMA_VERSION) return { reason: unsupportedStorageReason(current.schemaVersion) }
+  return { current: current as TimetableStorage }
 }
 
 function tryWriteStorage(data: TimetableStorage): boolean {
@@ -660,26 +666,24 @@ export function mergeFromBackup(envelope: TimetableBackupEnvelope, term?: TermSe
   }
 
   const result = current.courses.map((c) => ({ ...c }))
-  const remappedGroups = new Map<string, string>()
+  const decisions = planCourseGroupMerge(incoming, result)
   let added = 0
   let duplicateCount = 0
   let conflictCount = 0
-  for (const bc of incoming) {
-    if (result.some((e) => isDuplicateCourse(bc, e))) {
-      duplicateCount++
+  for (const decision of decisions) {
+    if (decision.kind === 'duplicate') {
+      duplicateCount += decision.courses.length
       continue
     }
-    if (result.some((e) => isOverlapping(bc, e))) {
-      conflictCount++
+    if (decision.kind === 'conflict') {
+      conflictCount += decision.courses.length
       continue
     }
-    let groupId = remappedGroups.get(bc.groupId)
-    if (!groupId) {
-      groupId = generateImportId()
-      remappedGroups.set(bc.groupId, groupId)
+    const groupId = generateImportId()
+    for (const course of decision.courses) {
+      result.push({ ...course, id: generateImportId(), groupId })
+      added++
     }
-    result.push({ ...bc, id: generateImportId(), groupId })
-    added++
   }
 
   try {
@@ -695,6 +699,11 @@ export function mergeFromBackup(envelope: TimetableBackupEnvelope, term?: TermSe
       skippedDuplicate: duplicateCount,
       skippedConflict: conflictCount,
       finalCount: result.length,
+      addedGroups: decisions.filter((decision) => decision.kind === 'add').length,
+      skippedDuplicateGroups: decisions.filter((decision) => decision.kind === 'duplicate').length,
+      skippedConflictGroups: decisions.filter((decision) => decision.kind === 'conflict').length,
+      finalGroupCount: courseGroupCount(result),
+      skippedGroupReasons: decisions.flatMap((decision) => decision.reason ? [decision.reason] : []),
     }
   } catch {
     return recoverAfterMutationFailure(current)
@@ -708,22 +717,28 @@ export function restoreRecentBackup(): MutationResult {
   const currentResult = getCurrentForMutation()
   if (!currentResult.current) return { ok: false, reason: currentResult.reason }
   const current = currentResult.current
+  const backupData = rb.export.data as unknown as {
+    schemaVersion: number
+    term: TermSettings | null
+    courses: Course[]
+    periodSettings: PeriodSettings
+  }
   let targetTerm: TermSettings
   let targetCourses: Course[]
-  const targetPeriodSettings = clonePeriodSettings(rb.export.data.periodSettings || DEFAULT_PERIOD_SETTINGS)
-  if (rb.export.data.schemaVersion === 1) {
+  const targetPeriodSettings = clonePeriodSettings(backupData.periodSettings || DEFAULT_PERIOD_SETTINGS)
+  if (backupData.schemaVersion === 1) {
     const termCheck = validateTerm(current.term)
     if (!termCheck.ok || !current.term) {
       return { ok: false, reason: '最近备份为旧版数据，请先设置学期后再恢复' }
     }
     targetTerm = current.term
-    targetCourses = expandV1CoursesWithTerm(rb.export.data.courses, targetTerm)
+    targetCourses = expandV1CoursesWithTerm(backupData.courses, targetTerm)
   } else if (
-    ([2, 3, 4, SCHEMA_VERSION].includes(rb.export.data.schemaVersion)) &&
-    rb.export.data.term
+    isSupportedSchemaVersion(backupData.schemaVersion) &&
+    backupData.term
   ) {
-    targetTerm = rb.export.data.term
-    targetCourses = rb.export.data.courses
+    targetTerm = backupData.term
+    targetCourses = backupData.courses
   } else {
     return { ok: false, reason: '最近备份的数据版本或学期设置不受支持' }
   }

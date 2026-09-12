@@ -1,7 +1,7 @@
 // utils/course-validator.ts
 // 课程必填、范围、周次与冲突校验（冲突 = 星期 + 节次 + 周次三者都重叠）。
 
-import type { Course } from '../models/course'
+import type { Course, CourseDraft } from '../models/course'
 import { DAYS, MAX_PERIODS, MAX_TOTAL_WEEKS, WEEK_MODES } from '../constants/timetable'
 import { compressWeeks, expandWeeks, normalizeWeeks, weeksIntersect } from './term'
 
@@ -32,7 +32,7 @@ export function isOverlapping(
  * 校验课程。all 为当前全部课程；excludeId 用于编辑时排除课程自身；totalWeeks 为当前学期总周数。
  */
 export function validate(
-  course: Course,
+  course: CourseDraft,
   all: Course[],
   excludeId?: string,
   totalWeeks = MAX_TOTAL_WEEKS,

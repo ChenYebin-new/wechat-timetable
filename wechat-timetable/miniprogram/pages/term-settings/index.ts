@@ -5,15 +5,8 @@ import {
   DEFAULT_TOTAL_WEEKS,
   MAX_TOTAL_WEEKS,
 } from '../../constants/timetable'
-import { applyTerm, getCourses, getTerm, needsMigration } from '../../services/course-storage'
-import { formatLocalDate, validateTerm } from '../../utils/term'
-
-function defaultMonday(): string {
-  const now = new Date()
-  const day = now.getDay() === 0 ? 7 : now.getDay()
-  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (day - 1))
-  return formatLocalDate(monday)
-}
+import { applyTerm, getStorageSnapshot } from '../../services/course-storage'
+import { currentMonday, validateTerm } from '../../utils/term'
 
 const weekOptions: string[] = []
 for (let w = 1; w <= MAX_TOTAL_WEEKS; w++) weekOptions.push(`${w} 周`)
@@ -35,18 +28,21 @@ Page({
 
   onLoad() {
     try {
-      const term = getTerm()
-      const courses = getCourses()
+      const snapshot = getStorageSnapshot()
+      if (snapshot.kind === 'io-error') throw new Error(snapshot.reason)
+      if (snapshot.kind === 'corrupt' || snapshot.kind === 'unsupported') throw new Error(snapshot.reason)
+      const term = snapshot.data.term
+      const courses = snapshot.data.courses
       this.setData({
-        startDate: term ? term.startDate : defaultMonday(),
+        startDate: term ? term.startDate : currentMonday(),
         totalWeeks: term ? term.totalWeeks : DEFAULT_TOTAL_WEEKS,
-        isMigration: needsMigration(),
+        isMigration: snapshot.kind === 'legacy',
         isEdit: !!term,
         affectedCount: courses.length,
       })
     } catch (error) {
       this.setData({
-        startDate: defaultMonday(),
+        startDate: currentMonday(),
         totalWeeks: DEFAULT_TOTAL_WEEKS,
         isMigration: false,
         affectedCount: 0,

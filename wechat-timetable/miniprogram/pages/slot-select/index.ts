@@ -1,5 +1,5 @@
 import type { CourseRange } from '../../models/course'
-import { getCourses, getPeriodSettings } from '../../services/course-storage'
+import { getStorageSnapshot } from '../../services/course-storage'
 import { weeksOverlap } from '../../utils/course-validator'
 import { buildDaySlots } from '../../utils/timetable-layout'
 import type { TimetableCardItem } from '../../utils/timetable-layout'
@@ -27,14 +27,19 @@ Page({
 
   onLoad() {
     this.getOpenerEventChannel().on('slotSelectorInit', (init: SlotSelectorInit) => {
+      const snapshot = getStorageSnapshot()
+      if (snapshot.kind === 'io-error' || snapshot.kind === 'corrupt' || snapshot.kind === 'unsupported') {
+        wx.showModal({ title: '课表暂时不可编辑', content: snapshot.reason, showCancel: false })
+        return
+      }
       const excluded = new Set(Array.isArray(init.excludedIds) ? init.excludedIds : [])
       const activeWeeks = Array.isArray(init.activeWeeks) ? init.activeWeeks : []
-      const occupied = getCourses().filter(
+      const occupied = snapshot.data.courses.filter(
         (course) => !excluded.has(course.id) && weeksOverlap(course.weeks, activeWeeks),
       )
       this.setData({
         ready: true,
-        periods: buildPeriodViews(getPeriodSettings()),
+        periods: buildPeriodViews(snapshot.data.periodSettings),
         daySlots: buildDaySlots(occupied),
         disabledKeys: rangesToKeys(occupied.map((course) => ({
           day: course.day,

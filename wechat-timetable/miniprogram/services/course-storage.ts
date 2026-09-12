@@ -2,17 +2,29 @@
 // 统一管理本地 Storage 里的课表数据：V5 读写、旧数据迁移、学期与课程作息读写。
 // 页面不要直接调用 wx.getStorageSync / setStorageSync 操作课表。
 
-import type { Course, CourseRange, PeriodSettings, TermSettings, TimetableStorage, WeekMode } from '../models/course'
-import { DEFAULT_PERIOD_SETTINGS, DAYS, MAX_PERIODS, SCHEMA_VERSION, STORAGE_KEY } from '../constants/timetable'
+import type { Course, CourseDraft, CourseRange, PeriodSettings, TermSettings, TimetableStorage, WeekMode } from '../models/course'
+import { DEFAULT_PERIOD_SETTINGS, DAYS, MAX_PERIODS, SCHEMA_VERSION } from '../constants/timetable'
 import { expandWeeks, normalizeWeeks, validateTerm } from '../utils/term'
 import { isOverlapping, validate } from '../utils/course-validator'
 import { APP_ID, BACKUP_VERSION, RECENT_BACKUP_KEY } from '../models/backup'
 import { cellsToRanges, rangesToCells } from '../utils/grid-selection'
 import { clonePeriodSettings, migrateV4PeriodSettings, validatePeriodSettings } from '../utils/period-settings'
+import {
+  type StorageReadKind,
+  type StorageReadResult,
+  type TimetableStorageView,
+  classifyStorageValue,
+  isLegacySchemaVersion,
+  isSupportedSchemaVersion,
+  isValidCourseColor,
+  validateCurrentStorage,
+} from './storage-codec'
+import { clearTimetableRaw, readTimetableRaw, writeTimetableRaw } from './storage-repository'
 
-interface LoadedStorage extends TimetableStorage {
+interface LoadedStorage extends TimetableStorageView {
   /** 仅存在于内存中，不会写入 Storage。 */
-  periodSettingsInvalid?: boolean
+  storageProblem?: string
+  readKind?: Exclude<StorageReadKind, 'io-error'>
 }
 
 function defaultStorage(): TimetableStorage {
@@ -46,7 +58,7 @@ function sanitizeCourse(raw: unknown, totalWeeks: number, schemaVersion: number,
   if (typeof c.startPeriod !== 'number' || !Number.isInteger(c.startPeriod) || c.startPeriod < 1 || c.startPeriod > maxPeriod) return null
   if (typeof c.endPeriod !== 'number' || !Number.isInteger(c.endPeriod) || c.endPeriod < 1 || c.endPeriod > maxPeriod) return null
   if (c.startPeriod > c.endPeriod) return null
-  if (typeof c.color !== 'string' || !c.color) return null
+  if (!isValidCourseColor(c.color)) return null
   const weekMode = toWeekMode(c.weekMode)
   const groupId =
     schemaVersion >= 3
@@ -79,16 +91,48 @@ function sanitizeCourse(raw: unknown, totalWeeks: number, schemaVersion: number,
 }
 
 function persist(data: TimetableStorage): void {
-  wx.setStorageSync(STORAGE_KEY, data)
+  writeTimetableRaw(data)
 }
 
-function load(): TimetableStorage {
+function cloneStorage(data: TimetableStorage): TimetableStorage {
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    term: data.term ? { ...data.term } : null,
+    courses: data.courses.map((course) => ({ ...course, weeks: [...course.weeks] })),
+    periodSettings: clonePeriodSettings(data.periodSettings),
+  }
+}
+
+function commitMutation(previous: TimetableStorage, next: TimetableStorage): void {
   try {
-    const raw = wx.getStorageSync(STORAGE_KEY)
-    if (!raw || typeof raw !== 'object') {
-      const def = defaultStorage()
-      persist(def)
-      return def
+    writeStorage(next)
+  } catch (error) {
+    try {
+      persist(previous)
+    } catch {
+      throw new Error('课表写入失败且无法确认原数据状态，请暂时不要继续操作')
+    }
+    throw error
+  }
+}
+
+function markLoaded(storage: LoadedStorage, kind: Exclude<StorageReadKind, 'io-error'>, problem?: string): LoadedStorage {
+  Object.defineProperty(storage, 'readKind', { value: kind, enumerable: false })
+  if (problem) Object.defineProperty(storage, 'storageProblem', { value: problem, enumerable: false })
+  return storage
+}
+
+function load(): TimetableStorageView {
+    const readResult = readTimetableRaw()
+    if (!readResult.ok) throw new Error(readResult.reason)
+    const raw = readResult.value
+    const classification = classifyStorageValue(raw)
+    if (classification.kind === 'missing') {
+      return markLoaded(defaultStorage(), 'missing')
+    }
+    if (classification.kind === 'current') return markLoaded(classification.data, 'current')
+    if (classification.kind === 'corrupt' && (!raw || typeof raw !== 'object' || Array.isArray(raw))) {
+      return markLoaded(defaultStorage(), 'corrupt', `${classification.reason}，为保护原数据已停止写入`)
     }
     const data = raw as Record<string, unknown>
     const schemaVersion =
@@ -110,16 +154,10 @@ function load(): TimetableStorage {
       if (course) courses.push(course)
     }
     const storage: LoadedStorage = { schemaVersion, term, courses, periodSettings }
-    if (schemaVersion === SCHEMA_VERSION && !periodCheck.ok) {
-      Object.defineProperty(storage, 'periodSettingsInvalid', { value: true, enumerable: false })
-    }
 
     if (schemaVersion === SCHEMA_VERSION) {
-      // V5：作息缺失或无效时保持只读语义，不静默覆盖；只清理课程数组中的无效项。
-      if (periodCheck.ok && rawCourses.length !== courses.length) {
-        persist(storage)
-      }
-      return storage
+      const reason = classification.kind === 'corrupt' ? classification.reason : '字段无效'
+      return markLoaded(storage, 'corrupt', `当前 V5 课表数据缺失或损坏：${reason}，为保护原数据已停止写入`)
     }
 
     if (
@@ -137,49 +175,36 @@ function load(): TimetableStorage {
       }
       try {
         persist(migrated)
-        const written = wx.getStorageSync(STORAGE_KEY) as Record<string, unknown>
-        const writtenCourses = written && Array.isArray(written.courses) ? written.courses : []
-        if (
-          written &&
-          written.schemaVersion === SCHEMA_VERSION &&
-          validatePeriodSettings(written.periodSettings).ok &&
-          writtenCourses.length === migrated.courses.length &&
-          writtenCourses.every(
-            (course) =>
-              !!course &&
-              typeof course === 'object' &&
-              typeof (course as Record<string, unknown>).groupId === 'string',
-          )
-        ) {
-          return migrated
+        const writtenResult = readTimetableRaw()
+        if (!writtenResult.ok) throw new Error(writtenResult.reason)
+        const written = writtenResult.value
+        const checked = validateCurrentStorage(written)
+        if (checked.ok && checked.data && JSON.stringify(checked.data) === JSON.stringify(migrated)) {
+          return markLoaded(migrated, 'current')
         }
       } catch {
         // 下方统一恢复旧版原数据。
       }
       try {
-        wx.setStorageSync(STORAGE_KEY, raw)
+        writeTimetableRaw(raw)
       } catch {
         // 保持只读返回，让后续写操作因版本不匹配而停止。
       }
-      return storage
+      return markLoaded(storage, 'legacy', '旧版课表自动升级未完成，为保护原数据已停止写入')
     }
 
     // V1（待设置学期）、无法迁移的旧版或未知更高版本：不降级写回。
-    return storage
-  } catch {
-    return defaultStorage()
-  }
+    if (isLegacySchemaVersion(schemaVersion)) return markLoaded(storage, 'legacy')
+    return markLoaded(storage, 'unsupported', `当前课表数据版本为 V${schemaVersion}，此版本小程序无法安全修改`)
 }
 
-function assertWritableStorage(data: TimetableStorage): void {
+function assertWritableStorage(data: TimetableStorageView): asserts data is TimetableStorage {
   if (data.schemaVersion !== SCHEMA_VERSION) {
     throw new Error(
       `当前课表数据版本为 V${data.schemaVersion}，此版本小程序仅支持修改 V${SCHEMA_VERSION}。请先完成数据升级或使用更新版本。`,
     )
   }
-  if ((data as LoadedStorage).periodSettingsInvalid) {
-    throw new Error('当前 V5 课程时间设置缺失或损坏，为保护课程数据已停止写入；请从有效备份恢复')
-  }
+  if ((data as LoadedStorage).storageProblem) throw new Error((data as LoadedStorage).storageProblem)
 }
 
 function assertTermReady(data: TimetableStorage): asserts data is TimetableStorage & { term: TermSettings } {
@@ -191,7 +216,9 @@ function assertTermReady(data: TimetableStorage): asserts data is TimetableStora
 
 function snapshotCurrentRaw(): boolean {
   try {
-    const raw = wx.getStorageSync(STORAGE_KEY)
+    const readResult = readTimetableRaw()
+    if (!readResult.ok) return false
+    const raw = readResult.value
     if (!raw || typeof raw !== 'object') return false
     const recent = {
       savedAt: Date.now(),
@@ -215,7 +242,7 @@ function restoreFromRecentRaw(): boolean {
     if (raw && typeof raw === 'object') {
       const rb = raw as { export?: { data?: unknown } }
       if (rb.export && rb.export.data) {
-        wx.setStorageSync(STORAGE_KEY, rb.export.data)
+        writeTimetableRaw(rb.export.data)
         return true
       }
     }
@@ -230,12 +257,50 @@ function generateId(): string {
 }
 
 /** 读取当前课表根数据（已做版本识别、周次展开与基础容错）。 */
-export function getStorage(): TimetableStorage {
+export function getStorage(): TimetableStorageView {
   return load()
 }
 
+function prepareRecoveryPoint(data: TimetableStorageView): boolean {
+  return (data as LoadedStorage).readKind === 'missing' || snapshotCurrentRaw()
+}
+
+function restoreOriginal(data: TimetableStorageView): boolean {
+  if ((data as LoadedStorage).readKind !== 'missing') return restoreFromRecentRaw()
+  try {
+    clearTimetableRaw()
+    const reread = readTimetableRaw()
+    return reread.ok && classifyStorageValue(reread.value).kind === 'missing'
+  } catch {
+    return false
+  }
+}
+
+/** 返回显式读取状态，供页面在一次刷新中使用同一个快照。 */
+export function getStorageSnapshot(): StorageReadResult<TimetableStorageView> {
+  try {
+    const data = load()
+    const loaded = data as LoadedStorage
+    const kind: Exclude<StorageReadKind, 'io-error'> = loaded.readKind || (data.schemaVersion === SCHEMA_VERSION ? 'current' : 'legacy')
+    if (kind === 'unsupported') {
+      return { kind, data, raw: data, reason: loaded.storageProblem || '当前数据版本不受支持' }
+    }
+    if (kind === 'corrupt') {
+      return { kind, data, raw: data, reason: loaded.storageProblem || '当前课表数据损坏' }
+    }
+    if (kind === 'missing') return { kind, data, raw: null }
+    if (kind === 'current') return { kind, data, raw: data }
+    return { kind: 'legacy', data, raw: data }
+  } catch (error) {
+    return {
+      kind: 'io-error',
+      reason: error instanceof Error && error.message ? error.message : '读取本地课表失败',
+    }
+  }
+}
+
 /** 当前根数据无法安全修改或导出时返回原因。 */
-export function getStorageProblem(data: TimetableStorage = load()): string | null {
+export function getStorageProblem(data: TimetableStorageView = load()): string | null {
   try {
     assertWritableStorage(data)
     return null
@@ -247,12 +312,21 @@ export function getStorageProblem(data: TimetableStorage = load()): string | nul
 /** 一次性写入课表根数据。调用方须自行完成校验；仅支持写 V5。 */
 export function writeStorage(data: TimetableStorage): void {
   assertWritableStorage(data)
-  const periodCheck = validatePeriodSettings(data.periodSettings)
-  if (!periodCheck.ok) throw new Error(periodCheck.reason || '课程时间设置无效')
-  if (data.courses.some((course) => course.endPeriod > data.periodSettings.periods.length)) {
-    throw new Error('课程引用了超出每日课程数的节次')
+  const checked = validateCurrentStorage(data)
+  if (!checked.ok || !checked.data) throw new Error(checked.reason || '当前课表数据无效')
+  persist(checked.data)
+  let written: unknown
+  try {
+    const readResult = readTimetableRaw()
+    if (!readResult.ok) throw new Error(readResult.reason)
+    written = readResult.value
+  } catch {
+    throw new Error('写入后无法重新读取课表进行校验')
   }
-  persist(data)
+  const verified = validateCurrentStorage(written)
+  if (!verified.ok || !verified.data || JSON.stringify(verified.data) !== JSON.stringify(checked.data)) {
+    throw new Error('写入后校验失败')
+  }
 }
 
 /** 当前课表数据版本。 */
@@ -301,7 +375,7 @@ export function savePeriodSettings(settings: PeriodSettings): { ok: boolean; rea
   if (settings.periods.length < maxUsed) {
     return { ok: false, reason: `已有课程使用到第 ${maxUsed} 节，不能减少到 ${settings.periods.length} 节` }
   }
-  if (!snapshotCurrentRaw()) return { ok: false, reason: '无法创建操作前自动备份，已停止保存' }
+  if (!prepareRecoveryPoint(current)) return { ok: false, reason: '无法创建操作前自动备份，已停止保存' }
   const next: TimetableStorage = {
     ...current,
     periodSettings: clonePeriodSettings(settings),
@@ -312,12 +386,12 @@ export function savePeriodSettings(settings: PeriodSettings): { ok: boolean; rea
     const rereadCheck = validatePeriodSettings(reread.periodSettings)
     const expected = JSON.stringify(next.periodSettings)
     if (!rereadCheck.ok || JSON.stringify(reread.periodSettings) !== expected) {
-      const restored = restoreFromRecentRaw()
+      const restored = restoreOriginal(current)
       return { ok: false, reason: restored ? '写入后校验失败，原数据已恢复' : '写入后校验失败，无法确认原数据状态' }
     }
     return { ok: true }
   } catch {
-    const restored = restoreFromRecentRaw()
+    const restored = restoreOriginal(current)
     return { ok: false, reason: restored ? '写入失败，原数据已恢复' : '写入失败，无法确认原数据状态' }
   }
 }
@@ -334,7 +408,7 @@ export function getCourseGroupByCourseId(id: string): Course[] {
   return selected ? courses.filter((course) => course.groupId === selected.groupId) : []
 }
 
-function normalizeForWrite(course: Course, totalWeeks: number): Course {
+function normalizeForWrite(course: CourseDraft, totalWeeks: number): CourseDraft {
   const weekMode = toWeekMode(course.weekMode)
   const weeks =
     weekMode === 'custom'
@@ -380,10 +454,11 @@ function canonicalRanges(ranges: CourseRange[], maxPeriod: number): CourseRange[
 }
 
 /** 新增或更新课程。无 id 视为新增；有 id 视为更新。 */
-export function save(course: Course): void {
+export function save(course: CourseDraft): void {
   const data = load()
   assertWritableStorage(data)
   assertTermReady(data)
+  const previous = cloneStorage(data)
   const totalWeeks = data.term.totalWeeks
   const normalized = normalizeForWrite(course, totalWeeks)
   const now = Date.now()
@@ -414,14 +489,15 @@ export function save(course: Course): void {
     validateCandidates([candidate], data.courses, [], totalWeeks, data.periodSettings.periods.length)
     data.courses = [...data.courses, candidate]
   }
-  persist(data)
+  commitMutation(previous, data)
 }
 
 /** 一次性创建包含多个连续时段的课程组。 */
-export function createCourseGroup(course: Course, ranges: CourseRange[]): string {
+export function createCourseGroup(course: CourseDraft, ranges: CourseRange[]): string {
   const data = load()
   assertWritableStorage(data)
   assertTermReady(data)
+  const previous = cloneStorage(data)
   const normalized = normalizeForWrite(course, data.term.totalWeeks)
   const groupId = generateId()
   const now = Date.now()
@@ -435,15 +511,16 @@ export function createCourseGroup(course: Course, ranges: CourseRange[]): string
   }))
   validateCandidates(candidates, data.courses, [], data.term.totalWeeks, data.periodSettings.periods.length)
   data.courses = [...data.courses, ...candidates]
-  persist(data)
+  commitMutation(previous, data)
   return groupId
 }
 
 /** 整体更新课程组的共同信息和全部时段。 */
-export function updateCourseGroup(groupId: string, course: Course, ranges: CourseRange[]): void {
+export function updateCourseGroup(groupId: string, course: CourseDraft, ranges: CourseRange[]): void {
   const data = load()
   assertWritableStorage(data)
   assertTermReady(data)
+  const previous = cloneStorage(data)
   const existing = data.courses.filter((item) => item.groupId === groupId)
   if (!existing.length) throw new Error('没有找到要编辑的课程')
   const existingByRange = new Map(
@@ -467,14 +544,16 @@ export function updateCourseGroup(groupId: string, course: Course, ranges: Cours
     ...data.courses.filter((item) => item.groupId !== groupId),
     ...candidates,
   ]
-  persist(data)
+  commitMutation(previous, data)
 }
 
 /** 只编辑课程组中的一个时段；多时段课程会自动拆分为独立课程。 */
-export function detachCourseSegment(course: Course): void {
+export function detachCourseSegment(course: CourseDraft): void {
   const data = load()
   assertWritableStorage(data)
   assertTermReady(data)
+  const previous = cloneStorage(data)
+  if (!course.id) throw new Error('缺少要编辑的课程 ID')
   const existing = data.courses.find((item) => item.id === course.id)
   if (!existing) throw new Error('没有找到要编辑的课程')
   const groupSize = data.courses.filter((item) => item.groupId === existing.groupId).length
@@ -489,23 +568,25 @@ export function detachCourseSegment(course: Course): void {
   }
   validateCandidates([candidate], data.courses, [existing.id], data.term.totalWeeks, data.periodSettings.periods.length)
   data.courses = data.courses.map((item) => (item.id === existing.id ? candidate : item))
-  persist(data)
+  commitMutation(previous, data)
 }
 
 /** 删除课程。 */
 export function remove(id: string): void {
   const data = load()
   assertWritableStorage(data)
+  const previous = cloneStorage(data)
   data.courses = data.courses.filter((c) => c.id !== id)
-  persist(data)
+  commitMutation(previous, data)
 }
 
 /** 删除同一 groupId 下的整门课程。 */
 export function removeCourseGroup(groupId: string): void {
   const data = load()
   assertWritableStorage(data)
+  const previous = cloneStorage(data)
   data.courses = data.courses.filter((course) => course.groupId !== groupId)
-  persist(data)
+  commitMutation(previous, data)
 }
 
 /**
@@ -524,7 +605,7 @@ export function applyTerm(term: TermSettings): { ok: boolean; reason?: string; m
   if (current.schemaVersion === 4) {
     return { ok: false, reason: '当前 V4 课程时间设置无法安全迁移，请从有效备份恢复后再修改学期' }
   }
-  if (![1, 2, 3, 4, SCHEMA_VERSION].includes(current.schemaVersion)) {
+  if (!isSupportedSchemaVersion(current.schemaVersion)) {
     return {
       ok: false,
       reason: `当前课表数据版本为 V${current.schemaVersion}，不能按 V1–V5 猜测迁移。请使用更新版本处理课表。`,
@@ -572,30 +653,13 @@ export function applyTerm(term: TermSettings): { ok: boolean; reason?: string; m
         : clonePeriodSettings(DEFAULT_PERIOD_SETTINGS),
   }
 
-  if (!snapshotCurrentRaw()) return { ok: false, reason: '无法创建操作前自动备份' }
+  if (!prepareRecoveryPoint(current)) return { ok: false, reason: '无法创建操作前自动备份' }
 
   try {
-    persist(storage)
-    const reread = load()
-    if (
-      reread.schemaVersion !== SCHEMA_VERSION ||
-      !reread.term ||
-      reread.term.startDate !== storage.term!.startDate ||
-      reread.term.totalWeeks !== storage.term!.totalWeeks ||
-      reread.courses.length !== storage.courses.length ||
-      JSON.stringify(reread.periodSettings) !== JSON.stringify(storage.periodSettings)
-    ) {
-      const restored = restoreFromRecentRaw()
-      return {
-        ok: false,
-        reason: restored
-          ? '写入后校验失败，原数据已恢复'
-          : '写入后校验失败，无法确认原数据状态；请暂时不要继续操作',
-      }
-    }
+    writeStorage(storage)
     return { ok: true, migrated }
   } catch {
-    const restored = restoreFromRecentRaw()
+    const restored = restoreOriginal(current)
     return {
       ok: false,
       reason: restored

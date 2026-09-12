@@ -1,26 +1,6 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
-import { registerHooks, stripTypeScriptTypes } from 'node:module'
 import test from 'node:test'
-
-registerHooks({
-  resolve(specifier, context, nextResolve) {
-    if ((specifier.startsWith('.') || specifier.startsWith('/')) && !/[.]\w+$/.test(specifier)) {
-      return nextResolve(`${specifier}.ts`, context)
-    }
-    return nextResolve(specifier, context)
-  },
-  load(url, context, nextLoad) {
-    if (url.endsWith('.ts')) {
-      return {
-        format: 'module',
-        shortCircuit: true,
-        source: stripTypeScriptTypes(readFileSync(new URL(url), 'utf8'), { mode: 'transform' }),
-      }
-    }
-    return nextLoad(url, context)
-  },
-})
+import './helpers/register-typescript.mjs'
 
 const TIMETABLE_KEY = 'timetable_courses'
 const RECENT_BACKUP_KEY = 'timetable_recent_backup'
@@ -37,6 +17,7 @@ const DEFAULT_PERIOD_SETTINGS = {
 }
 let storage = new Map()
 let timetableWriteFailures = 0
+let timetableReadFailures = 0
 
 function clone(value) {
   return value === undefined ? undefined : structuredClone(value)
@@ -44,6 +25,10 @@ function clone(value) {
 
 globalThis.wx = {
   getStorageSync(key) {
+    if (key === TIMETABLE_KEY && timetableReadFailures > 0) {
+      timetableReadFailures--
+      throw new Error('simulated read failure')
+    }
     return storage.has(key) ? clone(storage.get(key)) : ''
   },
   setStorageSync(key, value) {
@@ -120,6 +105,19 @@ function reset(currentCourses = []) {
     [TIMETABLE_KEY, { schemaVersion: 5, term: clone(TERM), courses: clone(currentCourses), periodSettings: clone(DEFAULT_PERIOD_SETTINGS) }],
   ])
   timetableWriteFailures = 0
+  timetableReadFailures = 0
+}
+
+function assertReadFailurePreservesCurrent(action, original) {
+  timetableReadFailures = 1
+  try {
+    const result = action()
+    if (result && typeof result === 'object' && 'ok' in result) assert.equal(result.ok, false)
+    else assert.fail('操作应在读取失败时中止')
+  } catch (error) {
+    assert.match(error instanceof Error ? error.message : String(error), /读取本地课表失败/)
+  }
+  assert.deepEqual(storage.get(TIMETABLE_KEY), original)
 }
 
 test('只接受小程序导出的标准 UTC ISO 时间', () => {
@@ -169,7 +167,7 @@ test('拒绝非整数节次、非法颜色、时间戳和可选字段类型', ()
     course({ day: 1.5 }),
     course({ startPeriod: 1.5 }),
     course({ endPeriod: 2.5 }),
-    course({ color: '#ffffff' }),
+    course({ color: 'not-a-color' }),
     course({ createdAt: -1 }),
     course({ updatedAt: Number.MAX_SAFE_INTEGER + 1 }),
     course({ teacher: 42 }),
@@ -236,6 +234,14 @@ test('合并统计新增、重复、冲突和最终数量', () => {
     skippedDuplicate: 1,
     skippedConflict: 1,
     finalCount: 3,
+    addedGroups: 1,
+    skippedDuplicateGroups: 1,
+    skippedConflictGroups: 1,
+    finalGroupCount: 3,
+    skippedGroupReasons: [
+      '「高等数学」包含与当前课表重复的时段，整门课程已跳过',
+      '「大学物理」包含与当前课表冲突的时段，整门课程已跳过',
+    ],
   })
 })
 
@@ -256,6 +262,11 @@ test('同名同时间但周次不相交的课程可以合并', () => {
     skippedDuplicate: 0,
     skippedConflict: 0,
     finalCount: 2,
+    addedGroups: 1,
+    skippedDuplicateGroups: 0,
+    skippedConflictGroups: 0,
+    finalGroupCount: 2,
+    skippedGroupReasons: [],
   })
 })
 
@@ -442,4 +453,67 @@ test('损坏的最近备份不会进入恢复流程', () => {
     ok: false,
     reason: '没有可用且通过校验的最近备份',
   })
+})
+
+test('V5 备份与本地读取共用严格快照校验并拒绝未知字段', () => {
+  reset()
+  const invalid = envelope([], {
+    data: {
+      schemaVersion: 5,
+      term: clone(TERM),
+      courses: [{ ...course(), futureField: 'not-in-v5' }],
+      periodSettings: clone(DEFAULT_PERIOD_SETTINGS),
+    },
+  })
+  const analyzed = backupService.analyzeBackup(invalid)
+  assert.equal(analyzed.ok, false)
+  assert.match(analyzed.errors[0], /未知字段/)
+})
+
+test('合法六位颜色的当前课表可以完整导出并重新导入', () => {
+  reset([course({ color: '#123456' })])
+  const parsed = backupService.parseBackup(backupService.exportBackup())
+  assert.equal(parsed.ok, true)
+  const analyzed = backupService.analyzeBackup(parsed.envelope)
+  assert.equal(analyzed.ok, true)
+  assert.equal(analyzed.courses[0].color, '#123456')
+  assert.equal(backupService.overwriteFromBackup(parsed.envelope).ok, true)
+  assert.equal(storage.get(TIMETABLE_KEY).courses[0].color, '#123456')
+})
+
+test('课程组任一时段冲突时整组跳过且预览与结果一致', () => {
+  const current = [course({ id: 'existing', groupId: 'existing', name: '数学', day: 1, startPeriod: 1, endPeriod: 1 })]
+  reset(current)
+  const incoming = [
+    course({ id: 'physics-1', groupId: 'physics', name: '物理', day: 1, startPeriod: 1, endPeriod: 1 }),
+    course({ id: 'physics-2', groupId: 'physics', name: '物理', day: 3, startPeriod: 4, endPeriod: 4 }),
+  ]
+  const backup = envelope(incoming)
+  const analyzed = backupService.analyzeBackup(backup)
+  assert.equal(analyzed.ok, true)
+  assert.equal(analyzed.preview.mergeAddGroupCount, 0)
+  assert.equal(analyzed.preview.mergeSkipConflictGroupCount, 1)
+  assert.equal(analyzed.preview.mergeAddCount, 0)
+  assert.equal(analyzed.preview.mergeSkipConflictCount, 2)
+
+  const result = backupService.mergeFromBackup(backup)
+  assert.equal(result.ok, true)
+  assert.equal(result.addedGroups, 0)
+  assert.equal(result.skippedConflictGroups, 1)
+  assert.equal(result.added, 0)
+  assert.deepEqual(storage.get(TIMETABLE_KEY).courses, current)
+})
+
+test('临时读取失败时导出、覆盖、合并和恢复操作全部中止且原数据不变', () => {
+  const currentCourses = [course()]
+  reset(currentCourses)
+  const original = clone(storage.get(TIMETABLE_KEY))
+  const incoming = envelope([course({ id: 'course-2', groupId: 'group-2', name: '英语', day: 2 })])
+  storage.set(RECENT_BACKUP_KEY, { savedAt: Date.now(), export: clone(incoming) })
+
+  assertReadFailurePreservesCurrent(() => backupService.exportBackup(), original)
+  assertReadFailurePreservesCurrent(() => backupService.overwriteFromBackup(incoming), original)
+  assertReadFailurePreservesCurrent(() => backupService.mergeFromBackup(incoming), original)
+  assertReadFailurePreservesCurrent(() => backupService.restoreRecentBackup(), original)
+  timetableReadFailures = 0
 })

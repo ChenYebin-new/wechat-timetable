@@ -10,25 +10,19 @@ import {
   parseBackup,
   restoreRecentBackup,
 } from '../../services/backup-service'
-import { getTerm } from '../../services/course-storage'
+import { getStorageSnapshot } from '../../services/course-storage'
 import { DEFAULT_TOTAL_WEEKS, MAX_TOTAL_WEEKS } from '../../constants/timetable'
-import { formatLocalDate, validateTerm } from '../../utils/term'
+import { currentMonday, validateTerm } from '../../utils/term'
 
 interface RecentBackupInfo {
   savedAtText: string
   schemaVersion: number
-  count: number
+  groupCount: number
+  segmentCount: number
 }
 
 function pad(n: number): string {
   return n < 10 ? '0' + n : '' + n
-}
-
-function defaultMonday(): string {
-  const now = new Date()
-  const day = now.getDay() === 0 ? 7 : now.getDay()
-  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (day - 1))
-  return formatLocalDate(monday)
 }
 
 const weekOptions: string[] = []
@@ -57,7 +51,10 @@ Page({
     return {
       savedAtText: this.formatTime(rb.savedAt),
       schemaVersion: rb.export.data.schemaVersion,
-      count: Array.isArray(rb.export.data.courses) ? rb.export.data.courses.length : 0,
+      groupCount: Array.isArray(rb.export.data.courses)
+        ? new Set(rb.export.data.courses.map((course) => 'groupId' in course ? course.groupId : course.id)).size
+        : 0,
+      segmentCount: Array.isArray(rb.export.data.courses) ? rb.export.data.courses.length : 0,
     }
   },
 
@@ -104,19 +101,24 @@ Page({
       })
       return
     }
-    const analyzed = analyzeBackup(parsed.envelope as TimetableBackupEnvelope)
+    const snapshot = getStorageSnapshot()
+    if (snapshot.kind === 'io-error') {
+      this.setData({ envelope: null, preview: null, previewErrors: [snapshot.reason], needsTerm: false })
+      return
+    }
+    const analyzed = analyzeBackup(parsed.envelope as TimetableBackupEnvelope, snapshot.data)
     if (!analyzed.ok) {
       this.setData({ envelope: null, preview: null, previewErrors: analyzed.errors, needsTerm: false })
       return
     }
     const needsTerm = analyzed.needsTerm === true
-    const term = getTerm()
+    const term = snapshot.data.term
     this.setData({
       envelope: parsed.envelope as TimetableBackupEnvelope,
       preview: analyzed.preview as ImportPreview,
       previewErrors: [],
       needsTerm,
-      termStartDate: term ? term.startDate : defaultMonday(),
+      termStartDate: term ? term.startDate : currentMonday(),
       termTotalWeeks: term ? term.totalWeeks : DEFAULT_TOTAL_WEEKS,
     })
   },
@@ -170,7 +172,7 @@ Page({
     }
     this.confirm(
       '覆盖确认',
-      `将用备份中的 ${preview ? preview.backupCount : 0} 门课程替换当前 ${preview ? preview.currentCount : 0} 门课程。继续前会自动保存当前课表，之后可在本页恢复。`,
+      `将用备份中的 ${preview ? preview.backupGroupCount : 0} 门课程（${preview ? preview.backupCount : 0} 个时段）替换当前 ${preview ? preview.currentGroupCount : 0} 门课程。继续前会自动保存当前课表，之后可在本页恢复。`,
       '确认覆盖',
       () => {
         const r = overwriteFromBackup(envelope, termArg)
@@ -199,7 +201,7 @@ Page({
     }
     this.confirm(
       '合并课表',
-      `将把备份中没有重复、没有冲突的课程合并进当前课表（预计新增 ${preview ? preview.mergeAddCount : 0} 门）。`,
+      `将按整门课程合并备份（预计新增 ${preview ? preview.mergeAddGroupCount : 0} 门、${preview ? preview.mergeAddCount : 0} 个时段）。任一时段重复或冲突时会跳过整门课程。`,
       '确认合并',
       () => {
         const r = mergeFromBackup(envelope, termArg)
@@ -208,7 +210,7 @@ Page({
           r.reason,
           '合并完成',
           r.ok
-            ? `新增 ${r.added || 0} 门，跳过重复 ${r.skippedDuplicate || 0} 门，跳过冲突 ${r.skippedConflict || 0} 门，当前共 ${r.finalCount || 0} 门课程。`
+            ? `新增 ${r.addedGroups || 0} 门课程（${r.added || 0} 个时段），整门跳过重复 ${r.skippedDuplicateGroups || 0} 门、冲突 ${r.skippedConflictGroups || 0} 门；当前共 ${r.finalGroupCount || 0} 门课程（${r.finalCount || 0} 个时段）。`
             : undefined,
         )
       },
@@ -223,7 +225,7 @@ Page({
     }
     this.confirm(
       '恢复确认',
-      `将用最近备份（V${info.schemaVersion}，${info.count} 门课程）替换当前课表。继续前会自动保存当前课表，之后仍可在本页恢复。`,
+      `将用最近备份（V${info.schemaVersion}，${info.groupCount} 门课程、${info.segmentCount} 个时段）替换当前课表。继续前会自动保存当前课表，之后仍可在本页恢复。`,
       '确认恢复',
       () => {
         const r = restoreRecentBackup()

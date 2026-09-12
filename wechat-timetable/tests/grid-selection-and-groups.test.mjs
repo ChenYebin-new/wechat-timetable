@@ -1,26 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { registerHooks, stripTypeScriptTypes } from 'node:module'
 import test from 'node:test'
-
-registerHooks({
-  resolve(specifier, context, nextResolve) {
-    if ((specifier.startsWith('.') || specifier.startsWith('/')) && !/[.]\w+$/.test(specifier)) {
-      return nextResolve(`${specifier}.ts`, context)
-    }
-    return nextResolve(specifier, context)
-  },
-  load(url, context, nextLoad) {
-    if (url.endsWith('.ts')) {
-      return {
-        format: 'module',
-        shortCircuit: true,
-        source: stripTypeScriptTypes(readFileSync(new URL(url), 'utf8'), { mode: 'transform' }),
-      }
-    }
-    return nextLoad(url, context)
-  },
-})
+import './helpers/register-typescript.mjs'
 
 const TIMETABLE_KEY = 'timetable_courses'
 const RECENT_BACKUP_KEY = 'timetable_recent_backup'
@@ -87,7 +68,7 @@ function draft(overrides = {}) {
     createdAt: 0,
     updatedAt: 0,
     weekMode: 'all',
-    weeks: [],
+    weeks: [...ALL_WEEKS],
     ...overrides,
   }
 }
@@ -106,6 +87,29 @@ test('多选模式使用静态课表，避免 swiper 继续响应横向拖动', 
   assert.match(timetablePageMarkup, /<swiper\s+wx:if="{{!selectionMode}}"/)
   assert.match(timetablePageMarkup, /<view wx:else class="week-static"/)
   assert.match(timetablePageMarkup, /wx:if="{{item\.week === currentWeek}}"/)
+})
+
+test('页面定义直接处理长按进入多选、点击增选和取消选择', () => {
+  let vibrated = 0
+  globalThis.wx.vibrateShort = () => { vibrated++ }
+  const context = {
+    data: { termReady: true, selectionMode: false, selectedKeys: [] },
+    setData(changes) { Object.assign(this.data, changes) },
+    updateSelection(keys) { timetablePage.updateSelection.call(this, keys) },
+  }
+
+  timetablePage.onCellHold.call(context, { detail: { key: '1-1' } })
+  assert.equal(vibrated, 1)
+  assert.equal(context.data.selectionMode, true)
+  assert.deepEqual(context.data.selectedKeys, ['1-1'])
+
+  timetablePage.onCellTap.call(context, { detail: { key: '1-2' } })
+  assert.deepEqual(context.data.selectedKeys, ['1-1', '1-2'])
+  assert.equal(context.data.selectedRangeCount, 1)
+
+  timetablePage.onCancelSelection.call(context)
+  assert.equal(context.data.selectionMode, false)
+  assert.deepEqual(context.data.selectedKeys, [])
 })
 
 test('每次点击课程都重新询问编辑范围，不沿用上一次选择', () => {
@@ -137,6 +141,21 @@ test('每次点击课程都重新询问编辑范围，不沿用上一次选择',
     `/pages/course-edit/index?id=${target.id}&mode=segment-edit&sourceWeek=2`,
     `/pages/course-edit/index?id=${target.id}&mode=group-edit&sourceWeek=2`,
   ])
+})
+
+test('非当前周概览按课程组计数且不误称今天', () => {
+  const context = {
+    data: {},
+    setData(changes) { Object.assign(this.data, changes) },
+  }
+  const courses = [
+    draft({ id: 'math-1', groupId: 'math', day: 1 }),
+    draft({ id: 'math-2', groupId: 'math', day: 3 }),
+    draft({ id: 'english-1', groupId: 'english', name: '英语', day: 5 }),
+  ]
+  timetablePage.renderWeek.call(context, 2, TERM, courses)
+  assert.match(context.data.overviewText, /本周共 2 门课程、3 个时段/)
+  assert.doesNotMatch(context.data.overviewText, /今天/)
 })
 
 test('课程卡片按星期分组并复用统一布局信息', () => {

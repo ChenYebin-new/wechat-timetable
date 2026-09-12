@@ -1,26 +1,6 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
-import { registerHooks, stripTypeScriptTypes } from 'node:module'
 import test from 'node:test'
-
-registerHooks({
-  resolve(specifier, context, nextResolve) {
-    if ((specifier.startsWith('.') || specifier.startsWith('/')) && !/[.]\w+$/.test(specifier)) {
-      return nextResolve(`${specifier}.ts`, context)
-    }
-    return nextResolve(specifier, context)
-  },
-  load(url, context, nextLoad) {
-    if (url.endsWith('.ts')) {
-      return {
-        format: 'module',
-        shortCircuit: true,
-        source: stripTypeScriptTypes(readFileSync(new URL(url), 'utf8'), { mode: 'transform' }),
-      }
-    }
-    return nextLoad(url, context)
-  },
-})
+import './helpers/register-typescript.mjs'
 
 const TIMETABLE_KEY = 'timetable_courses'
 const RECENT_BACKUP_KEY = 'timetable_recent_backup'
@@ -36,6 +16,7 @@ const DEFAULT_PERIOD_SETTINGS = {
 }
 let storage = new Map()
 let timetableWriteFailures = 0
+let timetableReadFailures = 0
 
 function clone(value) {
   return value === undefined ? undefined : structuredClone(value)
@@ -43,6 +24,10 @@ function clone(value) {
 
 globalThis.wx = {
   getStorageSync(key) {
+    if (key === TIMETABLE_KEY && timetableReadFailures > 0) {
+      timetableReadFailures--
+      throw new Error('simulated read failure')
+    }
     return storage.has(key) ? clone(storage.get(key)) : ''
   },
   setStorageSync(key, value) {
@@ -52,11 +37,15 @@ globalThis.wx = {
     }
     storage.set(key, clone(value))
   },
+  removeStorageSync(key) {
+    storage.delete(key)
+  },
 }
 
 const termUtils = await import('../miniprogram/utils/term.ts')
 const validator = await import('../miniprogram/utils/course-validator.ts')
 const courseStorage = await import('../miniprogram/services/course-storage.ts')
+const storageCodec = await import('../miniprogram/services/storage-codec.ts')
 
 function v1Course(overrides = {}) {
   return {
@@ -178,4 +167,105 @@ test('学期写入失败时恢复原数据并保留操作前备份', () => {
   assert.match(result.reason, /原数据已恢复/)
   assert.deepEqual(storage.get(TIMETABLE_KEY), current)
   assert.deepEqual(storage.get(RECENT_BACKUP_KEY).export.data, current)
+})
+
+test('全新安装首次设置学期无需伪造旧快照并可写入有效 V5', () => {
+  storage = new Map()
+  timetableWriteFailures = 0
+  timetableReadFailures = 0
+
+  const result = courseStorage.applyTerm(TERM)
+  assert.deepEqual(result, { ok: true, migrated: false })
+  assert.deepEqual(storage.get(TIMETABLE_KEY), {
+    schemaVersion: 5,
+    term: TERM,
+    courses: [],
+    periodSettings: DEFAULT_PERIOD_SETTINGS,
+  })
+  assert.equal(storage.has(RECENT_BACKUP_KEY), false)
+})
+
+test('全新安装首次写入失败时恢复为无课表数据状态', () => {
+  storage = new Map()
+  timetableWriteFailures = 1
+  timetableReadFailures = 0
+
+  const result = courseStorage.applyTerm(TERM)
+  assert.equal(result.ok, false)
+  assert.match(result.reason, /原数据已恢复/)
+  assert.equal(storage.has(TIMETABLE_KEY), false)
+  assert.equal(storage.has(RECENT_BACKUP_KEY), false)
+  timetableWriteFailures = 0
+})
+
+test('临时读取失败时学期、作息和课程增删都中止且原数据不变', () => {
+  const original = { schemaVersion: 5, term: clone(TERM), courses: [v2Course()], periodSettings: clone(DEFAULT_PERIOD_SETTINGS) }
+  storage = new Map([[TIMETABLE_KEY, clone(original)]])
+  timetableWriteFailures = 0
+  timetableReadFailures = 1
+  assert.throws(() => courseStorage.applyTerm({ startDate: '2026-09-14', totalWeeks: 18 }), /读取本地课表失败/)
+  assert.deepEqual(storage.get(TIMETABLE_KEY), original)
+
+  timetableReadFailures = 1
+  assert.throws(() => courseStorage.save(v2Course({ id: '' })), /读取本地课表失败/)
+  assert.deepEqual(storage.get(TIMETABLE_KEY), original)
+
+  timetableReadFailures = 1
+  assert.throws(() => courseStorage.savePeriodSettings(DEFAULT_PERIOD_SETTINGS), /读取本地课表失败/)
+  assert.deepEqual(storage.get(TIMETABLE_KEY), original)
+
+  timetableReadFailures = 1
+  assert.throws(() => courseStorage.remove('course-1'), /读取本地课表失败/)
+  assert.deepEqual(storage.get(TIMETABLE_KEY), original)
+  timetableReadFailures = 0
+})
+
+test('损坏的当前 V5 周次数据保持只读且不会被无关操作清洗', () => {
+  const corrupted = {
+    schemaVersion: 5,
+    term: clone(TERM),
+    courses: [v2Course({ weekMode: 'custom', weeks: [99] })],
+    periodSettings: clone(DEFAULT_PERIOD_SETTINGS),
+  }
+  storage = new Map([[TIMETABLE_KEY, clone(corrupted)]])
+  timetableReadFailures = 0
+  const snapshot = courseStorage.getStorageSnapshot()
+  assert.equal(snapshot.kind, 'corrupt')
+  assert.match(snapshot.reason, /周次/)
+  assert.throws(() => courseStorage.remove('course-1'), /停止写入/)
+  assert.deepEqual(storage.get(TIMETABLE_KEY), corrupted)
+})
+
+test('包含未知字段的 V5 快照保持逐项不变且不会在删除时被顺带清洗', () => {
+  const corrupted = {
+    schemaVersion: 5,
+    term: clone(TERM),
+    courses: [{ ...v2Course(), futureField: 'keep-me' }],
+    periodSettings: clone(DEFAULT_PERIOD_SETTINGS),
+  }
+  storage = new Map([[TIMETABLE_KEY, clone(corrupted)]])
+  const snapshot = courseStorage.getStorageSnapshot()
+  assert.equal(snapshot.kind, 'corrupt')
+  assert.match(snapshot.reason, /未知字段/)
+  assert.throws(() => courseStorage.remove('course-1'), /停止写入/)
+  assert.deepEqual(storage.get(TIMETABLE_KEY), corrupted)
+})
+
+test('存储解码明确区分六种读取结果且纯解码不写入', () => {
+  const current = { schemaVersion: 5, term: clone(TERM), courses: [], periodSettings: clone(DEFAULT_PERIOD_SETTINGS) }
+  const before = clone(current)
+  assert.equal(storageCodec.classifyStorageValue('').kind, 'missing')
+  assert.equal(storageCodec.classifyStorageValue(current).kind, 'current')
+  assert.equal(storageCodec.classifyStorageValue({ schemaVersion: 1, courses: [] }).kind, 'legacy')
+  assert.equal(storageCodec.classifyStorageValue({ schemaVersion: 99, courses: [] }).kind, 'unsupported')
+  assert.equal(storageCodec.classifyStorageValue({ ...current, courses: 'invalid' }).kind, 'corrupt')
+  assert.deepEqual(current, before)
+
+  storage = new Map([[TIMETABLE_KEY, clone(current)]])
+  timetableReadFailures = 1
+  const ioResult = courseStorage.getStorageSnapshot()
+  assert.equal(ioResult.kind, 'io-error')
+  assert.match(ioResult.reason, /读取本地课表失败/)
+  assert.deepEqual(storage.get(TIMETABLE_KEY), current)
+  timetableReadFailures = 0
 })

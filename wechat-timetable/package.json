@@ -3,14 +3,16 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "test": "node --test --disable-warning=ExperimentalWarning tests/*.test.mjs"
+    "test": "node --test --disable-warning=ExperimentalWarning tests/*.test.mjs",
+    "test:coverage": "node --experimental-test-coverage --test --disable-warning=ExperimentalWarning tests/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm test"
   },
   "keywords": [],
   "author": "",
   "license": "",
-  "dependencies": {
-  },
   "devDependencies": {
-    "miniprogram-api-typings": "^2.8.3-1"
+    "miniprogram-api-typings": "^2.8.3-1",
+    "typescript": "5.9.3"
   }
 }
