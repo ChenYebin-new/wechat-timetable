@@ -25,15 +25,15 @@
     <view wx:if="{{preview}}" class="preview">
       <view class="row"><text class="k">导出时间</text><text class="v">{{preview.exportedAt}}</text></view>
       <view class="row"><text class="k">课表数据版本</text><text class="v">V{{preview.schemaVersion}}</text></view>
-      <view class="row"><text class="k">备份课程数</text><text class="v">{{preview.backupCount}}</text></view>
-      <view class="row"><text class="k">当前课程数</text><text class="v">{{preview.currentCount}}</text></view>
-      <view class="row"><text class="k">重复课程数</text><text class="v">{{preview.duplicateCount}}</text></view>
-      <view class="row"><text class="k">冲突课程数</text><text class="v">{{preview.conflictCount}}</text></view>
-      <view class="row"><text class="k">覆盖后课程数</text><text class="v">{{preview.overwriteCount}}</text></view>
-      <view class="row"><text class="k">合并-新增</text><text class="v">{{preview.mergeAddCount}}</text></view>
-      <view class="row"><text class="k">合并-跳过重复</text><text class="v">{{preview.mergeSkipDuplicateCount}}</text></view>
-      <view class="row"><text class="k">合并-跳过冲突</text><text class="v">{{preview.mergeSkipConflictCount}}</text></view>
-      <view class="row"><text class="k">合并最终课程数</text><text class="v">{{preview.mergeFinalCount}}</text></view>
+      <view class="row"><text class="k">备份课程</text><text class="v">{{preview.backupGroupCount}} 门 / {{preview.backupCount}} 个时段</text></view>
+      <view class="row"><text class="k">当前课程</text><text class="v">{{preview.currentGroupCount}} 门 / {{preview.currentCount}} 个时段</text></view>
+      <view class="row"><text class="k">合并-新增</text><text class="v">{{preview.mergeAddGroupCount}} 门 / {{preview.mergeAddCount}} 个时段</text></view>
+      <view class="row"><text class="k">整门跳过-重复</text><text class="v">{{preview.mergeSkipDuplicateGroupCount}} 门</text></view>
+      <view class="row"><text class="k">整门跳过-冲突</text><text class="v">{{preview.mergeSkipConflictGroupCount}} 门</text></view>
+      <view class="row"><text class="k">合并后课程</text><text class="v">{{preview.mergeFinalGroupCount}} 门 / {{preview.mergeFinalCount}} 个时段</text></view>
+      <view wx:if="{{preview.skippedGroupReasons.length}}" class="merge-warning">
+        <text wx:for="{{preview.skippedGroupReasons}}" wx:key="index">{{item}}</text>
+      </view>
       <view wx:if="{{!preview.mergeAllowed}}" class="merge-warning">{{preview.mergeReason}}</view>
 
       <view wx:if="{{needsTerm}}" class="term-setup">
@@ -64,7 +64,7 @@
     <block wx:if="{{recentBackupInfo}}">
       <view class="row"><text class="k">备份时间</text><text class="v">{{recentBackupInfo.savedAtText}}</text></view>
       <view class="row"><text class="k">数据版本</text><text class="v">V{{recentBackupInfo.schemaVersion}}</text></view>
-      <view class="row"><text class="k">课程数量</text><text class="v">{{recentBackupInfo.count}}</text></view>
+      <view class="row"><text class="k">课程数量</text><text class="v">{{recentBackupInfo.groupCount}} 门 / {{recentBackupInfo.segmentCount}} 个时段</text></view>
       <button class="btn btn-danger" bindtap="onRestoreRecent">恢复最近备份</button>
     </block>
     <text wx:else class="card-desc">暂无最近自动备份。覆盖、合并或恢复前会自动保留一份当前课表。</text>

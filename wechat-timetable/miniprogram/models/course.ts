@@ -30,6 +30,12 @@ export interface Course extends CourseV2 {
   groupId: string
 }
 
+/** 页面编辑使用的草稿；持久化标识与时间戳由服务层负责生成或保留。 */
+export type CourseDraft = Omit<Course, 'id' | 'groupId' | 'createdAt' | 'updatedAt'> & {
+  id?: string
+  groupId?: string
+}
+
 /** 课表中一个可选择的星期/节次格子。 */
 export interface GridCell {
   day: number
@@ -75,7 +81,7 @@ export interface PeriodSettings {
 
 /** 整个课表存在一个 Storage key 下的根对象结构（当前为 V5）。 */
 export interface TimetableStorage {
-  schemaVersion: number
+  schemaVersion: 5
   term: TermSettings | null
   courses: Course[]
   periodSettings: PeriodSettings
@@ -86,3 +92,39 @@ export interface TimetableStorageV1 {
   schemaVersion: 1
   courses: CourseV1[]
 }
+
+/** V2：增加学期与周次。 */
+export interface TimetableStorageV2 {
+  schemaVersion: 2
+  term: TermSettings
+  courses: CourseV2[]
+}
+
+/** V3：增加课程组。 */
+export interface TimetableStorageV3 {
+  schemaVersion: 3
+  term: TermSettings
+  courses: Course[]
+}
+
+/** V4：增加完整课程作息，尚未包含规则锚点。 */
+export interface PeriodSettingsV4 {
+  durationMinutes: number
+  breakMinutes: number
+  periods: PeriodTime[]
+}
+
+export interface TimetableStorageV4 {
+  schemaVersion: 4
+  term: TermSettings
+  courses: Course[]
+  periodSettings: PeriodSettingsV4
+}
+
+export type LegacyTimetableStorage =
+  | TimetableStorageV1
+  | TimetableStorageV2
+  | TimetableStorageV3
+  | TimetableStorageV4
+
+export type SupportedTimetableStorage = LegacyTimetableStorage | TimetableStorage

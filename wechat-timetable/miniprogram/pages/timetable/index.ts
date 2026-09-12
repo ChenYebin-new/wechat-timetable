@@ -1,7 +1,7 @@
 // pages/timetable/index.ts
-import type { CourseRange, TermSettings } from '../../models/course'
+import type { Course, CourseRange, TermSettings } from '../../models/course'
 import { DAYS } from '../../constants/timetable'
-import { getCourses, getPeriodSettings, getTerm, needsMigration } from '../../services/course-storage'
+import { getStorageSnapshot } from '../../services/course-storage'
 import { calcCurrentWeek } from '../../utils/term'
 import {
   buildWeekPanels,
@@ -12,6 +12,7 @@ import type { WeekPanel } from '../../utils/timetable-layout'
 import { formatRanges, keysToRanges, rangesToKeys } from '../../utils/grid-selection'
 import { buildPeriodViews } from '../../utils/period-settings'
 import type { PeriodView } from '../../constants/timetable'
+import { courseGroupCount } from '../../utils/course-groups'
 
 interface CourseEditorInit {
   ranges: CourseRange[]
@@ -36,6 +37,7 @@ Page({
     selectedCount: 0,
     selectedRangeCount: 0,
     selectionSummary: '',
+    storageProblem: '',
   },
 
   onShow() {
@@ -48,8 +50,14 @@ Page({
 
   /** 整页刷新（进入页面/返回时）：默认定位到当前自然周。 */
   refresh() {
-    const term = getTerm()
-    const periods = buildPeriodViews(getPeriodSettings())
+    const snapshot = getStorageSnapshot()
+    if (snapshot.kind === 'io-error') {
+      this.setData({ storageProblem: snapshot.reason })
+      return
+    }
+    const storage = snapshot.data
+    const term = storage.term
+    const periods = buildPeriodViews(storage.periodSettings)
     const todayWeek = calcCurrentWeek(term, new Date())
     let currentWeek = todayWeek || 1
     const weekOptions: string[] = []
@@ -61,27 +69,32 @@ Page({
     this.setData({
       weekOptions,
       termReady: !!term,
-      needsMigration: needsMigration(),
+      needsMigration: snapshot.kind === 'legacy',
+      storageProblem: snapshot.kind === 'corrupt' || snapshot.kind === 'unsupported' ? snapshot.reason : '',
       weekStatus,
       periods,
       swiperHeightRpx: timetableGridHeightRpx(periods.length),
     })
-    this.renderWeek(currentWeek, term)
+    this.renderWeek(currentWeek, term, storage.courses)
   },
 
   /** 按指定周渲染课表（选周时调用，不再受当前自然周覆盖）。 */
-  renderWeek(week: number, term: TermSettings | null) {
-    const courses = getCourses()
+  renderWeek(week: number, term: TermSettings | null, courses: Course[]) {
     const visible = term
       ? coursesForWeek(courses, week)
       : courses
     const systemDay = new Date().getDay()
     const today = systemDay === 0 ? 7 : systemDay
-    const todayCount = visible.filter((c) => c.day === today).length
+    const todayCourses = visible.filter((course) => course.day === today)
+    const todayCount = courseGroupCount(todayCourses)
+    const totalCount = courseGroupCount(visible)
     const todayText = todayCount > 0 ? `今天有 ${todayCount} 门课` : '今天没有课程'
+    const todayWeek = calcCurrentWeek(term, new Date())
     const overviewText = term
-      ? `第 ${week} 周 · ${todayText} · ${DAYS[today - 1]} · 本周共 ${visible.length} 门`
-      : `${todayText} · ${DAYS[today - 1]} · 共 ${courses.length} 门课`
+      ? todayWeek === week
+        ? `第 ${week} 周 · ${todayText} · ${DAYS[today - 1]} · 本周共 ${totalCount} 门课程`
+        : `第 ${week} 周 · 本周共 ${totalCount} 门课程、${visible.length} 个时段`
+      : `${todayText} · ${DAYS[today - 1]} · 共 ${courseGroupCount(courses)} 门课程`
     this.setData({
       currentWeek: week,
       weekIndex: week - 1,
@@ -98,7 +111,12 @@ Page({
     if (w < 1) w = 1
     if (w > total) w = total
     if (w === this.data.currentWeek) return
-    this.renderWeek(w, getTerm())
+    const snapshot = getStorageSnapshot()
+    if (snapshot.kind === 'io-error') {
+      wx.showToast({ title: '读取课表失败，请重试', icon: 'none' })
+      return
+    }
+    this.renderWeek(w, snapshot.data.term, snapshot.data.courses)
   },
 
   onPrevWeek() {
@@ -119,7 +137,17 @@ Page({
   },
 
   openCourseEditor(url: string, init?: CourseEditorInit) {
-    if (getTerm()) {
+    const snapshot = getStorageSnapshot()
+    if (snapshot.kind === 'io-error' || snapshot.kind === 'corrupt' || snapshot.kind === 'unsupported') {
+      wx.showModal({
+        title: '课表暂时不可编辑',
+        content: snapshot.reason,
+        showCancel: false,
+        confirmText: '知道了',
+      })
+      return
+    }
+    if (snapshot.data.term) {
       wx.navigateTo({
         url,
         success: (result) => {
@@ -155,7 +183,8 @@ Page({
 
   onRetryMigration() {
     this.refresh()
-    if (needsMigration()) {
+    const snapshot = getStorageSnapshot()
+    if (snapshot.kind === 'legacy') {
       wx.showToast({ title: '升级仍未完成，请稍后重试', icon: 'none' })
     } else {
       wx.showToast({ title: '课表数据已升级', icon: 'success' })

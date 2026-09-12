@@ -8,7 +8,11 @@
     </view>
   </view>
 
-  <view wx:if="{{!termReady || needsMigration}}" class="term-banner">
+  <view wx:if="{{storageProblem}}" class="term-banner">
+    <text class="term-banner-text">{{storageProblem}}</text>
+  </view>
+
+  <view wx:if="{{!storageProblem && (!termReady || needsMigration)}}" class="term-banner">
     <text class="term-banner-text">{{needsMigration ? (termReady ? '旧版课表自动升级未完成，原数据已保留' : '检测到旧版课表数据，设置学期后自动升级') : '请先设置学期，才能按教学周查看课表'}}</text>
     <view wx:if="{{needsMigration && termReady}}" class="term-banner-btn" bindtap="onRetryMigration" aria-role="button" aria-label="重试数据升级">重试</view>
     <view wx:else class="term-banner-btn" bindtap="onTermSettings" aria-role="button" aria-label="设置学期">去设置</view>

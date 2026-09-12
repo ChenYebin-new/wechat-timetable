@@ -1,7 +1,7 @@
 // models/backup.ts
 // 课表数据备份相关类型与常量。
 
-import type { TimetableStorage } from './course'
+import type { SupportedTimetableStorage } from './course'
 
 /** 本项目备份的应用标识，用于识别是否为本项目生成的备份。 */
 export const APP_ID = 'qige-timetable'
@@ -17,7 +17,7 @@ export interface TimetableBackupEnvelope {
   app: string
   backupVersion: number
   exportedAt: string // ISO 8601 字符串
-  data: TimetableStorage
+  data: SupportedTimetableStorage
 }
 
 /** 最近自动备份：在覆盖、合并或迁移前保存的一份当前课表快照。 */
@@ -41,4 +41,11 @@ export interface ImportPreview {
   mergeFinalCount: number
   mergeAllowed: boolean
   mergeReason?: string
+  backupGroupCount: number
+  currentGroupCount: number
+  mergeAddGroupCount: number
+  mergeSkipDuplicateGroupCount: number
+  mergeSkipConflictGroupCount: number
+  mergeFinalGroupCount: number
+  skippedGroupReasons: string[]
 }

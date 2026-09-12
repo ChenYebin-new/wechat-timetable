@@ -1,20 +1,15 @@
 // pages/course-edit/index.ts
-import type { Course, CourseRange, WeekMode } from '../../models/course'
-import { COLOR_PALETTE, DAYS, MAX_TOTAL_WEEKS, WEEK_MODES } from '../../constants/timetable'
+import type { Course, CourseDraft, CourseRange, WeekMode } from '../../models/course'
+import { COLOR_PALETTE, DAYS, WEEK_MODES } from '../../constants/timetable'
 import {
   createCourseGroup,
   detachCourseSegment,
-  getCourseById,
-  getCourseGroupByCourseId,
-  getCourses,
-  getPeriodSettings,
-  getTerm,
+  getStorageSnapshot,
   remove,
   removeCourseGroup,
   save,
   updateCourseGroup,
 } from '../../services/course-storage'
-import { validate } from '../../utils/course-validator'
 import { expandWeeks, rangeWeeks } from '../../utils/term'
 import { cellsToRanges, formatRanges, rangesToCells } from '../../utils/grid-selection'
 import { buildPeriodViews } from '../../utils/period-settings'
@@ -43,6 +38,7 @@ Page({
     id: '',
     groupId: '',
     groupSize: 0,
+    groupCourseIds: [] as string[],
     editMode: 'single-create' as EditMode,
     isEdit: false,
     isGroupMode: false,
@@ -70,8 +66,13 @@ Page({
   },
 
   onLoad(options: Record<string, string | undefined>) {
-    const term = getTerm()
-    const periodOptions = buildPeriodViews(getPeriodSettings()).map((period) => `${period.label} ${period.time}`)
+    const snapshot = getStorageSnapshot()
+    if (snapshot.kind === 'io-error' || snapshot.kind === 'corrupt' || snapshot.kind === 'unsupported') {
+      wx.showModal({ title: '课表暂时不可编辑', content: snapshot.reason, showCancel: false })
+      return
+    }
+    const term = snapshot.data.term
+    const periodOptions = buildPeriodViews(snapshot.data.periodSettings).map((period) => `${period.label} ${period.time}`)
     const totalWeeks = term ? term.totalWeeks : 0
     const id = options && options.id ? options.id : ''
     const requestedMode = options && options.mode ? options.mode : ''
@@ -105,12 +106,13 @@ Page({
       wx.setNavigationBarTitle({ title: '新增课程' })
       return
     }
-    const course = getCourseById(id)
+    const course = snapshot.data.courses.find((item) => item.id === id)
     if (!course) {
       wx.showModal({ title: '课程不存在', content: '这门课程可能已经被删除。', showCancel: false })
       return
     }
-    const group = getCourseGroupByCourseId(id)
+    const group = snapshot.data.courses.filter((item) => item.groupId === course.groupId)
+    this.setData({ groupCourseIds: group.map((item) => item.id) })
     this.applyCourse(course, group.length)
     if (editMode === 'group-edit') {
       this.setRanges(group.map((item) => ({
@@ -207,9 +209,7 @@ Page({
   },
 
   onReselect() {
-    const excludedIds = this.data.groupId
-      ? getCourses().filter((course) => course.groupId === this.data.groupId).map((course) => course.id)
-      : []
+    const excludedIds = [...this.data.groupCourseIds]
     wx.navigateTo({
       url: '/pages/slot-select/index',
       success: (result) => {
@@ -225,11 +225,11 @@ Page({
     })
   },
 
-  buildCourse(range?: CourseRange): Course {
+  buildCourse(range?: CourseRange): CourseDraft {
     const weekMode = this.data.weekMode as WeekMode
     return {
-      id: this.data.id,
-      groupId: this.data.groupId,
+      ...(this.data.id ? { id: this.data.id } : {}),
+      ...(this.data.groupId ? { groupId: this.data.groupId } : {}),
       name: this.data.name.trim(),
       day: range ? range.day : this.data.dayIndex + 1,
       startPeriod: range ? range.startPeriod : this.data.startIndex + 1,
@@ -237,8 +237,6 @@ Page({
       teacher: this.data.teacher.trim() || undefined,
       location: this.data.location.trim() || undefined,
       color: this.data.color,
-      createdAt: 0,
-      updatedAt: 0,
       weekMode,
       weeks: weekMode === 'custom' ? [...this.data.customWeeks] : [],
     }
@@ -261,15 +259,6 @@ Page({
       return
     }
     const course = this.buildCourse(firstRange)
-    const totalWeeks = this.data.totalWeeks > 0 ? this.data.totalWeeks : MAX_TOTAL_WEEKS
-    if (!this.data.isGroupMode) {
-      const result = validate(course, getCourses(), this.data.id || undefined, totalWeeks, this.data.periodOptions.length)
-      if (!result.ok) {
-        this.showSaveError(new Error(result.errors[0]))
-        return
-      }
-    }
-
     this.setData({ saving: true })
     try {
       if (this.data.editMode === 'group-create') createCourseGroup(course, this.data.ranges)

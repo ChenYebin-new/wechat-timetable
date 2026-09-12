@@ -1,26 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { registerHooks, stripTypeScriptTypes } from 'node:module'
 import test from 'node:test'
-
-registerHooks({
-  resolve(specifier, context, nextResolve) {
-    if ((specifier.startsWith('.') || specifier.startsWith('/')) && !/[.]\w+$/.test(specifier)) {
-      return nextResolve(`${specifier}.ts`, context)
-    }
-    return nextResolve(specifier, context)
-  },
-  load(url, context, nextLoad) {
-    if (url.endsWith('.ts')) {
-      return {
-        format: 'module',
-        shortCircuit: true,
-        source: stripTypeScriptTypes(readFileSync(new URL(url), 'utf8'), { mode: 'transform' }),
-      }
-    }
-    return nextLoad(url, context)
-  },
-})
+import './helpers/register-typescript.mjs'
 
 const definitions = []
 globalThis.Page = (definition) => definitions.push(definition)
@@ -79,4 +60,44 @@ test('课表入口改为设置并向所有网格传入动态节次', () => {
   assert.match(timetableMarkup, /bindtap="onSettings"/)
   assert.doesNotMatch(timetableMarkup, /bindtap="onDataManage"/)
   assert.equal((timetableMarkup.match(/periods="{{periods}}"/g) || []).length, 2)
+})
+
+test('课表组件直接根据选择和占用状态构建可交互格子', () => {
+  const component = definitions[5]
+  const context = {
+    properties: {
+      periods: [{ index: 1, label: '第1节', time: '08:00–08:50', start: '08:00', end: '08:50', isCustom: false, customLabel: '' }],
+      daySlots: [],
+      selectedKeys: ['1-1'],
+      disabledKeys: ['2-1'],
+    },
+    data: {},
+    setData(changes) { Object.assign(this.data, changes) },
+  }
+  component.methods.rebuildColumns.call(context)
+  assert.equal(context.data.columns.length, 7)
+  assert.equal(context.data.columns[0].cells[0].selected, true)
+  assert.equal(context.data.columns[1].cells[0].disabled, true)
+})
+
+test('作息页面保存遇到 Storage 读取失败时恢复按钮状态并提示原因', async () => {
+  const constants = await import('../miniprogram/constants/timetable.ts')
+  const periodPage = definitions[1]
+  const originalGetStorageSync = globalThis.wx.getStorageSync
+  const originalShowModal = globalThis.wx.showModal
+  let modal
+  globalThis.wx.getStorageSync = () => { throw new Error('simulated read failure') }
+  globalThis.wx.showModal = (options) => { modal = options }
+  const context = {
+    data: { settings: structuredClone(constants.DEFAULT_PERIOD_SETTINGS), saving: false },
+    setData(changes) { Object.assign(this.data, changes) },
+  }
+
+  periodPage.onSave.call(context)
+
+  assert.equal(context.data.saving, false)
+  assert.equal(modal.title, '无法保存')
+  assert.match(modal.content, /读取本地课表失败/)
+  globalThis.wx.getStorageSync = originalGetStorageSync
+  globalThis.wx.showModal = originalShowModal
 })

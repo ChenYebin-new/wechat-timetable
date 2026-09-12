@@ -1,6 +1,6 @@
 import type { PeriodSettings } from '../../models/course'
 import { MAX_PERIODS, MIN_PERIODS } from '../../constants/timetable'
-import { getMaxUsedPeriod, getPeriodSettings, savePeriodSettings } from '../../services/course-storage'
+import { getStorageSnapshot, savePeriodSettings } from '../../services/course-storage'
 import {
   buildPeriodViews,
   clearPeriodOverrides,
@@ -26,8 +26,15 @@ Page({
   },
 
   onLoad() {
-    this.updateDraft(getPeriodSettings())
-    this.setData({ maxUsedPeriod: getMaxUsedPeriod() })
+    const snapshot = getStorageSnapshot()
+    if (snapshot.kind === 'io-error' || snapshot.kind === 'corrupt' || snapshot.kind === 'unsupported') {
+      wx.showModal({ title: '无法读取课程时间', content: snapshot.reason, showCancel: false })
+      return
+    }
+    this.updateDraft(snapshot.data.periodSettings)
+    this.setData({
+      maxUsedPeriod: snapshot.data.courses.reduce((highest, course) => Math.max(highest, course.endPeriod), 0),
+    })
   },
 
   updateDraft(settings: PeriodSettings) {
@@ -152,7 +159,15 @@ Page({
       return
     }
     this.setData({ saving: true })
-    const result = savePeriodSettings(settings)
+    let result: ReturnType<typeof savePeriodSettings>
+    try {
+      result = savePeriodSettings(settings)
+    } catch (error) {
+      result = {
+        ok: false,
+        reason: error instanceof Error && error.message ? error.message : '读取课表数据失败，请稍后重试',
+      }
+    }
     this.setData({ saving: false })
     if (!result.ok) {
       wx.showModal({ title: '无法保存', content: result.reason || '保存失败，请稍后重试', showCancel: false })
