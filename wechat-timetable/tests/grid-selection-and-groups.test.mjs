@@ -83,6 +83,23 @@ test('课表空白格长按阈值为 1.2 秒', () => {
   assert.equal(timetableConstants.GRID_HOLD_DURATION_MS, 1200)
 })
 
+test('课表首页只分享小程序入口并请求显示好友和朋友圈菜单', () => {
+  let menuOptions
+  globalThis.wx.showShareMenu = (options) => {
+    menuOptions = clone(options)
+  }
+
+  timetablePage.onLoad()
+
+  assert.deepEqual(menuOptions, {
+    menus: ['shareAppMessage', 'shareTimeline'],
+  })
+  assert.deepEqual(timetablePage.onShareAppMessage(), {
+    path: '/pages/timetable/index',
+  })
+  assert.deepEqual(timetablePage.onShareTimeline(), {})
+})
+
 test('多选模式使用静态课表，避免 swiper 继续响应横向拖动', () => {
   assert.match(timetablePageMarkup, /<swiper\s+wx:if="{{!selectionMode}}"/)
   assert.match(timetablePageMarkup, /<view wx:else class="week-static"/)
