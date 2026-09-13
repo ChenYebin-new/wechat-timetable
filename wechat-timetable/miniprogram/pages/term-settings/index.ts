@@ -7,6 +7,7 @@ import {
 } from '../../constants/timetable'
 import { applyTerm, getStorageSnapshot } from '../../services/course-storage'
 import { currentMonday, validateTerm } from '../../utils/term'
+import { initializeHomeSharing, shareHomeToFriend, shareHomeToTimeline } from '../../utils/share'
 
 const weekOptions: string[] = []
 for (let w = 1; w <= MAX_TOTAL_WEEKS; w++) weekOptions.push(`${w} 周`)
@@ -24,9 +25,11 @@ Page({
     isMigration: false,
     isEdit: false,
     affectedCount: 0,
+    showShareHomePreview: false,
   },
 
-  onLoad() {
+  onLoad(options: Record<string, string | undefined>) {
+    if (initializeHomeSharing(this, '/pages/term-settings/index', options)) return
     try {
       const snapshot = getStorageSnapshot()
       if (snapshot.kind === 'io-error') throw new Error(snapshot.reason)
@@ -55,6 +58,10 @@ Page({
       })
     }
   },
+
+  onShareAppMessage: shareHomeToFriend,
+
+  onShareTimeline: shareHomeToTimeline,
 
   onDateChange(e: WechatMiniprogram.PickerChange) {
     this.setData({ startDate: e.detail.value as string })

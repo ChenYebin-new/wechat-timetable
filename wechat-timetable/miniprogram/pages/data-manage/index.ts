@@ -13,6 +13,7 @@ import {
 import { getStorageSnapshot } from '../../services/course-storage'
 import { DEFAULT_TOTAL_WEEKS, MAX_TOTAL_WEEKS } from '../../constants/timetable'
 import { currentMonday, validateTerm } from '../../utils/term'
+import { initializeHomeSharing, shareHomeToFriend, shareHomeToTimeline } from '../../utils/share'
 
 interface RecentBackupInfo {
   savedAtText: string
@@ -39,9 +40,19 @@ Page({
     termStartDate: '',
     termTotalWeeks: DEFAULT_TOTAL_WEEKS,
     weekOptions,
+    showShareHomePreview: false,
   },
 
+  onLoad(options: Record<string, string | undefined>) {
+    if (initializeHomeSharing(this, '/pages/data-manage/index', options)) return
+  },
+
+  onShareAppMessage: shareHomeToFriend,
+
+  onShareTimeline: shareHomeToTimeline,
+
   onShow() {
+    if (this.data.showShareHomePreview) return
     this.setData({ recentBackupInfo: this.buildRecentBackupInfo() })
   },
 

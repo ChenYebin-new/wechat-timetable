@@ -9,6 +9,7 @@ import {
   resizePeriods,
   validatePeriodSettings,
 } from '../../utils/period-settings'
+import { initializeHomeSharing, shareHomeToFriend, shareHomeToTimeline } from '../../utils/share'
 
 const durationOptions = Array.from({ length: 180 }, (_, index) => index + 1)
 const breakOptions = Array.from({ length: 121 }, (_, index) => index)
@@ -23,9 +24,11 @@ Page({
     breakIndex: 10,
     maxUsedPeriod: 0,
     saving: false,
+    showShareHomePreview: false,
   },
 
-  onLoad() {
+  onLoad(options: Record<string, string | undefined>) {
+    if (initializeHomeSharing(this, '/pages/period-settings/index', options)) return
     const snapshot = getStorageSnapshot()
     if (snapshot.kind === 'io-error' || snapshot.kind === 'corrupt' || snapshot.kind === 'unsupported') {
       wx.showModal({ title: '无法读取课程时间', content: snapshot.reason, showCancel: false })
@@ -36,6 +39,10 @@ Page({
       maxUsedPeriod: snapshot.data.courses.reduce((highest, course) => Math.max(highest, course.endPeriod), 0),
     })
   },
+
+  onShareAppMessage: shareHomeToFriend,
+
+  onShareTimeline: shareHomeToTimeline,
 
   updateDraft(settings: PeriodSettings) {
     const draft = clonePeriodSettings(settings)

@@ -1,4 +1,6 @@
 <!-- pages/course-edit/index.wxml -->
+<share-home-preview wx:if="{{showShareHomePreview}}" />
+<block wx:else>
 <view class="page">
   <view class="form">
     <view class="field">
@@ -102,3 +104,4 @@
     </view>
   </view>
 </view>
+</block>

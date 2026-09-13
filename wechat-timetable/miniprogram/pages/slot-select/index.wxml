@@ -1,3 +1,5 @@
+<share-home-preview wx:if="{{showShareHomePreview}}" />
+<block wx:else>
 <view class="page">
   <view class="intro">
     <text class="intro-title">重新选择上课时段</text>
@@ -28,3 +30,4 @@
     </view>
   </view>
 </view>
+</block>

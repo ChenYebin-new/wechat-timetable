@@ -6,6 +6,7 @@ import type { TimetableCardItem } from '../../utils/timetable-layout'
 import { formatRanges, keysToRanges, rangesToKeys } from '../../utils/grid-selection'
 import { buildPeriodViews } from '../../utils/period-settings'
 import type { PeriodView } from '../../constants/timetable'
+import { initializeHomeSharing, shareHomeToFriend, shareHomeToTimeline } from '../../utils/share'
 
 interface SlotSelectorInit {
   ranges: CourseRange[]
@@ -23,9 +24,11 @@ Page({
     selectedCount: 0,
     rangeCount: 0,
     summary: '',
+    showShareHomePreview: false,
   },
 
-  onLoad() {
+  onLoad(options: Record<string, string | undefined>) {
+    if (initializeHomeSharing(this, '/pages/slot-select/index', options)) return
     this.getOpenerEventChannel().on('slotSelectorInit', (init: SlotSelectorInit) => {
       const snapshot = getStorageSnapshot()
       if (snapshot.kind === 'io-error' || snapshot.kind === 'corrupt' || snapshot.kind === 'unsupported') {
@@ -50,6 +53,10 @@ Page({
       this.updateSelection(rangesToKeys(Array.isArray(init.ranges) ? init.ranges : []))
     })
   },
+
+  onShareAppMessage: shareHomeToFriend,
+
+  onShareTimeline: shareHomeToTimeline,
 
   updateSelection(keys: string[]) {
     const ranges = keysToRanges(keys)

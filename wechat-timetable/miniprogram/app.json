@@ -1,6 +1,8 @@
 {
   "pages": [
     "pages/timetable/index",
+    "pages/todo/index",
+    "pages/todo-edit/index",
     "pages/settings/index",
     "pages/period-settings/index",
     "pages/period-time-edit/index",
@@ -14,6 +16,25 @@
     "navigationBarTitleText": "我的课表",
     "navigationBarBackgroundColor": "#ffffff",
     "backgroundColor": "#f2f5f7"
+  },
+  "usingComponents": {
+    "share-home-preview": "/components/share-home-preview/index"
+  },
+  "tabBar": {
+    "color": "#58706a",
+    "selectedColor": "#267d78",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/timetable/index",
+        "text": "课表"
+      },
+      {
+        "pagePath": "pages/todo/index",
+        "text": "待办"
+      }
+    ]
   },
   "style": "v2",
   "componentFramework": "glass-easel",

@@ -5,6 +5,7 @@ import {
   timeToMinutes,
   updatePeriodTime,
 } from '../../utils/period-settings'
+import { initializeHomeSharing, shareHomeToFriend, shareHomeToTimeline } from '../../utils/share'
 
 interface PeriodTimeEditInit {
   index: number
@@ -26,9 +27,11 @@ Page({
     endChanged: false,
     impactText: '',
     customText: '',
+    showShareHomePreview: false,
   },
 
-  onLoad() {
+  onLoad(options: Record<string, string | undefined>) {
+    if (initializeHomeSharing(this, '/pages/period-time-edit/index', options)) return
     this.getOpenerEventChannel().on('periodTimeEditInit', (init: PeriodTimeEditInit) => {
       const settings = clonePeriodSettings(init.settings)
       const period = settings.periods[init.index]
@@ -58,6 +61,10 @@ Page({
       wx.setNavigationBarTitle({ title: `编辑第 ${init.index + 1} 节` })
     })
   },
+
+  onShareAppMessage: shareHomeToFriend,
+
+  onShareTimeline: shareHomeToTimeline,
 
   onStartChange(e: WechatMiniprogram.PickerChange) {
     const startText = String(e.detail.value)

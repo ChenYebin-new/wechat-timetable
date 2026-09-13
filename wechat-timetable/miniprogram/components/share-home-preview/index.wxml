@@ -1,0 +1,10 @@
+<view class="share-preview" aria-label="拾课课表，课表与待办">
+  <image
+    class="share-preview-art"
+    src="/assets/share/timeline-square.jpg"
+    mode="aspectFill"
+    aria-hidden="true"
+  />
+  <text class="share-preview-title">拾课课表</text>
+  <text class="share-preview-desc">课表与待办，清楚安排每一天。</text>
+</view>
