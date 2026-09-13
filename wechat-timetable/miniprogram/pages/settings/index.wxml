@@ -1,3 +1,5 @@
+<share-home-preview wx:if="{{showShareHomePreview}}" />
+<block wx:else>
 <view class="page">
   <view class="intro">
     <text class="intro-title">课表设置</text>
@@ -30,3 +32,4 @@
     </view>
   </view>
 </view>
+</block>

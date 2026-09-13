@@ -83,7 +83,7 @@ test('课表空白格长按阈值为 1.2 秒', () => {
   assert.equal(timetableConstants.GRID_HOLD_DURATION_MS, 1200)
 })
 
-test('课表首页只分享小程序入口并请求显示好友和朋友圈菜单', () => {
+test('课表首页使用统一品牌卡片并请求显示好友和朋友圈菜单', () => {
   let menuOptions
   globalThis.wx.showShareMenu = (options) => {
     menuOptions = clone(options)
@@ -95,9 +95,15 @@ test('课表首页只分享小程序入口并请求显示好友和朋友圈菜�
     menus: ['shareAppMessage', 'shareTimeline'],
   })
   assert.deepEqual(timetablePage.onShareAppMessage(), {
+    title: '拾课课表｜课表与待办',
     path: '/pages/timetable/index',
+    imageUrl: '/assets/share/friend-card-5x4.jpg',
   })
-  assert.deepEqual(timetablePage.onShareTimeline(), {})
+  assert.deepEqual(timetablePage.onShareTimeline(), {
+    title: '拾课课表｜课表与待办',
+    query: 'qige_share=home',
+    imageUrl: '/assets/share/timeline-square.jpg',
+  })
 })
 
 test('多选模式使用静态课表，避免 swiper 继续响应横向拖动', () => {

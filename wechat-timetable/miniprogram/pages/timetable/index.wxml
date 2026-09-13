@@ -1,4 +1,6 @@
 <!-- pages/timetable/index.wxml -->
+<share-home-preview wx:if="{{showShareHomePreview}}" />
+<block wx:else>
 <view class="page {{selectionMode ? 'selecting' : ''}}">
   <view class="overview">
     <text class="overview-text">{{overviewText}}</text>
@@ -101,3 +103,4 @@
     </view>
   </view>
 </view>
+</block>

@@ -1,4 +1,18 @@
+import { initializeHomeSharing, shareHomeToFriend, shareHomeToTimeline } from '../../utils/share'
+
 Page({
+  data: {
+    showShareHomePreview: false,
+  },
+
+  onLoad(options: Record<string, string | undefined>) {
+    if (initializeHomeSharing(this, '/pages/settings/index', options)) return
+  },
+
+  onShareAppMessage: shareHomeToFriend,
+
+  onShareTimeline: shareHomeToTimeline,
+
   onTermSettings() {
     wx.navigateTo({ url: '/pages/term-settings/index' })
   },

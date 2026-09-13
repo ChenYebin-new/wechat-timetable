@@ -13,6 +13,12 @@ import { formatRanges, keysToRanges, rangesToKeys } from '../../utils/grid-selec
 import { buildPeriodViews } from '../../utils/period-settings'
 import type { PeriodView } from '../../constants/timetable'
 import { courseGroupCount } from '../../utils/course-groups'
+import {
+  HOME_PAGE_PATH,
+  initializeHomeSharing,
+  shareHomeToFriend,
+  shareHomeToTimeline,
+} from '../../utils/share'
 
 interface CourseEditorInit {
   ranges: CourseRange[]
@@ -38,25 +44,19 @@ Page({
     selectedRangeCount: 0,
     selectionSummary: '',
     storageProblem: '',
+    showShareHomePreview: false,
   },
 
-  onLoad() {
-    wx.showShareMenu({
-      menus: ['shareAppMessage', 'shareTimeline'],
-    })
+  onLoad(options: Record<string, string | undefined>) {
+    if (initializeHomeSharing(this, HOME_PAGE_PATH, options)) return
   },
 
-  onShareAppMessage() {
-    return {
-      path: '/pages/timetable/index',
-    }
-  },
+  onShareAppMessage: shareHomeToFriend,
 
-  onShareTimeline() {
-    return {}
-  },
+  onShareTimeline: shareHomeToTimeline,
 
   onShow() {
+    if (this.data.showShareHomePreview) return
     this.refresh()
   },
 

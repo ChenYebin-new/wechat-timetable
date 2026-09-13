@@ -13,6 +13,7 @@ import {
 import { expandWeeks, rangeWeeks } from '../../utils/term'
 import { cellsToRanges, formatRanges, rangesToCells } from '../../utils/grid-selection'
 import { buildPeriodViews } from '../../utils/period-settings'
+import { initializeHomeSharing, shareHomeToFriend, shareHomeToTimeline } from '../../utils/share'
 
 const dayOptions = DAYS
 const weekModeLabels = WEEK_MODES.map((m) => m.label)
@@ -63,9 +64,11 @@ Page({
     weekModeIndex: 0,
     customWeeks: [] as number[],
     weekChips: [] as WeekChip[],
+    showShareHomePreview: false,
   },
 
   onLoad(options: Record<string, string | undefined>) {
+    if (initializeHomeSharing(this, '/pages/course-edit/index', options)) return
     const snapshot = getStorageSnapshot()
     if (snapshot.kind === 'io-error' || snapshot.kind === 'corrupt' || snapshot.kind === 'unsupported') {
       wx.showModal({ title: '课表暂时不可编辑', content: snapshot.reason, showCancel: false })
@@ -122,6 +125,10 @@ Page({
       })))
     }
   },
+
+  onShareAppMessage: shareHomeToFriend,
+
+  onShareTimeline: shareHomeToTimeline,
 
   applyCourse(course: Course, groupSize: number) {
     const weekMode = course.weekMode as WeekMode

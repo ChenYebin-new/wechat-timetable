@@ -1,0 +1,73 @@
+<share-home-preview wx:if="{{showShareHomePreview}}" />
+<block wx:else>
+<view class="page">
+  <view class="overview">
+    <view class="overview-copy">
+      <text class="overview-title">把今天理清楚</text>
+      <text class="overview-desc">{{overviewText}}</text>
+    </view>
+    <view class="add-button" bindtap="onAdd" aria-role="button" aria-label="新建待办">新建待办</view>
+  </view>
+
+  <view class="filter-bar" aria-role="tablist">
+    <view
+      class="filter-item {{filter === 'pending' ? 'active' : ''}}"
+      data-filter="pending"
+      bindtap="onFilter"
+      aria-role="tab"
+      aria-selected="{{filter === 'pending'}}"
+    >待完成 <text class="filter-count">{{pendingCount}}</text></view>
+    <view
+      class="filter-item {{filter === 'completed' ? 'active' : ''}}"
+      data-filter="completed"
+      bindtap="onFilter"
+      aria-role="tab"
+      aria-selected="{{filter === 'completed'}}"
+    >已完成 <text class="filter-count">{{completedCount}}</text></view>
+  </view>
+
+  <view wx:if="{{storageProblem}}" class="problem-panel">
+    <text class="problem-title">暂时无法读取待办</text>
+    <text class="problem-desc">{{storageProblem}}</text>
+    <view class="retry-button" bindtap="onRetry" aria-role="button" aria-label="重新读取待办">重新读取</view>
+  </view>
+
+  <view wx:elif="{{visibleItems.length === 0}}" class="empty-state">
+    <view class="empty-mark" aria-hidden="true">
+      <view class="empty-line line-long"></view>
+      <view class="empty-line"></view>
+      <view class="empty-line line-short"></view>
+    </view>
+    <text class="empty-title">{{emptyTitle}}</text>
+    <text class="empty-desc">{{emptyDescription}}</text>
+    <view wx:if="{{filter === 'pending'}}" class="empty-action" bindtap="onAdd" aria-role="button" aria-label="新建第一条待办">新建第一条待办</view>
+  </view>
+
+  <view wx:else class="todo-list">
+    <view class="todo-row {{item.completed ? 'completed' : ''}}" wx:for="{{visibleItems}}" wx:key="id">
+      <view
+        class="check-control {{item.completed ? 'checked' : ''}}"
+        data-id="{{item.id}}"
+        bindtap="onToggle"
+        aria-role="checkbox"
+        aria-checked="{{item.completed}}"
+        aria-label="{{item.completed ? '恢复待办' : '完成待办'}}：{{item.title}}"
+      >
+        <view wx:if="{{item.completed}}" class="check-stem"></view>
+      </view>
+      <view class="todo-content" data-id="{{item.id}}" bindtap="onEdit" aria-role="button" aria-label="编辑待办：{{item.title}}">
+        <text class="todo-title">{{item.title}}</text>
+        <view wx:if="{{item.dueText}}" class="todo-meta">
+          <text class="due-label {{item.dueTone}}">{{item.dueText}}</text>
+        </view>
+        <text wx:if="{{item.note}}" class="todo-note">{{item.note}}</text>
+      </view>
+      <view class="more-control" data-id="{{item.id}}" bindtap="onMore" aria-role="button" aria-label="更多操作：{{item.title}}">
+        <view class="more-dot"></view>
+        <view class="more-dot"></view>
+        <view class="more-dot"></view>
+      </view>
+    </view>
+  </view>
+</view>
+</block>

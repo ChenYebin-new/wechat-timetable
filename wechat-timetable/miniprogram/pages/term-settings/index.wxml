@@ -1,4 +1,6 @@
 <!-- pages/term-settings/index.wxml -->
+<share-home-preview wx:if="{{showShareHomePreview}}" />
+<block wx:else>
 <view class="page">
   <view class="card">
     <text class="card-title">第一教学周的星期一</text>
@@ -34,3 +36,4 @@
 
   <button class="save-btn hover-btn" hover-class="save-btn-pressed" bindtap="onSave">{{isMigration ? '设置并迁移' : '保存'}}</button>
 </view>
+</block>

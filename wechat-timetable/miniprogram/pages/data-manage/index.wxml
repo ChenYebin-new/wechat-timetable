@@ -1,4 +1,6 @@
 <!-- pages/data-manage/index.wxml -->
+<share-home-preview wx:if="{{showShareHomePreview}}" />
+<block wx:else>
 <view class="page">
   <view class="card">
     <text class="card-title">导出课表</text>
@@ -70,3 +72,4 @@
     <text wx:else class="card-desc">暂无最近自动备份。覆盖、合并或恢复前会自动保留一份当前课表。</text>
   </view>
 </view>
+</block>
