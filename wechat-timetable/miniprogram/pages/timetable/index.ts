@@ -40,6 +40,22 @@ Page({
     storageProblem: '',
   },
 
+  onLoad() {
+    wx.showShareMenu({
+      menus: ['shareAppMessage', 'shareTimeline'],
+    })
+  },
+
+  onShareAppMessage() {
+    return {
+      path: '/pages/timetable/index',
+    }
+  },
+
+  onShareTimeline() {
+    return {}
+  },
+
   onShow() {
     this.refresh()
   },
