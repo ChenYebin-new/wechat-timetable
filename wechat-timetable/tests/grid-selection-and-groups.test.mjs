@@ -48,6 +48,7 @@ const selection = await import('../miniprogram/utils/grid-selection.ts')
 const courseStorage = await import('../miniprogram/services/course-storage.ts')
 const timetableConstants = await import('../miniprogram/constants/timetable.ts')
 const timetableLayout = await import('../miniprogram/utils/timetable-layout.ts')
+const termUtils = await import('../miniprogram/utils/term.ts')
 await import('../miniprogram/pages/timetable/index.ts')
 const timetablePageMarkup = readFileSync(
   new URL('../miniprogram/pages/timetable/index.wxml', import.meta.url),
@@ -176,7 +177,9 @@ test('非当前周概览按课程组计数且不误称今天', () => {
     draft({ id: 'math-2', groupId: 'math', day: 3 }),
     draft({ id: 'english-1', groupId: 'english', name: '英语', day: 5 }),
   ]
-  timetablePage.renderWeek.call(context, 2, TERM, courses)
+  const todayWeek = termUtils.calcCurrentWeek(TERM, new Date())
+  const nonCurrentWeek = todayWeek === 1 ? 2 : 1
+  timetablePage.renderWeek.call(context, nonCurrentWeek, TERM, courses)
   assert.match(context.data.overviewText, /本周共 2 门课程、3 个时段/)
   assert.doesNotMatch(context.data.overviewText, /今天/)
 })

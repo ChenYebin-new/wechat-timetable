@@ -4,10 +4,13 @@ import { initializeHomeSharing, shareHomeToFriend, shareHomeToTimeline } from '.
 
 type TodoFilter = 'pending' | 'completed'
 type DueTone = 'normal' | 'today' | 'overdue'
+type ScheduleTone = 'normal' | 'missed'
 
 interface TodoView extends TodoItem {
   dueText: string
   dueTone: DueTone
+  scheduleText: string
+  scheduleTone: ScheduleTone
 }
 
 function dateKey(date: Date): string {
@@ -34,11 +37,39 @@ function dueView(dueDate: string, completed: boolean, today: Date): { dueText: s
     : { dueText: `${label}截止`, dueTone: 'normal' }
 }
 
+function scheduleDateLabel(scheduleDate: string, today: Date): string {
+  if (scheduleDate === dateKey(today)) return '今天'
+  if (scheduleDate === offsetDateKey(today, 1)) return '明天'
+  const [year, month, day] = scheduleDate.split('-').map(Number)
+  return year === today.getFullYear() ? `${month}月${day}日` : `${year}年${month}月${day}日`
+}
+
+function localDateTime(date: string, time: string): Date {
+  const [year, month, day] = date.split('-').map(Number)
+  const [hour, minute] = time.split(':').map(Number)
+  return new Date(year, month - 1, day, hour, minute)
+}
+
+function scheduleView(item: TodoItem, now: Date): { scheduleText: string; scheduleTone: ScheduleTone } {
+  if (!item.scheduleDate) return { scheduleText: '', scheduleTone: 'normal' }
+  const label = `${scheduleDateLabel(item.scheduleDate, now)} ${item.scheduleStartTime}–${item.scheduleEndTime}`
+  const missed = !item.completed && localDateTime(item.scheduleDate, item.scheduleEndTime).getTime() <= now.getTime()
+  return missed
+    ? { scheduleText: `计划时间已过 · ${label}`, scheduleTone: 'missed' }
+    : { scheduleText: label, scheduleTone: 'normal' }
+}
+
 function sortTodos(items: TodoItem[], filter: TodoFilter): TodoItem[] {
   return [...items]
     .filter((item) => filter === 'completed' ? item.completed : !item.completed)
     .sort((left, right) => {
       if (filter === 'completed') return (right.completedAt || right.updatedAt) - (left.completedAt || left.updatedAt)
+      if (left.scheduleDate && right.scheduleDate) {
+        const leftSchedule = `${left.scheduleDate}T${left.scheduleStartTime}`
+        const rightSchedule = `${right.scheduleDate}T${right.scheduleStartTime}`
+        if (leftSchedule !== rightSchedule) return leftSchedule.localeCompare(rightSchedule)
+      }
+      if (left.scheduleDate !== right.scheduleDate) return left.scheduleDate ? -1 : 1
       if (left.dueDate && right.dueDate && left.dueDate !== right.dueDate) return left.dueDate.localeCompare(right.dueDate)
       if (left.dueDate !== right.dueDate) return left.dueDate ? -1 : 1
       return right.createdAt - left.createdAt
@@ -89,16 +120,22 @@ Page({
     const now = new Date()
     const pendingCount = snapshot.data.items.filter((item) => !item.completed).length
     const completedCount = snapshot.data.items.length - pendingCount
+    const scheduledToday = snapshot.data.items.filter((item) => !item.completed && item.scheduleDate === dateKey(now)).length
     const dueToday = snapshot.data.items.filter((item) => !item.completed && item.dueDate === dateKey(now)).length
     const visibleItems = sortTodos(snapshot.data.items, this.data.filter).map((item) => ({
       ...item,
+      ...scheduleView(item, now),
       ...dueView(item.dueDate, item.completed, now),
     }))
+    const todayParts = [
+      ...(scheduledToday ? [`今天计划 ${scheduledToday} 项`] : []),
+      ...(dueToday ? [`今天截止 ${dueToday} 项`] : []),
+    ]
     const overviewText = pendingCount === 0
       ? snapshot.data.items.length === 0
         ? '把接下来要做的事记下来。'
         : '待办已经清空，可以轻装上阵。'
-      : `还有 ${pendingCount} 项待完成${dueToday ? ` · ${dueToday} 项今天截止` : ''}`
+      : `还有 ${pendingCount} 项待完成${todayParts.length ? ` · ${todayParts.join(' · ')}` : ''}`
     const emptyTitle = this.data.filter === 'completed'
       ? '还没有完成记录'
       : completedCount > 0
