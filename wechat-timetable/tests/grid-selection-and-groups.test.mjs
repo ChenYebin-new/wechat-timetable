@@ -49,6 +49,7 @@ const courseStorage = await import('../miniprogram/services/course-storage.ts')
 const timetableConstants = await import('../miniprogram/constants/timetable.ts')
 const timetableLayout = await import('../miniprogram/utils/timetable-layout.ts')
 const termUtils = await import('../miniprogram/utils/term.ts')
+const colorUtils = await import('../miniprogram/utils/color.ts')
 await import('../miniprogram/pages/timetable/index.ts')
 const timetablePageMarkup = readFileSync(
   new URL('../miniprogram/pages/timetable/index.wxml', import.meta.url),
@@ -136,6 +137,90 @@ test('页面定义直接处理长按进入多选、点击增选和取消选择',
   assert.deepEqual(context.data.selectedKeys, [])
 })
 
+test('打开课程编辑失败前不抢先清空已选时段', () => {
+  let opened
+  let cleared = false
+  const context = {
+    data: { currentWeek: 2, selectedKeys: ['1-1', '1-2'] },
+    updateSelection() { cleared = true },
+    openCourseEditor(url, init) { opened = { url, init } },
+  }
+
+  timetablePage.onSelectionNext.call(context)
+
+  assert.equal(cleared, false)
+  assert.deepEqual(context.data.selectedKeys, ['1-1', '1-2'])
+  assert.deepEqual(opened, {
+    url: '/pages/course-edit/index?mode=group-create',
+    init: {
+      ranges: [{ day: 1, startPeriod: 1, endPeriod: 2 }],
+      sourceWeek: 2,
+    },
+  })
+})
+
+test('课表重新读取失败时清空陈旧网格与选择态并提供重试', () => {
+  const originalGetStorageSync = globalThis.wx.getStorageSync
+  globalThis.wx.getStorageSync = () => { throw new Error('simulated read failure') }
+  const context = {
+    data: {
+      weekPanels: [{ week: 2 }],
+      periods: [{ index: 1 }],
+      isEmpty: true,
+      overviewText: '第 2 周 · 本周共 3 门课程',
+      termReady: true,
+      needsMigration: true,
+      currentWeek: 2,
+      weekIndex: 1,
+      weekOptions: ['第 1 周', '第 2 周'],
+      weekStatus: '旧状态',
+      selectionMode: true,
+      selectedKeys: ['1-1'],
+      selectedCount: 1,
+      selectedRangeCount: 1,
+      selectionSummary: '周一第1节',
+    },
+    setData(changes) { Object.assign(this.data, changes) },
+  }
+
+  try {
+    timetablePage.refresh.call(context)
+    assert.deepEqual(context.data.weekPanels, [])
+    assert.deepEqual(context.data.periods, [])
+    assert.equal(context.data.termReady, false)
+    assert.equal(context.data.isEmpty, false)
+    assert.equal(context.data.selectionMode, false)
+    assert.deepEqual(context.data.selectedKeys, [])
+    assert.equal(context.data.selectedCount, 0)
+    assert.match(context.data.overviewText, /暂时无法读取/)
+    assert.match(context.data.storageProblem, /读取本地课表失败/)
+    assert.match(timetablePageMarkup, /wx:if="{{!storageProblem}}" class="grid-scroll"/)
+    assert.match(timetablePageMarkup, /bindtap="onRetry"/)
+  } finally {
+    globalThis.wx.getStorageSync = originalGetStorageSync
+  }
+})
+
+test('数据升级重试只在确认读到当前版本后报成功', () => {
+  const originalShowToast = globalThis.wx.showToast
+  let toast
+  globalThis.wx.showToast = (options) => { toast = options }
+  const context = { refresh() { return 'io-error' } }
+
+  try {
+    timetablePage.onRetryMigration.call(context)
+    assert.equal(toast.icon, 'none')
+    assert.match(toast.title, /升级仍未完成/)
+
+    context.refresh = () => 'current'
+    timetablePage.onRetryMigration.call(context)
+    assert.equal(toast.icon, 'success')
+    assert.equal(toast.title, '课表数据已升级')
+  } finally {
+    globalThis.wx.showToast = originalShowToast
+  }
+})
+
 test('每次点击课程都重新询问编辑范围，不沿用上一次选择', () => {
   reset()
   courseStorage.createCourseGroup(draft(), [
@@ -145,7 +230,7 @@ test('每次点击课程都重新询问编辑范围，不沿用上一次选择',
   const target = storage.get(TIMETABLE_KEY).courses[0]
   courseStorage.detachCourseSegment({ ...target, name: '高数习题课' })
   const openedUrls = []
-  const choices = [0, 1]
+  const choices = [0, 1, 0]
   let promptCount = 0
   globalThis.wx.showActionSheet = (options) => {
     options.success({ tapIndex: choices[promptCount++] })
@@ -159,11 +244,13 @@ test('每次点击课程都重新询问编辑范围，不沿用上一次选择',
 
   timetablePage.onCourseTap.call(page, { detail: { id: target.id } })
   timetablePage.onCourseTap.call(page, { detail: { id: target.id } })
+  timetablePage.onCourseTap.call(page, { detail: { id: 'course&mode=group-edit?/x' } })
 
-  assert.equal(promptCount, 2)
+  assert.equal(promptCount, 3)
   assert.deepEqual(openedUrls, [
     `/pages/course-edit/index?id=${target.id}&mode=segment-edit&sourceWeek=2`,
     `/pages/course-edit/index?id=${target.id}&mode=group-edit&sourceWeek=2`,
+    '/pages/course-edit/index?id=course%26mode%3Dgroup-edit%3F%2Fx&mode=segment-edit&sourceWeek=2',
   ])
 })
 
@@ -196,6 +283,33 @@ test('课程卡片按星期分组并复用统一布局信息', () => {
   assert.deepEqual(slots[6].map((item) => item.id), ['sunday'])
   assert.match(slots[0][0].style, /^top: \d+rpx; height: \d+rpx;$/)
   assert.match(slots[0][0].textColor, /^#[0-9a-f]{6}$/i)
+})
+
+test('课程色板生成的文字前景色均达到 WCAG 4.5:1', () => {
+  const relativeLuminance = (hex) => {
+    const value = Number.parseInt(hex.slice(1), 16)
+    const channels = [value >> 16, (value >> 8) & 255, value & 255].map((channel) => {
+      const normalized = channel / 255
+      return normalized <= 0.04045
+        ? normalized / 12.92
+        : ((normalized + 0.055) / 1.055) ** 2.4
+    })
+    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
+  }
+  const contrastRatio = (left, right) => {
+    const leftLuminance = relativeLuminance(left)
+    const rightLuminance = relativeLuminance(right)
+    return (Math.max(leftLuminance, rightLuminance) + 0.05) /
+      (Math.min(leftLuminance, rightLuminance) + 0.05)
+  }
+
+  for (const background of timetableConstants.COLOR_PALETTE) {
+    const foreground = colorUtils.getContrastText(background)
+    assert.ok(
+      contrastRatio(background, foreground) >= 4.5,
+      `${background} 与 ${foreground} 的对比度不足 4.5:1`,
+    )
+  }
 })
 
 test('周面板只为当前周与相邻周构建课表，并按课程周次过滤', () => {

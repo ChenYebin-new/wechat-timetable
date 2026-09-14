@@ -18,6 +18,7 @@ const DEFAULT_PERIOD_SETTINGS = {
 let storage = new Map()
 let timetableWriteFailures = 0
 let timetableReadFailures = 0
+let recentWriteModes = []
 
 function clone(value) {
   return value === undefined ? undefined : structuredClone(value)
@@ -32,6 +33,14 @@ globalThis.wx = {
     return storage.has(key) ? clone(storage.get(key)) : ''
   },
   setStorageSync(key, value) {
+    if (key === RECENT_BACKUP_KEY) {
+      const mode = recentWriteModes.shift()
+      if (mode === 'ignore') return
+      if (mode === 'corrupt') {
+        storage.set(key, { corrupted: true })
+        return
+      }
+    }
     if (key === TIMETABLE_KEY && timetableWriteFailures > 0) {
       timetableWriteFailures--
       throw new Error('simulated write failure')
@@ -106,6 +115,7 @@ function reset(currentCourses = []) {
   ])
   timetableWriteFailures = 0
   timetableReadFailures = 0
+  recentWriteModes = []
 }
 
 function assertReadFailurePreservesCurrent(action, original) {
@@ -317,6 +327,47 @@ test('V2 备份覆盖时为每个旧课程补齐独立课程组', () => {
   assert.deepEqual(saved.courses.map((item) => item.groupId), ['old-1', 'old-2'])
 })
 
+test('V2–V4 备份兼容每周课程的旧空周次哨兵，但 V5 仍严格拒绝', () => {
+  const legacyPeriodSettings = {
+    durationMinutes: DEFAULT_PERIOD_SETTINGS.durationMinutes,
+    breakMinutes: DEFAULT_PERIOD_SETTINGS.breakMinutes,
+    periods: clone(DEFAULT_PERIOD_SETTINGS.periods),
+  }
+  for (const schemaVersion of [2, 3, 4]) {
+    const legacyCourse = schemaVersion === 2
+      ? v2Course({ weeks: [] })
+      : course({ weeks: [] })
+    const analyzed = backupService.analyzeBackup(envelope([legacyCourse], {
+      data: {
+        schemaVersion,
+        term: clone(TERM),
+        courses: [legacyCourse],
+        ...(schemaVersion === 4 ? { periodSettings: legacyPeriodSettings } : {}),
+      },
+    }))
+    assert.equal(analyzed.ok, true, `V${schemaVersion} 应接受 all + []`)
+    assert.deepEqual(analyzed.courses[0].weeks, ALL_WEEKS)
+  }
+
+  const current = envelope([course({ weeks: [] })], {
+    data: {
+      schemaVersion: 5,
+      term: clone(TERM),
+      courses: [course({ weeks: [] })],
+      periodSettings: clone(DEFAULT_PERIOD_SETTINGS),
+    },
+  })
+  assert.equal(backupService.analyzeBackup(current).ok, false)
+})
+
+test('备份入口拒绝静默重排指定周次数组', () => {
+  const analyzed = backupService.analyzeBackup(envelope([
+    course({ weekMode: 'custom', weeks: [3, 1] }),
+  ]))
+  assert.equal(analyzed.ok, false)
+  assert.match(analyzed.errors[0], /指定周次无效/)
+})
+
 test('V3 备份拒绝同一课程组的共同信息不一致', () => {
   reset()
   const analyzed = backupService.analyzeBackup(envelope([
@@ -371,6 +422,62 @@ test('成功覆盖后可以恢复最近自动备份', () => {
     JSON.stringify(storage.get(RECENT_BACKUP_KEY).export.data.courses),
     JSON.stringify(replacement),
   )
+})
+
+test('未设置学期的空 V5 最近备份可以恢复且空合并与预览一致', () => {
+  const customPeriods = {
+    durationMinutes: 45,
+    breakMinutes: 5,
+    firstStart: '08:00',
+    overrides: [],
+    periods: [{ start: '08:00', end: '08:45' }],
+  }
+  const original = { schemaVersion: 5, term: null, courses: [], periodSettings: clone(customPeriods) }
+  storage = new Map([[TIMETABLE_KEY, clone(original)]])
+  recentWriteModes = []
+
+  const incoming = envelope([], {
+    data: { schemaVersion: 5, term: clone(TERM), courses: [], periodSettings: clone(customPeriods) },
+  })
+  assert.equal(backupService.overwriteFromBackup(incoming).ok, true)
+  assert.equal(backupService.getRecentBackup().export.data.term, null)
+  assert.equal(backupService.restoreRecentBackup().ok, true)
+  assert.deepEqual(storage.get(TIMETABLE_KEY), original)
+
+  const empty = envelope([], {
+    data: { schemaVersion: 5, term: null, courses: [], periodSettings: clone(customPeriods) },
+  })
+  const analyzed = backupService.analyzeBackup(empty)
+  assert.equal(analyzed.preview.mergeAllowed, true)
+  assert.deepEqual(backupService.mergeFromBackup(empty), {
+    ok: true,
+    added: 0,
+    skippedDuplicate: 0,
+    skippedConflict: 0,
+    finalCount: 0,
+    addedGroups: 0,
+    skippedDuplicateGroups: 0,
+    skippedConflictGroups: 0,
+    finalGroupCount: 0,
+    skippedGroupReasons: [],
+  })
+  assert.deepEqual(storage.get(TIMETABLE_KEY), original)
+})
+
+test('自动备份写后校验失败时恢复之前的最近备份并停止覆盖', () => {
+  const current = [course()]
+  reset(current)
+  const previousRecent = { marker: 'keep-previous-backup' }
+  storage.set(RECENT_BACKUP_KEY, clone(previousRecent))
+  recentWriteModes = ['corrupt']
+
+  const result = backupService.overwriteFromBackup(
+    envelope([course({ id: 'course-2', name: '英语', day: 2 })]),
+  )
+  assert.equal(result.ok, false)
+  assert.match(result.reason, /无法创建操作前自动备份/)
+  assert.deepEqual(storage.get(TIMETABLE_KEY).courses, current)
+  assert.deepEqual(storage.get(RECENT_BACKUP_KEY), previousRecent)
 })
 
 test('迁移生成的 V1 最近备份可以按当前学期恢复', () => {
@@ -440,6 +547,31 @@ test('恢复失败时保留恢复前课表和原来的最近备份', () => {
   assert.match(result.reason, /无法确认原课表状态/)
   assert.equal(JSON.stringify(storage.get(TIMETABLE_KEY).courses), JSON.stringify(replacement))
   assert.equal(JSON.stringify(storage.get(RECENT_BACKUP_KEY)), JSON.stringify(recentBeforeRestore))
+})
+
+test('恢复旧版最近备份失败时原样保留操作前的原始快照', () => {
+  const current = [course({ id: 'current', name: '英语', day: 2 })]
+  reset(current)
+  const legacyCourse = v2Course({
+    name: '  高等数学  ',
+    teacher: '',
+    location: '',
+    weeks: [],
+  })
+  const rawRecent = {
+    savedAt: 123,
+    export: v2Envelope([legacyCourse]),
+  }
+  storage.set(RECENT_BACKUP_KEY, clone(rawRecent))
+  assert.deepEqual(backupService.getRecentBackup().export.data.courses[0].weeks, ALL_WEEKS)
+
+  timetableWriteFailures = 1
+  const result = backupService.restoreRecentBackup()
+
+  assert.equal(result.ok, false)
+  assert.match(result.reason, /原课表和最近备份均已保留/)
+  assert.deepEqual(storage.get(TIMETABLE_KEY).courses, current)
+  assert.deepEqual(storage.get(RECENT_BACKUP_KEY), rawRecent)
 })
 
 test('损坏的最近备份不会进入恢复流程', () => {

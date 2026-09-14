@@ -1,4 +1,6 @@
 import type { TodoDraft, TodoItem, TodoStorage } from '../models/todo'
+import { restoreStorageKey } from './storage-safety'
+import { parseLocalDate } from '../utils/local-date'
 
 export const TODO_STORAGE_KEY = 'timetable_todos'
 export const TODO_SCHEMA_VERSION = 2
@@ -43,27 +45,26 @@ function hasOnlyKeys(value: Record<string, unknown>, allowed: string[]): boolean
   return Object.keys(value).every((key) => allowed.includes(key))
 }
 
-function isValidDate(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
-  const [year, month, day] = value.split('-').map(Number)
-  const date = new Date(year, month - 1, day)
-  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
-}
-
 function isValidTime(value: string): boolean {
   if (!/^\d{2}:\d{2}$/.test(value)) return false
   const [hour, minute] = value.split(':').map(Number)
   return hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59
 }
 
+function isValidTimestamp(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) >= 0
+}
+
 function validateBaseItem(value: Record<string, unknown>): boolean {
   if (typeof value.id !== 'string' || !value.id) return false
   if (typeof value.title !== 'string' || !value.title.trim() || value.title.length > 60) return false
   if (typeof value.note !== 'string' || value.note.length > 200) return false
-  if (typeof value.dueDate !== 'string' || (value.dueDate !== '' && !isValidDate(value.dueDate))) return false
+  if (typeof value.dueDate !== 'string' || (value.dueDate !== '' && !parseLocalDate(value.dueDate))) return false
   if (typeof value.completed !== 'boolean') return false
-  if (!Number.isFinite(value.createdAt) || !Number.isFinite(value.updatedAt)) return false
-  if (value.completedAt !== null && !Number.isFinite(value.completedAt)) return false
+  if (!isValidTimestamp(value.createdAt) || !isValidTimestamp(value.updatedAt)) return false
+  if (value.completed) {
+    if (!isValidTimestamp(value.completedAt)) return false
+  } else if (value.completedAt !== null) return false
   return true
 }
 
@@ -79,7 +80,7 @@ function validateItem(value: unknown): value is TodoItem {
   const scheduleFields = [value.scheduleDate, value.scheduleStartTime, value.scheduleEndTime]
   if (scheduleFields.every((field) => field === '')) return true
   if (scheduleFields.some((field) => field === '')) return false
-  return isValidDate(value.scheduleDate)
+  return !!parseLocalDate(value.scheduleDate)
     && isValidTime(value.scheduleStartTime)
     && isValidTime(value.scheduleEndTime)
     && value.scheduleEndTime > value.scheduleStartTime
@@ -165,13 +166,7 @@ function loadWritable(): { data: TodoStorage; raw: unknown; wasMissing: boolean 
 }
 
 function restoreRaw(raw: unknown, wasMissing: boolean): boolean {
-  try {
-    if (wasMissing) wx.removeStorageSync(TODO_STORAGE_KEY)
-    else wx.setStorageSync(TODO_STORAGE_KEY, raw)
-    return true
-  } catch {
-    return false
-  }
+  return restoreStorageKey(TODO_STORAGE_KEY, wasMissing ? undefined : raw)
 }
 
 function persist(next: TodoStorage, previousRaw: unknown, wasMissing: boolean): void {
@@ -199,12 +194,12 @@ function normalizedDraft(draft: TodoDraft): Omit<TodoItem, 'id' | 'completed' | 
   if (!title) throw new Error('请填写待办标题')
   if (title.length > 60) throw new Error('待办标题不能超过 60 个字')
   if (note.length > 200) throw new Error('备注不能超过 200 个字')
-  if (dueDate && !isValidDate(dueDate)) throw new Error('截止日期格式无效')
+  if (dueDate && !parseLocalDate(dueDate)) throw new Error('截止日期格式无效')
   const scheduleFields = [scheduleDate, scheduleStartTime, scheduleEndTime]
   if (scheduleFields.some(Boolean) && !scheduleFields.every(Boolean)) {
     throw new Error('请完整选择执行日期、开始时间和结束时间')
   }
-  if (scheduleDate && !isValidDate(scheduleDate)) throw new Error('执行日期格式无效')
+  if (scheduleDate && !parseLocalDate(scheduleDate)) throw new Error('执行日期格式无效')
   if (scheduleStartTime && (!isValidTime(scheduleStartTime) || !isValidTime(scheduleEndTime))) {
     throw new Error('执行时间格式无效')
   }

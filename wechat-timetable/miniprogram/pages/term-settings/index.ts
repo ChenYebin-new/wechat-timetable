@@ -7,6 +7,7 @@ import {
 } from '../../constants/timetable'
 import { applyTerm, getStorageSnapshot } from '../../services/course-storage'
 import { currentMonday, validateTerm } from '../../utils/term'
+import { courseGroupCount } from '../../utils/course-groups'
 import { initializeHomeSharing, shareHomeToFriend, shareHomeToTimeline } from '../../utils/share'
 
 const weekOptions: string[] = []
@@ -23,7 +24,6 @@ Page({
     commonWeeks: COMMON_TOTAL_WEEKS,
     weekOptions,
     isMigration: false,
-    isEdit: false,
     affectedCount: 0,
     showShareHomePreview: false,
   },
@@ -40,8 +40,7 @@ Page({
         startDate: term ? term.startDate : currentMonday(),
         totalWeeks: term ? term.totalWeeks : DEFAULT_TOTAL_WEEKS,
         isMigration: snapshot.kind === 'legacy',
-        isEdit: !!term,
-        affectedCount: courses.length,
+        affectedCount: courseGroupCount(courses),
       })
     } catch (error) {
       this.setData({

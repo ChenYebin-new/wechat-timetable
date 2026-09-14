@@ -175,12 +175,16 @@ Page({
         reason: error instanceof Error && error.message ? error.message : '读取课表数据失败，请稍后重试',
       }
     }
-    this.setData({ saving: false })
     if (!result.ok) {
+      this.setData({ saving: false })
       wx.showModal({ title: '无法保存', content: result.reason || '保存失败，请稍后重试', showCancel: false })
       return
     }
     wx.showToast({ title: '已保存', icon: 'success' })
-    setTimeout(() => wx.navigateBack(), 400)
+    setTimeout(() => {
+      wx.navigateBack({
+        fail: () => this.setData({ saving: false }),
+      })
+    }, 400)
   },
 })

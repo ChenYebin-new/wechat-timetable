@@ -22,9 +22,9 @@
   <view class="count-card">
     <text class="row-title">每日课程数</text>
     <view class="stepper">
-      <view class="step-btn {{settings.periods.length <= 1 ? 'disabled' : ''}}" bindtap="onDecrease" aria-role="button" aria-label="减少一节">−</view>
+      <view class="step-btn {{settings.periods.length <= 1 ? 'disabled' : ''}}" bindtap="onDecrease" aria-role="button" aria-label="减少一节" aria-disabled="{{settings.periods.length <= 1}}">−</view>
       <text class="step-value">{{settings.periods.length}}</text>
-      <view class="step-btn {{settings.periods.length >= 14 ? 'disabled' : ''}}" bindtap="onIncrease" aria-role="button" aria-label="增加一节">＋</view>
+      <view class="step-btn {{settings.periods.length >= 14 ? 'disabled' : ''}}" bindtap="onIncrease" aria-role="button" aria-label="增加一节" aria-disabled="{{settings.periods.length >= 14}}">＋</view>
     </view>
   </view>
 

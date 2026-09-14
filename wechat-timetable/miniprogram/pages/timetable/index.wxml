@@ -5,13 +5,14 @@
   <view class="overview">
     <text class="overview-text">{{overviewText}}</text>
     <view class="overview-actions {{selectionMode ? 'actions-disabled' : ''}}">
-      <view class="action-btn" bindtap="onSettings" aria-role="button" aria-label="设置">设置</view>
-      <view class="action-btn action-primary" bindtap="onAdd" aria-role="button" aria-label="新增课程">＋新增</view>
+      <view class="action-btn" bindtap="onSettings" aria-role="button" aria-label="设置" aria-disabled="{{selectionMode}}">设置</view>
+      <view class="action-btn action-primary" bindtap="onAdd" aria-role="button" aria-label="新增课程" aria-disabled="{{selectionMode}}">＋新增</view>
     </view>
   </view>
 
   <view wx:if="{{storageProblem}}" class="term-banner">
     <text class="term-banner-text">{{storageProblem}}</text>
+    <view class="term-banner-btn" bindtap="onRetry" aria-role="button" aria-label="重新读取课表">重新读取</view>
   </view>
 
   <view wx:if="{{!storageProblem && (!termReady || needsMigration)}}" class="term-banner">
@@ -21,27 +22,27 @@
   </view>
 
   <view wx:if="{{termReady}}" class="week-bar {{selectionMode ? 'week-bar-disabled' : ''}}">
-    <view class="week-nav {{currentWeek <= 1 ? 'disabled' : ''}}" bindtap="onPrevWeek" aria-role="button" aria-label="上一周">‹</view>
-    <picker mode="selector" range="{{weekOptions}}" value="{{weekIndex}}" bindchange="onWeekChange" disabled="{{selectionMode}}" aria-label="选择教学周">
+    <view class="week-nav {{currentWeek <= 1 ? 'disabled' : ''}}" bindtap="onPrevWeek" aria-role="button" aria-label="上一周" aria-disabled="{{selectionMode || currentWeek <= 1}}">‹</view>
+    <picker mode="selector" range="{{weekOptions}}" value="{{weekIndex}}" bindchange="onWeekChange" disabled="{{selectionMode}}" aria-label="选择教学周" aria-disabled="{{selectionMode}}">
       <view class="week-label">第 {{currentWeek}} 周</view>
     </picker>
-    <view class="week-nav {{currentWeek >= weekOptions.length ? 'disabled' : ''}}" bindtap="onNextWeek" aria-role="button" aria-label="下一周">›</view>
-    <view class="term-edit" bindtap="onTermSettings" aria-role="button" aria-label="修改学期">学期</view>
+    <view class="week-nav {{currentWeek >= weekOptions.length ? 'disabled' : ''}}" bindtap="onNextWeek" aria-role="button" aria-label="下一周" aria-disabled="{{selectionMode || currentWeek >= weekOptions.length}}">›</view>
+    <view class="term-edit" bindtap="onTermSettings" aria-role="button" aria-label="修改学期" aria-disabled="{{selectionMode}}">学期</view>
   </view>
 
   <view wx:if="{{termReady && weekStatus}}" class="week-status">{{weekStatus}}</view>
 
   <view wx:if="{{termReady && !selectionMode}}" class="selection-hint">左右滑动切换周次；长按空白格 1.2 秒可多选时段</view>
 
-  <view wx:if="{{isEmpty}}" class="empty-notice">
+  <view wx:if="{{!storageProblem && isEmpty}}" class="empty-notice">
     <view class="empty-copy">
       <text class="empty-title">课表还是空的</text>
       <text class="empty-desc">先添加第一门课程，周课表会立即显示。</text>
     </view>
-    <view class="empty-btn" bindtap="onAdd" aria-role="button" aria-label="开始添加">开始添加</view>
+    <view class="empty-btn" bindtap="onAdd" aria-role="button" aria-label="开始添加" aria-disabled="{{selectionMode}}">开始添加</view>
   </view>
 
-  <view class="grid-scroll">
+  <view wx:if="{{!storageProblem}}" class="grid-scroll">
     <swiper
       wx:if="{{!selectionMode}}"
       class="week-swiper"

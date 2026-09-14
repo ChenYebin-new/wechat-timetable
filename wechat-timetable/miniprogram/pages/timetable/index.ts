@@ -68,8 +68,26 @@ Page({
   refresh() {
     const snapshot = getStorageSnapshot()
     if (snapshot.kind === 'io-error') {
-      this.setData({ storageProblem: snapshot.reason })
-      return
+      this.setData({
+        weekPanels: [],
+        periods: [],
+        swiperHeightRpx: timetableGridHeightRpx(0),
+        isEmpty: false,
+        overviewText: '课表暂时无法读取，请重新读取。',
+        termReady: false,
+        needsMigration: false,
+        currentWeek: 1,
+        weekIndex: 0,
+        weekOptions: [],
+        weekStatus: '',
+        selectionMode: false,
+        selectedKeys: [],
+        selectedCount: 0,
+        selectedRangeCount: 0,
+        selectionSummary: '',
+        storageProblem: snapshot.reason,
+      })
+      return snapshot.kind
     }
     const storage = snapshot.data
     const term = storage.term
@@ -92,6 +110,7 @@ Page({
       swiperHeightRpx: timetableGridHeightRpx(periods.length),
     })
     this.renderWeek(currentWeek, term, storage.courses)
+    return snapshot.kind
   },
 
   /** 按指定周渲染课表（选周时调用，不再受当前自然周覆盖）。 */
@@ -198,13 +217,16 @@ Page({
   },
 
   onRetryMigration() {
-    this.refresh()
-    const snapshot = getStorageSnapshot()
-    if (snapshot.kind === 'legacy') {
-      wx.showToast({ title: '升级仍未完成，请稍后重试', icon: 'none' })
-    } else {
+    const kind = this.refresh()
+    if (kind === 'current') {
       wx.showToast({ title: '课表数据已升级', icon: 'success' })
+    } else {
+      wx.showToast({ title: '升级仍未完成，请稍后重试', icon: 'none' })
     }
+  },
+
+  onRetry() {
+    this.refresh()
   },
 
   onCourseTap(e: WechatMiniprogram.CustomEvent) {
@@ -213,7 +235,7 @@ Page({
       itemList: ['仅编辑本时段', '编辑整门课程'],
       success: (result) => {
         const mode = result.tapIndex === 0 ? 'segment-edit' : 'group-edit'
-        this.openCourseEditor(`/pages/course-edit/index?id=${id}&mode=${mode}&sourceWeek=${this.data.currentWeek}`)
+        this.openCourseEditor(`/pages/course-edit/index?id=${encodeURIComponent(id)}&mode=${mode}&sourceWeek=${this.data.currentWeek}`)
       },
     })
   },
@@ -259,7 +281,6 @@ Page({
     const ranges = keysToRanges(this.data.selectedKeys)
     if (!ranges.length) return
     const init: CourseEditorInit = { ranges, sourceWeek: this.data.currentWeek }
-    this.updateSelection([])
     this.openCourseEditor('/pages/course-edit/index?mode=group-create', init)
   },
 })

@@ -98,7 +98,15 @@ Page({
   },
 
   onInput(e: WechatMiniprogram.Input) {
-    this.setData({ inputText: e.detail.value })
+    const inputText = e.detail.value
+    if (inputText === this.data.inputText) return
+    this.setData({
+      inputText,
+      envelope: null,
+      preview: null,
+      previewErrors: [],
+      needsTerm: false,
+    })
   },
 
   onParse() {

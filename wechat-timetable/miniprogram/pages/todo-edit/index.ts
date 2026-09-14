@@ -1,13 +1,7 @@
 import type { TodoDraft } from '../../models/todo'
 import { getTodoById, getTodoDraftWarning, saveTodo } from '../../services/todo-storage'
 import { initializeHomeSharing, shareHomeToFriend, shareHomeToTimeline } from '../../utils/share'
-
-function dateKey(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
+import { formatLocalDate } from '../../utils/local-date'
 
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback
@@ -20,12 +14,12 @@ Page({
     title: '',
     note: '',
     dueDate: '',
-    dueDatePickerValue: dateKey(new Date()),
+    dueDatePickerValue: formatLocalDate(new Date()),
     scheduleExpanded: false,
     scheduleDate: '',
     scheduleStartTime: '',
     scheduleEndTime: '',
-    scheduleDatePickerValue: dateKey(new Date()),
+    scheduleDatePickerValue: formatLocalDate(new Date()),
     scheduleStartPickerValue: '09:00',
     scheduleEndPickerValue: '10:00',
     saving: false,
@@ -48,12 +42,12 @@ Page({
         title: item.title,
         note: item.note,
         dueDate: item.dueDate,
-        dueDatePickerValue: item.dueDate || dateKey(new Date()),
+        dueDatePickerValue: item.dueDate || formatLocalDate(new Date()),
         scheduleExpanded: !!item.scheduleDate,
         scheduleDate: item.scheduleDate,
         scheduleStartTime: item.scheduleStartTime,
         scheduleEndTime: item.scheduleEndTime,
-        scheduleDatePickerValue: item.scheduleDate || dateKey(new Date()),
+        scheduleDatePickerValue: item.scheduleDate || formatLocalDate(new Date()),
         scheduleStartPickerValue: item.scheduleStartTime || '09:00',
         scheduleEndPickerValue: item.scheduleEndTime || '10:00',
       })
@@ -119,7 +113,7 @@ Page({
       scheduleDate: '',
       scheduleStartTime: '',
       scheduleEndTime: '',
-      scheduleDatePickerValue: dateKey(new Date()),
+      scheduleDatePickerValue: formatLocalDate(new Date()),
       scheduleStartPickerValue: '09:00',
       scheduleEndPickerValue: '10:00',
     })

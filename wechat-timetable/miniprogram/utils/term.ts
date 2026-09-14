@@ -4,30 +4,14 @@
 
 import type { TermSettings, WeekMode } from '../models/course'
 import { MAX_TOTAL_WEEKS } from '../constants/timetable'
+import { formatLocalDate, parseLocalDate } from './local-date'
 
-function pad(n: number): string {
-  return n < 10 ? '0' + n : '' + n
-}
+export { formatLocalDate, parseLocalDate } from './local-date'
 
 const DAY_MS = 86400000
 
 function calendarDayNumber(d: Date): number {
   return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / DAY_MS
-}
-
-/** 解析 YYYY-MM-DD 为本地日期；非法返回 null。 */
-export function parseLocalDate(dateStr: string): Date | null {
-  if (!dateStr || typeof dateStr !== 'string') return null
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr)
-  if (!m) return null
-  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
-  if (Number.isNaN(d.getTime()) || formatLocalDate(d) !== dateStr) return null
-  return d
-}
-
-/** 把本地日期格式化为 YYYY-MM-DD。 */
-export function formatLocalDate(d: Date): string {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
 /** 返回指定日期所在周的星期一（本地自然日）。 */

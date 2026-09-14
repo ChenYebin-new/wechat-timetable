@@ -37,7 +37,7 @@
 }
 
 .ph {
-  color: #b5c0bc;
+  color: #526963;
 }
 
 .picker-value {
@@ -68,8 +68,7 @@
 
 .swatch-check {
   font-size: 30rpx;
-  color: #ffffff;
-  text-shadow: 0 1rpx 3rpx rgba(0, 0, 0, 0.55);
+  color: #000000;
   line-height: 1;
 }
 
@@ -130,7 +129,7 @@
 .field-hint {
   flex: 1;
   font-size: 24rpx;
-  color: #71837e;
+  color: #526963;
 }
 
 .week-chips {
@@ -172,10 +171,10 @@
 
 .btn-primary {
   color: #ffffff;
-  background: #0ea5a4;
+  background: #267d78;
 }
 
 .btn-danger {
-  color: #e64340;
+  color: #c0353a;
   background: #fdeceb;
 }
