@@ -104,6 +104,74 @@
   gap: 12rpx;
 }
 
+.schedule-field {
+  gap: 18rpx;
+}
+
+.schedule-add {
+  min-height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #176c66;
+  background: #e8f3f1;
+  border-radius: 14rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.schedule-pickers,
+.schedule-time-range {
+  display: flex;
+  align-items: center;
+}
+
+.schedule-pickers {
+  gap: 12rpx;
+}
+
+.schedule-date-picker {
+  flex: 1.15;
+  min-width: 0;
+}
+
+.schedule-time-range {
+  flex: 1;
+  min-width: 0;
+  gap: 8rpx;
+}
+
+.schedule-time-picker {
+  flex: 1;
+  min-width: 0;
+}
+
+.schedule-picker-value {
+  min-height: 62rpx;
+  padding: 0 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  color: #176c66;
+  background: #e8f3f1;
+  border-radius: 12rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.schedule-picker-value.muted {
+  color: #58706a;
+  background: #f3f6f5;
+}
+
+.time-separator {
+  flex-shrink: 0;
+  color: #58706a;
+  font-size: 21rpx;
+}
+
 .picker-value,
 .clear-date {
   min-height: 56rpx;
@@ -126,9 +194,21 @@
   background: #f3f6f5;
 }
 
-.clear-date {
+.clear-date,
+.clear-schedule {
   color: #8c5c34;
   background: #fff4e8;
+}
+
+.clear-schedule {
+  min-height: 56rpx;
+  padding: 0 18rpx;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  border-radius: 28rpx;
+  font-size: 23rpx;
 }
 
 .note-field {

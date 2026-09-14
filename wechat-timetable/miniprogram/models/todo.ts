@@ -3,6 +3,9 @@ export interface TodoItem {
   title: string
   note: string
   dueDate: string
+  scheduleDate: string
+  scheduleStartTime: string
+  scheduleEndTime: string
   completed: boolean
   createdAt: number
   updatedAt: number
@@ -14,9 +17,12 @@ export interface TodoDraft {
   title: string
   note?: string
   dueDate?: string
+  scheduleDate?: string
+  scheduleStartTime?: string
+  scheduleEndTime?: string
 }
 
 export interface TodoStorage {
-  schemaVersion: 1
+  schemaVersion: 2
   items: TodoItem[]
 }

@@ -180,16 +180,39 @@
 
 .todo-meta {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
   margin-top: 10rpx;
 }
 
-.due-label {
+.due-label,
+.schedule-label {
   padding: 6rpx 12rpx;
-  color: #58706a;
-  background: #eef4f2;
   border-radius: 10rpx;
   font-size: 20rpx;
   line-height: 1.2;
+}
+
+.due-label {
+  color: #58706a;
+  background: #eef4f2;
+}
+
+.schedule-label {
+  color: #176c66;
+  background: #e8f3f1;
+  font-weight: 600;
+}
+
+.schedule-label.missed {
+  color: #a3443f;
+  background: #fae9e7;
+}
+
+.completed .schedule-label {
+  color: #58706a;
+  background: #eef4f2;
+  font-weight: 400;
 }
 
 .due-label.today {

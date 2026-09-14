@@ -57,8 +57,9 @@
       </view>
       <view class="todo-content" data-id="{{item.id}}" bindtap="onEdit" aria-role="button" aria-label="编辑待办：{{item.title}}">
         <text class="todo-title">{{item.title}}</text>
-        <view wx:if="{{item.dueText}}" class="todo-meta">
-          <text class="due-label {{item.dueTone}}">{{item.dueText}}</text>
+        <view wx:if="{{item.scheduleText || item.dueText}}" class="todo-meta">
+          <text wx:if="{{item.scheduleText}}" class="schedule-label {{item.scheduleTone}}">{{item.scheduleText}}</text>
+          <text wx:if="{{item.dueText}}" class="due-label {{item.dueTone}}">{{item.dueText}}</text>
         </view>
         <text wx:if="{{item.note}}" class="todo-note">{{item.note}}</text>
       </view>

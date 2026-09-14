@@ -3,7 +3,7 @@
 <view class="page">
   <view class="intro">
     <text class="intro-title">{{isEdit ? '完善这件事' : '记下一件要做的事'}}</text>
-    <text class="intro-desc">标题保持简短；日期和备注都可以稍后再补。</text>
+    <text class="intro-desc">标题保持简短；执行时间、截止日期和备注都可以稍后再补。</text>
   </view>
 
   <view class="form">
@@ -23,6 +23,63 @@
       />
     </view>
 
+    <view class="field field-column schedule-field">
+      <view class="field-heading">
+        <view class="field-copy">
+          <text class="label">计划执行时间</text>
+          <text class="field-hint">可选，仅用于安排，不会自动提醒</text>
+        </view>
+        <view
+          wx:if="{{scheduleExpanded}}"
+          class="clear-schedule"
+          bindtap="onClearSchedule"
+          aria-role="button"
+          aria-label="清除计划执行时间"
+        >清除</view>
+      </view>
+
+      <view
+        wx:if="{{!scheduleExpanded}}"
+        class="schedule-add"
+        bindtap="onAddSchedule"
+        aria-role="button"
+        aria-label="添加计划执行时间"
+      >添加执行时间</view>
+
+      <view wx:else class="schedule-pickers">
+        <picker
+          class="schedule-date-picker"
+          mode="date"
+          value="{{scheduleDatePickerValue}}"
+          bindchange="onScheduleDate"
+          aria-label="选择执行日期"
+        >
+          <view class="schedule-picker-value {{scheduleDate ? '' : 'muted'}}">{{scheduleDate || '选择日期'}}</view>
+        </picker>
+        <view class="schedule-time-range">
+          <picker
+            class="schedule-time-picker"
+            mode="time"
+            value="{{scheduleStartPickerValue}}"
+            bindchange="onScheduleStart"
+            aria-label="选择开始时间"
+          >
+            <view class="schedule-picker-value {{scheduleStartTime ? '' : 'muted'}}">{{scheduleStartTime || '开始'}}</view>
+          </picker>
+          <text class="time-separator">至</text>
+          <picker
+            class="schedule-time-picker"
+            mode="time"
+            value="{{scheduleEndPickerValue}}"
+            bindchange="onScheduleEnd"
+            aria-label="选择结束时间"
+          >
+            <view class="schedule-picker-value {{scheduleEndTime ? '' : 'muted'}}">{{scheduleEndTime || '结束'}}</view>
+          </picker>
+        </view>
+      </view>
+    </view>
+
     <view class="field date-field">
       <view class="field-copy">
         <text class="label">截止日期</text>
@@ -30,7 +87,7 @@
       </view>
       <view class="date-actions">
         <view wx:if="{{dueDate}}" class="clear-date" bindtap="onClearDate" aria-role="button" aria-label="清除截止日期">清除</view>
-        <picker mode="date" value="{{datePickerValue}}" bindchange="onDate" aria-label="选择截止日期">
+        <picker mode="date" value="{{dueDatePickerValue}}" bindchange="onDate" aria-label="选择截止日期">
           <view class="picker-value {{dueDate ? '' : 'muted'}}">{{dueDate || '选择日期'}}</view>
         </picker>
       </view>
