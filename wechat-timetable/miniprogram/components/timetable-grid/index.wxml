@@ -41,6 +41,7 @@
           aria-role="{{selectionMode ? 'checkbox' : 'button'}}"
           aria-label="{{days[cell.day - 1]}}第{{cell.period}}节{{cell.disabled ? '，已有课程不可选择' : cell.selected ? '，已选择' : '，空白'}}"
           aria-checked="{{selectionMode ? cell.selected : false}}"
+          aria-disabled="{{selectionMode && cell.disabled && !cell.selected}}"
         >
           <text wx:if="{{cell.selected}}" class="selected-label">已选</text>
         </view>
@@ -53,6 +54,7 @@
           bindtap="onCardTap"
           aria-role="button"
           aria-label="{{days[column.day - 1]}}，{{item.course.name}}，第{{item.course.startPeriod}}到{{item.course.endPeriod}}节{{selectionMode ? '，已有课程不可选择' : ''}}"
+          aria-disabled="{{selectionMode}}"
         >
           <text class="card-name">{{item.course.name}}</text>
           <text class="card-loc" wx:if="{{item.course.location}}">{{item.course.location}}</text>

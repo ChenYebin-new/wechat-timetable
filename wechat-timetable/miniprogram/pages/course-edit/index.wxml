@@ -5,7 +5,7 @@
   <view class="form">
     <view class="field">
       <text class="label">课程名称</text>
-      <input class="input" value="{{name}}" placeholder="必填" placeholder-class="ph" bindinput="onName" />
+      <input class="input" value="{{name}}" placeholder="必填" placeholder-class="ph" bindinput="onName" aria-label="课程名称" />
     </view>
 
     <block wx:if="{{isGroupMode}}">
@@ -45,17 +45,17 @@
 
     <view class="field">
       <text class="label">教师</text>
-      <input class="input" value="{{teacher}}" placeholder="可选" placeholder-class="ph" bindinput="onTeacher" />
+      <input class="input" value="{{teacher}}" placeholder="可选" placeholder-class="ph" bindinput="onTeacher" aria-label="教师" />
     </view>
 
     <view class="field">
       <text class="label">教室</text>
-      <input class="input" value="{{location}}" placeholder="可选" placeholder-class="ph" bindinput="onLocation" />
+      <input class="input" value="{{location}}" placeholder="可选" placeholder-class="ph" bindinput="onLocation" aria-label="教室" />
     </view>
 
     <view class="field">
       <text class="label">颜色</text>
-      <view class="colors">
+      <view class="colors" aria-role="radiogroup" aria-label="课程颜色">
         <view
           wx:for="{{colors}}"
           wx:key="*this"
@@ -63,7 +63,7 @@
           style="background: {{item}};"
           data-color="{{item}}"
           bindtap="onColor"
-          aria-role="button"
+          aria-role="radio"
           aria-label="选择颜色 {{item}}{{color === item ? '，已选中' : ''}}"
           aria-checked="{{color === item}}"
         >

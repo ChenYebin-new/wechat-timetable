@@ -20,6 +20,7 @@ import {
   validateCurrentStorage,
 } from './storage-codec'
 import { clearTimetableRaw, readTimetableRaw, writeTimetableRaw } from './storage-repository'
+import { restoreStorageKey, sameStoredValue } from './storage-safety'
 
 interface LoadedStorage extends TimetableStorageView {
   /** 仅存在于内存中，不会写入 Storage。 */
@@ -36,13 +37,39 @@ function defaultStorage(): TimetableStorage {
   }
 }
 
+const LEGACY_ROOT_KEYS: Record<number, Set<string>> = {
+  1: new Set(['schemaVersion', 'courses']),
+  2: new Set(['schemaVersion', 'term', 'courses']),
+  3: new Set(['schemaVersion', 'term', 'courses']),
+  4: new Set(['schemaVersion', 'term', 'courses', 'periodSettings']),
+}
+const LEGACY_TERM_KEYS = new Set(['startDate', 'totalWeeks'])
+const LEGACY_COURSE_BASE_KEYS = [
+  'id', 'name', 'day', 'startPeriod', 'endPeriod', 'teacher', 'location',
+  'color', 'createdAt', 'updatedAt',
+]
+const LEGACY_COURSE_KEYS: Record<number, Set<string>> = {
+  1: new Set(LEGACY_COURSE_BASE_KEYS),
+  2: new Set([...LEGACY_COURSE_BASE_KEYS, 'weekMode', 'weeks']),
+  3: new Set([...LEGACY_COURSE_BASE_KEYS, 'weekMode', 'weeks', 'groupId']),
+  4: new Set([...LEGACY_COURSE_BASE_KEYS, 'weekMode', 'weeks', 'groupId']),
+  5: new Set([...LEGACY_COURSE_BASE_KEYS, 'weekMode', 'weeks', 'groupId']),
+}
+const LEGACY_V4_PERIOD_SETTINGS_KEYS = new Set(['durationMinutes', 'breakMinutes', 'periods'])
+const LEGACY_PERIOD_KEYS = new Set(['start', 'end'])
+
+function hasOnlyKeys(value: Record<string, unknown>, allowed: Set<string>): boolean {
+  return Object.keys(value).every((key) => allowed.has(key))
+}
+
 function toWeekMode(v: unknown): WeekMode {
   return v === 'odd' || v === 'even' || v === 'custom' ? v : 'all'
 }
 
 function sanitizeTerm(raw: unknown): TermSettings | null {
-  if (!raw || typeof raw !== 'object') return null
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
   const t = raw as Record<string, unknown>
+  if (!hasOnlyKeys(t, LEGACY_TERM_KEYS)) return null
   const startDate = typeof t.startDate === 'string' ? t.startDate : ''
   const totalWeeks = typeof t.totalWeeks === 'number' ? t.totalWeeks : 0
   const result = validateTerm({ startDate, totalWeeks })
@@ -50,29 +77,53 @@ function sanitizeTerm(raw: unknown): TermSettings | null {
 }
 
 function sanitizeCourse(raw: unknown, totalWeeks: number, schemaVersion: number, maxPeriod: number): Course | null {
-  if (!raw || typeof raw !== 'object') return null
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
   const c = raw as Record<string, unknown>
-  if (typeof c.id !== 'string' || !c.id) return null
+  const allowedKeys = LEGACY_COURSE_KEYS[schemaVersion]
+  if (!allowedKeys || !hasOnlyKeys(c, allowedKeys)) return null
+  if (typeof c.id !== 'string' || !c.id.trim() || c.id !== c.id.trim()) return null
   if (typeof c.name !== 'string' || !c.name.trim()) return null
   if (typeof c.day !== 'number' || !Number.isInteger(c.day) || c.day < 1 || c.day > DAYS.length) return null
   if (typeof c.startPeriod !== 'number' || !Number.isInteger(c.startPeriod) || c.startPeriod < 1 || c.startPeriod > maxPeriod) return null
   if (typeof c.endPeriod !== 'number' || !Number.isInteger(c.endPeriod) || c.endPeriod < 1 || c.endPeriod > maxPeriod) return null
   if (c.startPeriod > c.endPeriod) return null
   if (!isValidCourseColor(c.color)) return null
-  const weekMode = toWeekMode(c.weekMode)
+  if (!Number.isSafeInteger(c.createdAt) || (c.createdAt as number) < 0) return null
+  if (!Number.isSafeInteger(c.updatedAt) || (c.updatedAt as number) < 0) return null
+  if (c.teacher !== undefined && typeof c.teacher !== 'string') return null
+  if (c.location !== undefined && typeof c.location !== 'string') return null
+
+  let weekMode: WeekMode = 'all'
+  let weeks = totalWeeks > 0 ? expandWeeks('all', totalWeeks) : []
+  if (schemaVersion >= 2) {
+    if (c.weekMode !== 'all' && c.weekMode !== 'odd' && c.weekMode !== 'even' && c.weekMode !== 'custom') return null
+    if (!Array.isArray(c.weeks) || c.weeks.some((week) => !Number.isInteger(week))) return null
+    weekMode = c.weekMode
+    const rawWeeks = c.weeks as number[]
+    if (weekMode === 'custom') {
+      weeks = normalizeWeeks(rawWeeks, totalWeeks)
+      if (
+        !weeks.length ||
+        weeks.length !== rawWeeks.length ||
+        weeks.some((week, index) => week !== rawWeeks[index])
+      ) return null
+    } else {
+      const expectedWeeks = expandWeeks(weekMode, totalWeeks)
+      const legacyAllWeeksSentinel = weekMode === 'all' && rawWeeks.length === 0
+      if (
+        !legacyAllWeeksSentinel &&
+        (rawWeeks.length !== expectedWeeks.length || rawWeeks.some((week, index) => week !== expectedWeeks[index]))
+      ) return null
+      weeks = expectedWeeks
+    }
+  }
   const groupId =
     schemaVersion >= 3
       ? typeof c.groupId === 'string' && c.groupId.trim()
-        ? c.groupId.trim()
+        ? c.groupId
         : ''
       : c.id
-  if (!groupId) return null
-  const weeks =
-    totalWeeks > 0
-      ? weekMode === 'custom'
-        ? normalizeWeeks(c.weeks as number[], totalWeeks)
-        : expandWeeks(weekMode, totalWeeks)
-      : []
+  if (!groupId || groupId !== groupId.trim()) return null
   return {
     id: c.id,
     groupId,
@@ -80,18 +131,50 @@ function sanitizeCourse(raw: unknown, totalWeeks: number, schemaVersion: number,
     day: c.day,
     startPeriod: c.startPeriod,
     endPeriod: c.endPeriod,
-    teacher: typeof c.teacher === 'string' && c.teacher ? c.teacher : undefined,
-    location: typeof c.location === 'string' && c.location ? c.location : undefined,
+    teacher: typeof c.teacher === 'string' ? c.teacher : undefined,
+    location: typeof c.location === 'string' ? c.location : undefined,
     color: c.color,
-    createdAt: typeof c.createdAt === 'number' ? c.createdAt : 0,
-    updatedAt: typeof c.updatedAt === 'number' ? c.updatedAt : 0,
+    createdAt: c.createdAt as number,
+    updatedAt: c.updatedAt as number,
     weekMode,
     weeks,
   }
 }
 
+function isStrictLegacyRoot(data: Record<string, unknown>, schemaVersion: number): boolean {
+  const allowedKeys = LEGACY_ROOT_KEYS[schemaVersion]
+  return !!allowedKeys && Object.keys(data).length === allowedKeys.size && hasOnlyKeys(data, allowedKeys)
+}
+
+function isStrictV4PeriodSettings(raw: unknown): boolean {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return false
+  const value = raw as Record<string, unknown>
+  return hasOnlyKeys(value, LEGACY_V4_PERIOD_SETTINGS_KEYS)
+    && Array.isArray(value.periods)
+    && value.periods.every((period) => (
+      !!period
+      && typeof period === 'object'
+      && !Array.isArray(period)
+      && hasOnlyKeys(period as Record<string, unknown>, LEGACY_PERIOD_KEYS)
+    ))
+}
+
 function persist(data: TimetableStorage): void {
   writeTimetableRaw(data)
+}
+
+function writeRawAndVerify(value: unknown): boolean {
+  try {
+    writeTimetableRaw(value)
+    const reread = readTimetableRaw()
+    return reread.ok && sameStoredValue(reread.value, value)
+  } catch {
+    return false
+  }
+}
+
+function restoreCurrentStorage(previous: TimetableStorage): boolean {
+  return writeRawAndVerify(previous)
 }
 
 function cloneStorage(data: TimetableStorage): TimetableStorage {
@@ -107,9 +190,7 @@ function commitMutation(previous: TimetableStorage, next: TimetableStorage): voi
   try {
     writeStorage(next)
   } catch (error) {
-    try {
-      persist(previous)
-    } catch {
+    if (!restoreCurrentStorage(previous)) {
       throw new Error('课表写入失败且无法确认原数据状态，请暂时不要继续操作')
     }
     throw error
@@ -137,11 +218,15 @@ function load(): TimetableStorageView {
     const data = raw as Record<string, unknown>
     const schemaVersion =
       typeof data.schemaVersion === 'number' ? data.schemaVersion : SCHEMA_VERSION
+    const legacySchema = isLegacySchemaVersion(schemaVersion)
+    const legacyRootInvalid = legacySchema && !isStrictLegacyRoot(data, schemaVersion)
     const term = sanitizeTerm(data.term)
     const totalWeeks = term ? term.totalWeeks : 0
     const rawCourses = Array.isArray(data.courses) ? (data.courses as unknown[]) : []
     const periodCheck = validatePeriodSettings(data.periodSettings)
-    const migratedV4Settings = schemaVersion === 4 ? migrateV4PeriodSettings(data.periodSettings) : null
+    const migratedV4Settings = schemaVersion === 4 && isStrictV4PeriodSettings(data.periodSettings)
+      ? migrateV4PeriodSettings(data.periodSettings)
+      : null
     const periodSettings = schemaVersion === SCHEMA_VERSION && periodCheck.ok
       ? clonePeriodSettings(data.periodSettings as PeriodSettings)
       : migratedV4Settings || clonePeriodSettings(DEFAULT_PERIOD_SETTINGS)
@@ -155,6 +240,23 @@ function load(): TimetableStorageView {
     }
     const storage: LoadedStorage = { schemaVersion, term, courses, periodSettings }
 
+    if (
+      legacySchema && (
+        legacyRootInvalid ||
+        !Array.isArray(data.courses) ||
+        (
+          schemaVersion >= 2 && (
+            (data.term !== null && !term) ||
+            (!term && rawCourses.length > 0)
+          )
+        ) ||
+        rawCourses.length !== courses.length ||
+        periodSettingsInvalid
+      )
+    ) {
+      return markLoaded(storage, 'corrupt', '旧版课表字段缺失或损坏，为保护原数据已停止写入')
+    }
+
     if (schemaVersion === SCHEMA_VERSION) {
       const reason = classification.kind === 'corrupt' ? classification.reason : '字段无效'
       return markLoaded(storage, 'corrupt', `当前 V5 课表数据缺失或损坏：${reason}，为保护原数据已停止写入`)
@@ -162,35 +264,43 @@ function load(): TimetableStorageView {
 
     if (
       (schemaVersion === 2 || schemaVersion === 3 || schemaVersion === 4) &&
-      term &&
+      (term || rawCourses.length === 0) &&
       rawCourses.length === courses.length &&
       !periodSettingsInvalid
     ) {
-      if (!snapshotCurrentRaw()) return storage
       const migrated: TimetableStorage = {
         schemaVersion: SCHEMA_VERSION,
         term,
         courses: courses.map((course) => ({ ...course, groupId: schemaVersion === 2 ? course.id : course.groupId })),
         periodSettings: clonePeriodSettings(periodSettings),
       }
+      const migrationCheck = validateCurrentStorage(migrated)
+      if (!migrationCheck.ok || !migrationCheck.data) {
+        return markLoaded(storage, 'corrupt', `旧版课表无法安全升级：${migrationCheck.reason || '字段无效'}，为保护原数据已停止写入`)
+      }
+      if (!snapshotCurrentRaw()) {
+        return markLoaded(storage, 'legacy', '无法创建升级前备份，为保护原数据已停止写入')
+      }
       try {
-        persist(migrated)
+        persist(migrationCheck.data)
         const writtenResult = readTimetableRaw()
         if (!writtenResult.ok) throw new Error(writtenResult.reason)
         const written = writtenResult.value
         const checked = validateCurrentStorage(written)
-        if (checked.ok && checked.data && JSON.stringify(checked.data) === JSON.stringify(migrated)) {
-          return markLoaded(migrated, 'current')
+        if (checked.ok && checked.data && JSON.stringify(checked.data) === JSON.stringify(migrationCheck.data)) {
+          return markLoaded(migrationCheck.data, 'current')
         }
       } catch {
         // 下方统一恢复旧版原数据。
       }
-      try {
-        writeTimetableRaw(raw)
-      } catch {
-        // 保持只读返回，让后续写操作因版本不匹配而停止。
-      }
-      return markLoaded(storage, 'legacy', '旧版课表自动升级未完成，为保护原数据已停止写入')
+      const restored = writeRawAndVerify(raw)
+      return markLoaded(
+        storage,
+        restored ? 'legacy' : 'corrupt',
+        restored
+          ? '旧版课表自动升级未完成，为保护原数据已停止写入'
+          : '旧版课表自动升级失败且无法确认原数据状态，请暂时不要继续操作',
+      )
     }
 
     // V1（待设置学期）、无法迁移的旧版或未知更高版本：不降级写回。
@@ -215,7 +325,11 @@ function assertTermReady(data: TimetableStorage): asserts data is TimetableStora
 }
 
 function snapshotCurrentRaw(): boolean {
+  let previousRecent: unknown
+  let previousRecentRead = false
   try {
+    previousRecent = wx.getStorageSync(RECENT_BACKUP_KEY)
+    previousRecentRead = true
     const readResult = readTimetableRaw()
     if (!readResult.ok) return false
     const raw = readResult.value
@@ -230,10 +344,13 @@ function snapshotCurrentRaw(): boolean {
       },
     }
     wx.setStorageSync(RECENT_BACKUP_KEY, recent)
-    return true
+    const written = wx.getStorageSync(RECENT_BACKUP_KEY)
+    if (sameStoredValue(written, recent)) return true
   } catch {
-    return false
+    // 下方恢复写入前的最近备份。
   }
+  if (previousRecentRead) restoreStorageKey(RECENT_BACKUP_KEY, previousRecent)
+  return false
 }
 
 function restoreFromRecentRaw(): boolean {
@@ -242,8 +359,7 @@ function restoreFromRecentRaw(): boolean {
     if (raw && typeof raw === 'object') {
       const rb = raw as { export?: { data?: unknown } }
       if (rb.export && rb.export.data) {
-        writeTimetableRaw(rb.export.data)
-        return true
+        return writeRawAndVerify(rb.export.data)
       }
     }
   } catch {
@@ -575,6 +691,7 @@ export function detachCourseSegment(course: CourseDraft): void {
 export function remove(id: string): void {
   const data = load()
   assertWritableStorage(data)
+  if (!data.courses.some((course) => course.id === id)) throw new Error('没有找到要删除的课程')
   const previous = cloneStorage(data)
   data.courses = data.courses.filter((c) => c.id !== id)
   commitMutation(previous, data)
@@ -584,6 +701,7 @@ export function remove(id: string): void {
 export function removeCourseGroup(groupId: string): void {
   const data = load()
   assertWritableStorage(data)
+  if (!data.courses.some((course) => course.groupId === groupId)) throw new Error('没有找到要删除的课程组')
   const previous = cloneStorage(data)
   data.courses = data.courses.filter((course) => course.groupId !== groupId)
   commitMutation(previous, data)
@@ -600,7 +718,7 @@ export function applyTerm(term: TermSettings): { ok: boolean; reason?: string; m
   if (!vt.ok) return { ok: false, reason: vt.reason }
 
   const current = load()
-  const currentProblem = current.schemaVersion === SCHEMA_VERSION ? getStorageProblem(current) : null
+  const currentProblem = (current as LoadedStorage).storageProblem || null
   if (currentProblem) return { ok: false, reason: currentProblem }
   if (current.schemaVersion === 4) {
     return { ok: false, reason: '当前 V4 课程时间设置无法安全迁移，请从有效备份恢复后再修改学期' }
@@ -648,9 +766,7 @@ export function applyTerm(term: TermSettings): { ok: boolean; reason?: string; m
     courses: newCourses,
     periodSettings: current.schemaVersion === SCHEMA_VERSION
       ? clonePeriodSettings(current.periodSettings)
-      : current.schemaVersion === 4
-        ? migrateV4PeriodSettings(current.periodSettings) || clonePeriodSettings(DEFAULT_PERIOD_SETTINGS)
-        : clonePeriodSettings(DEFAULT_PERIOD_SETTINGS),
+      : clonePeriodSettings(DEFAULT_PERIOD_SETTINGS),
   }
 
   if (!prepareRecoveryPoint(current)) return { ok: false, reason: '无法创建操作前自动备份' }

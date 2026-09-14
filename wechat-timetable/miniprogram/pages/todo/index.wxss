@@ -31,7 +31,7 @@
 }
 
 .overview-desc {
-  color: #58706a;
+  color: #526963;
   font-size: 23rpx;
   line-height: 1.45;
 }

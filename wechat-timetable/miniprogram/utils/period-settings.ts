@@ -39,6 +39,14 @@ function canonicalOverrides(overrides: PeriodOverride[]): PeriodOverride[] {
     .sort((a, b) => a.period - b.period)
 }
 
+function sameOverrides(a: PeriodOverride[], b: PeriodOverride[]): boolean {
+  return a.length === b.length && a.every((override, index) => (
+    override.period === b[index].period
+    && override.start === b[index].start
+    && override.durationMinutes === b[index].durationMinutes
+  ))
+}
+
 export function clonePeriodSettings(settings: PeriodSettings = DEFAULT_PERIOD_SETTINGS): PeriodSettings {
   return {
     durationMinutes: settings.durationMinutes,
@@ -195,7 +203,7 @@ export function validatePeriodSettings(settings: unknown): PeriodSettingsValidat
   ) {
     return { ok: false, reason: '课程时间与当前规则或自定义设置不一致' }
   }
-  if (JSON.stringify(result.settings.overrides) !== JSON.stringify(value.overrides)) {
+  if (!sameOverrides(result.settings.overrides, value.overrides)) {
     return { ok: false, reason: '自定义课程时间需要按节次升序保存且不能包含空项' }
   }
   return { ok: true }
@@ -331,7 +339,7 @@ export function samePeriodSettings(a: PeriodSettings, b: PeriodSettings): boolea
     a.durationMinutes === b.durationMinutes &&
     a.breakMinutes === b.breakMinutes &&
     a.firstStart === b.firstStart &&
-    JSON.stringify(a.overrides) === JSON.stringify(b.overrides) &&
+    sameOverrides(a.overrides, b.overrides) &&
     a.periods.length === b.periods.length &&
     a.periods.every((period, index) => period.start === b.periods[index].start && period.end === b.periods[index].end)
   )

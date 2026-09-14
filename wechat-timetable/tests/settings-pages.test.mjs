@@ -101,3 +101,45 @@ test('作息页面保存遇到 Storage 读取失败时恢复按钮状态并提�
   globalThis.wx.getStorageSync = originalGetStorageSync
   globalThis.wx.showModal = originalShowModal
 })
+
+test('作息页面保存成功后保持按钮禁用直到返回', async () => {
+  const constants = await import('../miniprogram/constants/timetable.ts')
+  const periodPage = definitions[1]
+  const originalGetStorageSync = globalThis.wx.getStorageSync
+  const originalSetStorageSync = globalThis.wx.setStorageSync
+  const originalShowToast = globalThis.wx.showToast
+  const originalNavigateBack = globalThis.wx.navigateBack
+  const originalSetTimeout = globalThis.setTimeout
+  const saved = new Map()
+  let scheduled
+  let navigatedBack = false
+  globalThis.wx.getStorageSync = (key) => saved.has(key) ? structuredClone(saved.get(key)) : ''
+  globalThis.wx.setStorageSync = (key, value) => saved.set(key, structuredClone(value))
+  globalThis.wx.showToast = () => {}
+  globalThis.wx.navigateBack = () => { navigatedBack = true }
+  globalThis.setTimeout = (callback, delay) => {
+    scheduled = { callback, delay }
+    return 1
+  }
+  const context = {
+    data: { settings: structuredClone(constants.DEFAULT_PERIOD_SETTINGS), saving: false },
+    setData(changes) { Object.assign(this.data, changes) },
+  }
+
+  try {
+    periodPage.onSave.call(context)
+    assert.equal(context.data.saving, true)
+    assert.equal(scheduled.delay, 400)
+    assert.equal(navigatedBack, false)
+
+    scheduled.callback()
+    assert.equal(navigatedBack, true)
+    assert.equal(context.data.saving, true)
+  } finally {
+    globalThis.wx.getStorageSync = originalGetStorageSync
+    globalThis.wx.setStorageSync = originalSetStorageSync
+    globalThis.wx.showToast = originalShowToast
+    globalThis.wx.navigateBack = originalNavigateBack
+    globalThis.setTimeout = originalSetTimeout
+  }
+})

@@ -1,6 +1,7 @@
 import type { TodoItem } from '../../models/todo'
 import { getTodoSnapshot, removeTodo, toggleTodo } from '../../services/todo-storage'
 import { initializeHomeSharing, shareHomeToFriend, shareHomeToTimeline } from '../../utils/share'
+import { formatLocalDate } from '../../utils/local-date'
 
 type TodoFilter = 'pending' | 'completed'
 type DueTone = 'normal' | 'today' | 'overdue'
@@ -13,22 +14,15 @@ interface TodoView extends TodoItem {
   scheduleTone: ScheduleTone
 }
 
-function dateKey(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
 function offsetDateKey(date: Date, days: number): string {
   const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate() + days)
-  return dateKey(copy)
+  return formatLocalDate(copy)
 }
 
 function dueView(dueDate: string, completed: boolean, today: Date): { dueText: string; dueTone: DueTone } {
   if (!dueDate) return { dueText: '', dueTone: 'normal' }
   const [year, month, day] = dueDate.split('-').map(Number)
-  const todayKey = dateKey(today)
+  const todayKey = formatLocalDate(today)
   if (dueDate === todayKey) return { dueText: '今天截止', dueTone: completed ? 'normal' : 'today' }
   if (dueDate === offsetDateKey(today, 1)) return { dueText: '明天截止', dueTone: 'normal' }
   const label = year === today.getFullYear() ? `${month}月${day}日` : `${year}年${month}月${day}日`
@@ -38,7 +32,7 @@ function dueView(dueDate: string, completed: boolean, today: Date): { dueText: s
 }
 
 function scheduleDateLabel(scheduleDate: string, today: Date): string {
-  if (scheduleDate === dateKey(today)) return '今天'
+  if (scheduleDate === formatLocalDate(today)) return '今天'
   if (scheduleDate === offsetDateKey(today, 1)) return '明天'
   const [year, month, day] = scheduleDate.split('-').map(Number)
   return year === today.getFullYear() ? `${month}月${day}日` : `${year}年${month}月${day}日`
@@ -63,11 +57,12 @@ function sortTodos(items: TodoItem[], filter: TodoFilter): TodoItem[] {
   return [...items]
     .filter((item) => filter === 'completed' ? item.completed : !item.completed)
     .sort((left, right) => {
-      if (filter === 'completed') return (right.completedAt || right.updatedAt) - (left.completedAt || left.updatedAt)
+      if (filter === 'completed') return (right.completedAt ?? right.updatedAt) - (left.completedAt ?? left.updatedAt)
       if (left.scheduleDate && right.scheduleDate) {
         const leftSchedule = `${left.scheduleDate}T${left.scheduleStartTime}`
         const rightSchedule = `${right.scheduleDate}T${right.scheduleStartTime}`
         if (leftSchedule !== rightSchedule) return leftSchedule.localeCompare(rightSchedule)
+        return right.createdAt - left.createdAt
       }
       if (left.scheduleDate !== right.scheduleDate) return left.scheduleDate ? -1 : 1
       if (left.dueDate && right.dueDate && left.dueDate !== right.dueDate) return left.dueDate.localeCompare(right.dueDate)
@@ -113,6 +108,7 @@ Page({
         visibleItems: [],
         pendingCount: 0,
         completedCount: 0,
+        overviewText: '待办数据暂时无法读取，请重新读取。',
         storageProblem: snapshot.reason,
       })
       return
@@ -120,8 +116,9 @@ Page({
     const now = new Date()
     const pendingCount = snapshot.data.items.filter((item) => !item.completed).length
     const completedCount = snapshot.data.items.length - pendingCount
-    const scheduledToday = snapshot.data.items.filter((item) => !item.completed && item.scheduleDate === dateKey(now)).length
-    const dueToday = snapshot.data.items.filter((item) => !item.completed && item.dueDate === dateKey(now)).length
+    const todayKey = formatLocalDate(now)
+    const scheduledToday = snapshot.data.items.filter((item) => !item.completed && item.scheduleDate === todayKey).length
+    const dueToday = snapshot.data.items.filter((item) => !item.completed && item.dueDate === todayKey).length
     const visibleItems = sortTodos(snapshot.data.items, this.data.filter).map((item) => ({
       ...item,
       ...scheduleView(item, now),
@@ -168,7 +165,7 @@ Page({
 
   onEdit(e: WechatMiniprogram.TouchEvent) {
     const id = e.currentTarget.dataset.id as string
-    wx.navigateTo({ url: `/pages/todo-edit/index?id=${id}` })
+    wx.navigateTo({ url: `/pages/todo-edit/index?id=${encodeURIComponent(id)}` })
   },
 
   onToggle(e: WechatMiniprogram.TouchEvent) {
@@ -192,7 +189,7 @@ Page({
       itemList: ['编辑', '删除'],
       success: (result) => {
         if (result.tapIndex === 0) {
-          wx.navigateTo({ url: `/pages/todo-edit/index?id=${id}` })
+          wx.navigateTo({ url: `/pages/todo-edit/index?id=${encodeURIComponent(id)}` })
           return
         }
         this.confirmDelete(id)

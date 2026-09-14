@@ -19,7 +19,7 @@
   justify-content: center;
   box-sizing: border-box;
   border: 2rpx solid #e8efee;
-  color: #63756f;
+  color: #526963;
   font-size: 19rpx;
   font-weight: 500;
   background: #dce5e3;
@@ -164,7 +164,6 @@
 }
 
 .card.selection-locked {
-  opacity: 0.58;
   box-shadow: none;
   pointer-events: none;
 }
@@ -182,7 +181,6 @@
 
 .card-loc {
   font-size: 20rpx;
-  opacity: 0.9;
   margin-top: 6rpx;
   text-align: center;
 }

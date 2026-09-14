@@ -5,6 +5,7 @@ import './helpers/register-typescript.mjs'
 
 let storage = new Map()
 let failWrites = 0
+let writeModes = []
 const definitions = []
 
 globalThis.Page = (definition) => definitions.push(definition)
@@ -13,6 +14,12 @@ globalThis.wx = {
     return storage.has(key) ? structuredClone(storage.get(key)) : ''
   },
   setStorageSync(key, value) {
+    const mode = writeModes.shift()
+    if (mode === 'ignore') return
+    if (mode === 'empty-todos') {
+      storage.set(key, { schemaVersion: 2, items: [] })
+      return
+    }
     if (failWrites > 0) {
       failWrites -= 1
       throw new Error('simulated write failure')
@@ -33,6 +40,7 @@ const todoEditPage = definitions[1]
 function reset() {
   storage = new Map()
   failWrites = 0
+  writeModes = []
 }
 
 function dateKey(date) {
@@ -249,6 +257,34 @@ test('损坏或更高版本的待办数据保持只读且不会被清洗', () =>
   assert.deepEqual(storage.get(todoStorage.TODO_STORAGE_KEY), partialSchedule)
 })
 
+test('待办时间戳和完成状态矛盾时保持只读', () => {
+  const invalidItems = [
+    todoItem({ createdAt: -1 }),
+    todoItem({ updatedAt: 1.5 }),
+    todoItem({ completed: true, completedAt: null }),
+    todoItem({ completed: false, completedAt: 10 }),
+  ]
+
+  for (const item of invalidItems) {
+    const raw = { schemaVersion: 2, items: [item] }
+    storage = new Map([[todoStorage.TODO_STORAGE_KEY, structuredClone(raw)]])
+    assert.equal(todoStorage.getTodoSnapshot().kind, 'corrupt')
+    assert.throws(() => todoStorage.toggleTodo(item.id), /停止写入/)
+    assert.deepEqual(storage.get(todoStorage.TODO_STORAGE_KEY), raw)
+  }
+})
+
+test('待办回滚未真正落盘时不会误报原数据已恢复', () => {
+  const original = { schemaVersion: 2, items: [todoItem()] }
+  storage = new Map([[todoStorage.TODO_STORAGE_KEY, structuredClone(original)]])
+  failWrites = 0
+  writeModes = ['empty-todos', 'ignore']
+
+  assert.throws(() => todoStorage.toggleTodo('todo-1'), /无法确认原数据状态/)
+  assert.deepEqual(storage.get(todoStorage.TODO_STORAGE_KEY), { schemaVersion: 2, items: [] })
+  writeModes = []
+})
+
 test('首次写入失败时恢复为无待办状态', () => {
   reset()
   failWrites = 1
@@ -322,11 +358,95 @@ test('待完成列表按执行时间优先排序并展示日期、错过状态�
   assert.match(context.data.overviewText, /今天截止 1 项/)
 })
 
+test('待办 ID 写入编辑页地址前会安全编码', () => {
+  const originalNavigateTo = globalThis.wx.navigateTo
+  const originalShowActionSheet = globalThis.wx.showActionSheet
+  const urls = []
+  globalThis.wx.navigateTo = ({ url }) => { urls.push(url) }
+  globalThis.wx.showActionSheet = ({ success }) => success({ tapIndex: 0 })
+  const event = { currentTarget: { dataset: { id: 'todo&id=?#一' } } }
+
+  try {
+    todoPage.onEdit.call({}, event)
+    todoPage.onMore.call({ confirmDelete() {} }, event)
+    assert.deepEqual(urls, [
+      '/pages/todo-edit/index?id=todo%26id%3D%3F%23%E4%B8%80',
+      '/pages/todo-edit/index?id=todo%26id%3D%3F%23%E4%B8%80',
+    ])
+  } finally {
+    globalThis.wx.navigateTo = originalNavigateTo
+    globalThis.wx.showActionSheet = originalShowActionSheet
+  }
+})
+
+test('执行时间相同的待办按创建时间倒序，不受截止日期干扰', () => {
+  const tomorrow = offsetDateKey(new Date(), 1)
+  storage = new Map([[todoStorage.TODO_STORAGE_KEY, {
+    schemaVersion: 2,
+    items: [
+      todoItem({
+        id: 'older-earlier-due',
+        dueDate: tomorrow,
+        scheduleDate: tomorrow,
+        scheduleStartTime: '15:00',
+        scheduleEndTime: '16:00',
+        createdAt: 10,
+      }),
+      todoItem({
+        id: 'newer-later-due',
+        dueDate: offsetDateKey(new Date(), 2),
+        scheduleDate: tomorrow,
+        scheduleStartTime: '15:00',
+        scheduleEndTime: '16:00',
+        createdAt: 20,
+      }),
+    ],
+  }]])
+  const context = {
+    data: { filter: 'pending' },
+    setData(changes) { Object.assign(this.data, changes) },
+  }
+
+  todoPage.refresh.call(context)
+
+  assert.deepEqual(context.data.visibleItems.map((item) => item.id), [
+    'newer-later-due',
+    'older-earlier-due',
+  ])
+})
+
+test('待办重新读取失败时会清除陈旧概览和列表数量', () => {
+  const originalGetStorageSync = globalThis.wx.getStorageSync
+  globalThis.wx.getStorageSync = () => { throw new Error('simulated read failure') }
+  const context = {
+    data: {
+      filter: 'pending',
+      visibleItems: [todoItem()],
+      pendingCount: 1,
+      completedCount: 2,
+      overviewText: '还有 1 项待完成',
+    },
+    setData(changes) { Object.assign(this.data, changes) },
+  }
+
+  try {
+    todoPage.refresh.call(context)
+    assert.deepEqual(context.data.visibleItems, [])
+    assert.equal(context.data.pendingCount, 0)
+    assert.equal(context.data.completedCount, 0)
+    assert.match(context.data.overviewText, /暂时无法读取/)
+    assert.match(context.data.storageProblem, /读取本地待办失败/)
+  } finally {
+    globalThis.wx.getStorageSync = originalGetStorageSync
+  }
+})
+
 test('已完成待办保持完成时间排序且执行时间不再标记为错过', () => {
   const yesterday = offsetDateKey(new Date(), -1)
   storage = new Map([[todoStorage.TODO_STORAGE_KEY, {
     schemaVersion: 2,
     items: [
+      todoItem({ id: 'completed-epoch', completed: true, completedAt: 0, updatedAt: 999, scheduleDate: yesterday, scheduleStartTime: '08:00', scheduleEndTime: '09:00' }),
       todoItem({ id: 'completed-old', completed: true, completedAt: 10, scheduleDate: yesterday, scheduleStartTime: '09:00', scheduleEndTime: '10:00' }),
       todoItem({ id: 'completed-new', completed: true, completedAt: 20, scheduleDate: yesterday, scheduleStartTime: '11:00', scheduleEndTime: '12:00' }),
     ],
@@ -338,7 +458,7 @@ test('已完成待办保持完成时间排序且执行时间不再标记为错�
 
   todoPage.refresh.call(context)
 
-  assert.deepEqual(context.data.visibleItems.map((item) => item.id), ['completed-new', 'completed-old'])
+  assert.deepEqual(context.data.visibleItems.map((item) => item.id), ['completed-new', 'completed-old', 'completed-epoch'])
   assert.ok(context.data.visibleItems.every((item) => item.scheduleTone === 'normal'))
   assert.ok(context.data.visibleItems.every((item) => !item.scheduleText.includes('计划时间已过')))
 })

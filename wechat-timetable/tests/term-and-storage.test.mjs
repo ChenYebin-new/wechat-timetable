@@ -17,6 +17,9 @@ const DEFAULT_PERIOD_SETTINGS = {
 let storage = new Map()
 let timetableWriteFailures = 0
 let timetableReadFailures = 0
+let timetableWriteModes = []
+let timetableWrites = 0
+let recentWriteModes = []
 
 function clone(value) {
   return value === undefined ? undefined : structuredClone(value)
@@ -31,6 +34,23 @@ globalThis.wx = {
     return storage.has(key) ? clone(storage.get(key)) : ''
   },
   setStorageSync(key, value) {
+    if (key === RECENT_BACKUP_KEY) {
+      const mode = recentWriteModes.shift()
+      if (mode === 'ignore') return
+      if (mode === 'corrupt') {
+        storage.set(key, { corrupted: true })
+        return
+      }
+    }
+    if (key === TIMETABLE_KEY) {
+      timetableWrites++
+      const mode = timetableWriteModes.shift()
+      if (mode === 'ignore') return
+      if (mode === 'corrupt') {
+        storage.set(key, { schemaVersion: 5, courses: 'corrupted' })
+        return
+      }
+    }
     if (key === TIMETABLE_KEY && timetableWriteFailures > 0) {
       timetableWriteFailures--
       throw new Error('simulated write failure')
@@ -46,6 +66,7 @@ const termUtils = await import('../miniprogram/utils/term.ts')
 const validator = await import('../miniprogram/utils/course-validator.ts')
 const courseStorage = await import('../miniprogram/services/course-storage.ts')
 const storageCodec = await import('../miniprogram/services/storage-codec.ts')
+const backupService = await import('../miniprogram/services/backup-service.ts')
 
 function v1Course(overrides = {}) {
   return {
@@ -137,6 +158,116 @@ test('V1 迁移完整保留课程字段并展开全部周', () => {
   assert.equal(storage.get(RECENT_BACKUP_KEY).export.data.schemaVersion, 1)
 })
 
+test('旧版课表字段异常时保持原始数据只读且不猜测迁移', () => {
+  const corrupted = {
+    schemaVersion: 2,
+    term: clone(TERM),
+    courses: [{
+      ...v1Course(),
+      createdAt: 'bad-timestamp',
+      teacher: 42,
+      weekMode: 'monthly',
+      weeks: [99],
+    }],
+  }
+  storage = new Map([[TIMETABLE_KEY, clone(corrupted)]])
+  timetableWriteFailures = 0
+  timetableWriteModes = []
+
+  const snapshot = courseStorage.getStorageSnapshot()
+  assert.equal(snapshot.kind, 'corrupt')
+  assert.match(snapshot.reason, /旧版课表字段缺失或损坏/)
+  assert.deepEqual(storage.get(TIMETABLE_KEY), corrupted)
+  assert.equal(storage.has(RECENT_BACKUP_KEY), false)
+  assert.equal(courseStorage.applyTerm(TERM).ok, false)
+  assert.deepEqual(storage.get(TIMETABLE_KEY), corrupted)
+
+  const unsortedCustomWeeks = {
+    schemaVersion: 2,
+    term: clone(TERM),
+    courses: [{ ...v1Course(), weekMode: 'custom', weeks: [3, 1] }],
+  }
+  storage = new Map([[TIMETABLE_KEY, clone(unsortedCustomWeeks)]])
+  const unsortedSnapshot = courseStorage.getStorageSnapshot()
+  assert.equal(unsortedSnapshot.kind, 'corrupt')
+  assert.deepEqual(storage.get(TIMETABLE_KEY), unsortedCustomWeeks)
+  assert.equal(storage.has(RECENT_BACKUP_KEY), false)
+})
+
+test('V2 每周课程的旧空周次数组仍可安全升级', () => {
+  const legacyCourse = { ...v1Course({ teacher: '', location: '' }), weekMode: 'all', weeks: [] }
+  const legacy = { schemaVersion: 2, term: clone(TERM), courses: [legacyCourse] }
+  storage = new Map([[TIMETABLE_KEY, clone(legacy)]])
+  timetableWriteModes = []
+
+  const snapshot = courseStorage.getStorageSnapshot()
+  assert.equal(snapshot.kind, 'current')
+  assert.deepEqual(snapshot.data.courses[0].weeks, ALL_WEEKS)
+  assert.equal(snapshot.data.courses[0].teacher, '')
+  assert.equal(snapshot.data.courses[0].location, '')
+  assert.deepEqual(storage.get(RECENT_BACKUP_KEY).export.data, legacy)
+})
+
+test('V2、V3、V4 未设置学期的空课表安全升级为 V5', () => {
+  const legacyV4PeriodSettings = {
+    durationMinutes: DEFAULT_PERIOD_SETTINGS.durationMinutes,
+    breakMinutes: DEFAULT_PERIOD_SETTINGS.breakMinutes,
+    periods: clone(DEFAULT_PERIOD_SETTINGS.periods),
+  }
+
+  for (const schemaVersion of [2, 3, 4]) {
+    const legacy = {
+      schemaVersion,
+      term: null,
+      courses: [],
+      ...(schemaVersion === 4 ? { periodSettings: legacyV4PeriodSettings } : {}),
+    }
+    storage = new Map([[TIMETABLE_KEY, clone(legacy)]])
+    timetableWriteModes = []
+    recentWriteModes = []
+
+    const snapshot = courseStorage.getStorageSnapshot()
+    assert.equal(snapshot.kind, 'current', `V${schemaVersion} 应完成自动升级`)
+    assert.equal(snapshot.data.schemaVersion, 5)
+    assert.equal(snapshot.data.term, null)
+    assert.deepEqual(snapshot.data.courses, [])
+    assert.deepEqual(snapshot.data.periodSettings, DEFAULT_PERIOD_SETTINGS)
+    assert.deepEqual(storage.get(RECENT_BACKUP_KEY).export.data, legacy)
+
+    const recent = backupService.getRecentBackup()
+    assert.ok(recent, `V${schemaVersion} 的迁移前备份应可读取`)
+    assert.equal(recent.export.data.term, null)
+    storage.set(TIMETABLE_KEY, {
+      schemaVersion: 5,
+      term: clone(TERM),
+      courses: [],
+      periodSettings: clone(DEFAULT_PERIOD_SETTINGS),
+    })
+    assert.equal(backupService.restoreRecentBackup().ok, true, `V${schemaVersion} 的迁移前备份应可恢复`)
+    assert.equal(storage.get(TIMETABLE_KEY).term, null)
+    assert.deepEqual(storage.get(TIMETABLE_KEY).periodSettings, DEFAULT_PERIOD_SETTINGS)
+  }
+})
+
+test('迁移前备份写后校验失败时保留之前的最近备份并停止迁移', () => {
+  const legacyCourse = { ...v1Course(), weekMode: 'all', weeks: [...ALL_WEEKS] }
+  const legacy = { schemaVersion: 2, term: clone(TERM), courses: [legacyCourse] }
+  const previousRecent = { marker: 'keep-previous-backup' }
+  storage = new Map([
+    [TIMETABLE_KEY, clone(legacy)],
+    [RECENT_BACKUP_KEY, clone(previousRecent)],
+  ])
+  timetableWriteModes = []
+  recentWriteModes = ['corrupt']
+
+  const snapshot = courseStorage.getStorageSnapshot()
+  assert.equal(snapshot.kind, 'legacy')
+  assert.equal(snapshot.data.schemaVersion, 2)
+  assert.deepEqual(storage.get(TIMETABLE_KEY), legacy)
+  assert.deepEqual(storage.get(RECENT_BACKUP_KEY), previousRecent)
+  recentWriteModes = []
+})
+
 test('学期调整校验失败时不覆盖原来的最近备份', () => {
   const current = {
     schemaVersion: 5,
@@ -218,6 +349,29 @@ test('临时读取失败时学期、作息和课程增删都中止且原数据�
   assert.throws(() => courseStorage.remove('course-1'), /读取本地课表失败/)
   assert.deepEqual(storage.get(TIMETABLE_KEY), original)
   timetableReadFailures = 0
+})
+
+test('课程回滚写入未真正落盘时不会误报原数据已恢复', () => {
+  const original = { schemaVersion: 5, term: clone(TERM), courses: [v2Course()], periodSettings: clone(DEFAULT_PERIOD_SETTINGS) }
+  storage = new Map([[TIMETABLE_KEY, clone(original)]])
+  timetableWriteFailures = 0
+  timetableWriteModes = ['corrupt', 'ignore']
+
+  assert.throws(() => courseStorage.remove('course-1'), /无法确认原数据状态/)
+  assert.deepEqual(storage.get(TIMETABLE_KEY), { schemaVersion: 5, courses: 'corrupted' })
+  timetableWriteModes = []
+})
+
+test('删除不存在的课程或课程组会报错且不产生写入', () => {
+  const current = { schemaVersion: 5, term: clone(TERM), courses: [], periodSettings: clone(DEFAULT_PERIOD_SETTINGS) }
+  storage = new Map([[TIMETABLE_KEY, clone(current)]])
+  timetableWriteModes = []
+  const writesBefore = timetableWrites
+
+  assert.throws(() => courseStorage.remove('missing-course'), /没有找到要删除的课程/)
+  assert.throws(() => courseStorage.removeCourseGroup('missing-group'), /没有找到要删除的课程组/)
+  assert.equal(timetableWrites, writesBefore)
+  assert.deepEqual(storage.get(TIMETABLE_KEY), current)
 })
 
 test('损坏的当前 V5 周次数据保持只读且不会被无关操作清洗', () => {

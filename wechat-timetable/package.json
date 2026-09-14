@@ -1,18 +1,21 @@
 {
-  "name": "miniprogram-ts-quickstart",
+  "name": "wechat-timetable",
   "version": "1.0.0",
-  "description": "",
+  "private": true,
+  "description": "拾课课表原生微信小程序",
+  "engines": {
+    "node": ">=24 <25"
+  },
   "scripts": {
-    "test": "node --test --disable-warning=ExperimentalWarning tests/*.test.mjs",
-    "test:coverage": "node --experimental-test-coverage --test --disable-warning=ExperimentalWarning tests/*.test.mjs",
+    "test": "node --test --disable-warning=ExperimentalWarning",
+    "test:coverage": "node --experimental-test-coverage --test-coverage-lines=67 --test-coverage-branches=77 --test-coverage-functions=70 --test --disable-warning=ExperimentalWarning",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && npm test"
+    "check": "npm run typecheck && npm run test:coverage"
   },
   "keywords": [],
   "author": "",
   "license": "",
   "devDependencies": {
-    "miniprogram-api-typings": "^2.8.3-1",
     "typescript": "5.9.3"
   }
 }

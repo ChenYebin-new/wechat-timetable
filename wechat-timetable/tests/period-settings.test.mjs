@@ -199,6 +199,15 @@ test('校验拒绝非法分钟、倒置时间和相邻重叠', () => {
   assert.match(periods.validatePeriodSettings(overlapping).reason, /重叠/)
 })
 
+test('作息自定义项按字段语义比较，不受对象键顺序影响', () => {
+  const canonical = periods.clonePeriodSettings(constants.DEFAULT_PERIOD_SETTINGS)
+  const reordered = periods.clonePeriodSettings(constants.DEFAULT_PERIOD_SETTINGS)
+  reordered.overrides = [{ start: '14:00', period: 5 }]
+
+  assert.equal(periods.validatePeriodSettings(reordered).ok, true)
+  assert.equal(periods.samePeriodSettings(canonical, reordered), true)
+})
+
 test('已有课程占用高节次时服务层阻止缩减', () => {
   storage = new Map([[TIMETABLE_KEY, currentStorage({ courses: [course({ startPeriod: 9, endPeriod: 9 })] })]])
   const shorter = periods.resizePeriods(constants.DEFAULT_PERIOD_SETTINGS, 8)

@@ -22,7 +22,7 @@
 }
 
 .intro-desc {
-  color: #58706a;
+  color: #526963;
   font-size: 23rpx;
   line-height: 1.5;
 }
@@ -56,12 +56,12 @@
 }
 
 .menu-desc {
-  color: #71837e;
+  color: #526963;
   font-size: 22rpx;
 }
 
 .chevron {
-  color: #9aaba6;
+  color: #526963;
   font-size: 46rpx;
   font-weight: 300;
 }

@@ -24,7 +24,7 @@
   display: block;
   margin-top: 10rpx;
   font-size: 24rpx;
-  color: #71837e;
+  color: #526963;
   line-height: 1.5;
 }
 
@@ -56,12 +56,12 @@
 }
 
 .btn-secondary {
-  color: #267d78;
+  color: #176c66;
   background: #e8f3f1;
 }
 
 .btn-danger {
-  color: #e64340;
+  color: #c0353a;
   background: #fdeceb;
 }
 
@@ -108,7 +108,7 @@
 .k {
   width: 220rpx;
   font-size: 24rpx;
-  color: #71837e;
+  color: #526963;
 }
 
 .v {

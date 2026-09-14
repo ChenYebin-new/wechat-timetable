@@ -21,6 +21,7 @@ import {
 } from '../utils/period-settings'
 import { isSupportedSchemaVersion, isValidCourseColor, validateCurrentStorage } from './storage-codec'
 import { courseGroupCount, planCourseGroupMerge } from '../utils/course-groups'
+import { restoreStorageKey, sameStoredValue } from './storage-safety'
 
 // ---------- 基础工具 ----------
 
@@ -266,17 +267,24 @@ export function analyzeBackup(envelope: TimetableBackupEnvelope, currentSnapshot
     checkedV5 = checked.data
   }
 
-  // V2–V5 备份必须带有效学期；V1 备份无学期。
+  // V2–V4 的空课表可尚未设置学期；只要存在课程就必须带有效学期。V1 备份无学期。
   let term: TermSettings | null = null
   const needsTerm = schemaVersion === 1
   if (schemaVersion === SCHEMA_VERSION) {
     term = checkedV5 ? checkedV5.term : null
   } else if (schemaVersion === 2 || schemaVersion === 3 || schemaVersion === 4) {
-    const termCheck = validateTerm(envelope.data.term as TermSettings | null)
-    if (!termCheck.ok) {
-      errors.push(`备份学期设置无效：${termCheck.reason || '缺少学期设置'}`)
+    const emptyWithoutTerm = envelope.data.term === null
+      && Array.isArray(envelope.data.courses)
+      && envelope.data.courses.length === 0
+    if (!emptyWithoutTerm) {
+      const termCheck = validateTerm(envelope.data.term as TermSettings | null)
+      if (!termCheck.ok) {
+        errors.push(`备份学期设置无效：${termCheck.reason || '缺少学期设置'}`)
+      } else {
+        term = envelope.data.term as TermSettings
+      }
     } else {
-      term = envelope.data.term as TermSettings
+      term = null
     }
   }
 
@@ -330,14 +338,20 @@ export function analyzeBackup(envelope: TimetableBackupEnvelope, currentSnapshot
       if (totalWeeks > 0) {
         if (course.weekMode === 'custom') {
           const weeks = normalizeWeeks(course.weeks, totalWeeks)
-          if (!weeks.length || weeks.length !== course.weeks.length) {
+          if (!weeks.length || weeks.length !== course.weeks.length || !sameWeeks(weeks, course.weeks)) {
             errors.push(`课程「${course.name}」的指定周次无效或超出学期范围`)
             break
           }
           course = { ...course, weeks }
         } else {
           const expectedWeeks = expandWeeks(course.weekMode, totalWeeks)
-          if (!sameWeeks(course.weeks, expectedWeeks)) {
+          const legacyAllWeeksSentinel = (
+            schemaVersion >= 2 &&
+            schemaVersion <= 4 &&
+            course.weekMode === 'all' &&
+            course.weeks.length === 0
+          )
+          if (!legacyAllWeeksSentinel && !sameWeeks(course.weeks, expectedWeeks)) {
             errors.push(`课程「${course.name}」的周次模式与实际上课周次不一致`)
             break
           }
@@ -488,37 +502,47 @@ function buildRecentBackup(current: TimetableStorage): RecentBackup {
 
 /** 覆盖、合并或恢复前，先把当前完整课表写入"最近自动备份"。 */
 function snapshotCurrent(current: TimetableStorage): boolean {
+  let previousRecent: unknown
+  let previousRecentRead = false
   try {
-    wx.setStorageSync(RECENT_BACKUP_KEY, buildRecentBackup(current))
-    return true
+    previousRecent = wx.getStorageSync(RECENT_BACKUP_KEY)
+    previousRecentRead = true
+    const backup = buildRecentBackup(current)
+    wx.setStorageSync(RECENT_BACKUP_KEY, backup)
+    if (sameStoredValue(wx.getStorageSync(RECENT_BACKUP_KEY), backup)) return true
   } catch {
-    return false
+    // 下方恢复写入前的最近备份。
+  }
+  if (previousRecentRead) restoreStorageKey(RECENT_BACKUP_KEY, previousRecent)
+  return false
+}
+
+function normalizeRecentBackup(raw: unknown): RecentBackup | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+  const rb = raw as RecentBackup
+  if (!Number.isSafeInteger(rb.savedAt) || rb.savedAt < 0) return null
+  const parsed = validateEnvelopeObject(rb.export)
+  if (!parsed.ok || !parsed.envelope) return null
+  const analyzed = analyzeBackup(parsed.envelope)
+  if (!analyzed.ok || !analyzed.courses) return null
+  return {
+    savedAt: rb.savedAt,
+    export: {
+      ...parsed.envelope,
+      data: {
+        schemaVersion: parsed.envelope.data.schemaVersion,
+        term: analyzed.term ?? null,
+        courses: analyzed.courses,
+        periodSettings: clonePeriodSettings(analyzed.periodSettings || DEFAULT_PERIOD_SETTINGS),
+      } as unknown as SupportedTimetableStorage,
+    },
   }
 }
 
 /** 读取最近自动备份；没有则返回 null。 */
 export function getRecentBackup(): RecentBackup | null {
   try {
-    const raw = wx.getStorageSync(RECENT_BACKUP_KEY)
-    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
-    const rb = raw as RecentBackup
-    if (!Number.isSafeInteger(rb.savedAt) || rb.savedAt < 0) return null
-    const parsed = validateEnvelopeObject(rb.export)
-    if (!parsed.ok || !parsed.envelope) return null
-    const analyzed = analyzeBackup(parsed.envelope)
-    if (!analyzed.ok || !analyzed.courses) return null
-    return {
-      savedAt: rb.savedAt,
-      export: {
-        ...parsed.envelope,
-        data: {
-          schemaVersion: parsed.envelope.data.schemaVersion,
-          term: analyzed.term ?? null,
-          courses: analyzed.courses,
-          periodSettings: clonePeriodSettings(analyzed.periodSettings || DEFAULT_PERIOD_SETTINGS),
-        } as unknown as SupportedTimetableStorage,
-      },
-    }
+    return normalizeRecentBackup(wx.getStorageSync(RECENT_BACKUP_KEY))
   } catch {
     return null
   }
@@ -551,15 +575,6 @@ function getCurrentForMutation(): { current?: TimetableStorage; reason?: string 
 function tryWriteStorage(data: TimetableStorage): boolean {
   try {
     writeStorage(data)
-    return true
-  } catch {
-    return false
-  }
-}
-
-function tryWriteRecentBackup(backup: RecentBackup): boolean {
-  try {
-    wx.setStorageSync(RECENT_BACKUP_KEY, backup)
     return true
   } catch {
     return false
@@ -647,7 +662,21 @@ export function mergeFromBackup(envelope: TimetableBackupEnvelope, term?: TermSe
     targetTerm = selectedTerm as TermSettings
     incoming = expandV1CoursesWithTerm(analyzed.courses, targetTerm)
   } else {
-    if (!analyzed.term) return { ok: false, reason: '备份缺少有效学期设置' }
+    if (!analyzed.term) {
+      if (analyzed.courses.length > 0) return { ok: false, reason: '备份缺少有效学期设置' }
+      return {
+        ok: true,
+        added: 0,
+        skippedDuplicate: 0,
+        skippedConflict: 0,
+        finalCount: current.courses.length,
+        addedGroups: 0,
+        skippedDuplicateGroups: 0,
+        skippedConflictGroups: 0,
+        finalGroupCount: courseGroupCount(current.courses),
+        skippedGroupReasons: [],
+      }
+    }
     if (current.term && !sameTerm(current.term, analyzed.term)) {
       return {
         ok: false,
@@ -712,7 +741,13 @@ export function mergeFromBackup(envelope: TimetableBackupEnvelope, term?: TermSe
 
 /** 恢复最近自动备份。恢复前先生成最近自动备份。 */
 export function restoreRecentBackup(): MutationResult {
-  const rb = getRecentBackup()
+  let rawRecent: unknown
+  try {
+    rawRecent = wx.getStorageSync(RECENT_BACKUP_KEY)
+  } catch {
+    return { ok: false, reason: '无法读取最近自动备份' }
+  }
+  const rb = normalizeRecentBackup(rawRecent)
   if (!rb) return { ok: false, reason: '没有可用且通过校验的最近备份' }
   const currentResult = getCurrentForMutation()
   if (!currentResult.current) return { ok: false, reason: currentResult.reason }
@@ -723,7 +758,7 @@ export function restoreRecentBackup(): MutationResult {
     courses: Course[]
     periodSettings: PeriodSettings
   }
-  let targetTerm: TermSettings
+  let targetTerm: TermSettings | null
   let targetCourses: Course[]
   const targetPeriodSettings = clonePeriodSettings(backupData.periodSettings || DEFAULT_PERIOD_SETTINGS)
   if (backupData.schemaVersion === 1) {
@@ -733,12 +768,17 @@ export function restoreRecentBackup(): MutationResult {
     }
     targetTerm = current.term
     targetCourses = expandV1CoursesWithTerm(backupData.courses, targetTerm)
-  } else if (
-    isSupportedSchemaVersion(backupData.schemaVersion) &&
-    backupData.term
-  ) {
+  } else if (isSupportedSchemaVersion(backupData.schemaVersion) && backupData.term) {
     targetTerm = backupData.term
     targetCourses = backupData.courses
+  } else if (
+    backupData.schemaVersion >= 2 &&
+    backupData.schemaVersion <= SCHEMA_VERSION &&
+    backupData.term === null &&
+    backupData.courses.length === 0
+  ) {
+    targetTerm = null
+    targetCourses = []
   } else {
     return { ok: false, reason: '最近备份的数据版本或学期设置不受支持' }
   }
@@ -755,7 +795,7 @@ export function restoreRecentBackup(): MutationResult {
     return { ok: true }
   } catch {
     const currentRestored = tryWriteStorage(current)
-    const backupRestored = tryWriteRecentBackup(rb)
+    const backupRestored = restoreStorageKey(RECENT_BACKUP_KEY, rawRecent)
     if (currentRestored && backupRestored) {
       return { ok: false, reason: '恢复失败，原课表和最近备份均已保留' }
     }
