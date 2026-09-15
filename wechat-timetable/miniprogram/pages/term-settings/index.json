@@ -1,4 +1,6 @@
 {
   "navigationBarTitleText": "学期设置",
-  "usingComponents": {}
+  "usingComponents": {
+    "monday-picker": "/components/monday-picker/index"
+  }
 }

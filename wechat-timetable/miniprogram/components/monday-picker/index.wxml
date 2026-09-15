@@ -1,0 +1,11 @@
+<picker
+  mode="multiSelector"
+  range="{{picker.range}}"
+  value="{{picker.indices}}"
+  bindcolumnchange="onColumnChange"
+  bindchange="onConfirm"
+  bindcancel="resetSelection"
+  aria-label="选择第一教学周星期一，{{value}}，日期列表仅显示星期一"
+>
+  <slot />
+</picker>

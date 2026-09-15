@@ -62,8 +62,8 @@ Page({
 
   onShareTimeline: shareHomeToTimeline,
 
-  onDateChange(e: WechatMiniprogram.PickerChange) {
-    this.setData({ startDate: e.detail.value as string })
+  onDateChange(e: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    this.setData({ startDate: e.detail.value })
   },
 
   onWeeksChange(e: WechatMiniprogram.PickerChange) {
