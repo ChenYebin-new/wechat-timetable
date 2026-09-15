@@ -142,8 +142,8 @@ Page({
     })
   },
 
-  onTermDate(e: WechatMiniprogram.PickerChange) {
-    this.setData({ termStartDate: e.detail.value as string })
+  onTermDate(e: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    this.setData({ termStartDate: e.detail.value })
   },
 
   onTermWeeks(e: WechatMiniprogram.PickerChange) {

@@ -39,12 +39,12 @@
       <view wx:if="{{!preview.mergeAllowed}}" class="merge-warning">{{preview.mergeReason}}</view>
 
       <view wx:if="{{needsTerm}}" class="term-setup">
-        <text class="term-setup-title">这是旧版（V1）备份，导入前请确认学期设置</text>
+        <text class="term-setup-title">这是旧版（V1）备份，导入前请确认学期设置。日期列表仅显示星期一。</text>
         <view class="term-row">
           <text class="k">第一教学周星期一</text>
-          <picker mode="date" value="{{termStartDate}}" bindchange="onTermDate">
-            <view class="v picker-date">{{termStartDate}}</view>
-          </picker>
+          <monday-picker id="term-monday-picker" value="{{termStartDate}}" bindchange="onTermDate">
+            <view class="v picker-date">{{termStartDate}}（周一）</view>
+          </monday-picker>
         </view>
         <view class="term-row">
           <text class="k">学期总周数</text>
