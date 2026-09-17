@@ -1,74 +1,228 @@
+<!--
+THESIS: 用日期、目标和随想完成每天的轻量记录，不再安排起止时间。
+OWN-WORLD: 灰蓝背景、青绿操作、白色列表、原生选日与可收起月历。
+STORY: 从日期栏或月历选一天，记录目标和随想；切日前保护草稿。
+FIRST VIEWPORT: 日期与月历入口在上，展开时显示七列六行，下面仍是目标和随想。
+FORM: 沿用原生课表/待办双入口，以已批准的每日视图和月历图为依据。
+FINISH: 行为与项目检查通过，有限视觉验收发现的问题修复或报告。
+-->
 <share-home-preview wx:if="{{showShareHomePreview}}" />
 <block wx:else>
 <view class="page">
-  <view class="overview">
-    <view class="overview-copy">
-      <text class="overview-title">把今天理清楚</text>
-      <text class="overview-desc">{{overviewText}}</text>
+  <view class="date-navigation">
+    <button class="plain-button date-arrow" size="mini" style="width: 88rpx;" bindtap="onPreviousDate" hover-class="control-pressed" aria-label="前一天">
+      <view class="chevron previous" aria-hidden="true"></view>
+    </button>
+    <view class="date-picker-slot">
+      <picker class="date-picker" style="width: 100%;" mode="date" value="{{selectedDate}}" bindchange="onChooseDate" aria-label="选择待办日期，当前为{{dateLabel}}">
+        <view class="date-picker-content">
+          <view class="date-heading">
+            <text class="date-label">{{dateLabel}}</text>
+            <view class="date-dropdown" aria-hidden="true"></view>
+          </view>
+          <text class="weekday-label">{{weekdayLabel}}{{isToday ? ' · 今天' : ''}}</text>
+        </view>
+      </picker>
     </view>
-    <view class="add-button" bindtap="onAdd" aria-role="button" aria-label="新建待办">新建待办</view>
+    <button class="plain-button date-arrow" size="mini" style="width: 88rpx;" bindtap="onNextDate" hover-class="control-pressed" aria-label="后一天">
+      <view class="chevron next" aria-hidden="true"></view>
+    </button>
+  </view>
+  <view class="calendar-toolbar">
+    <button wx:if="{{!isToday || calendarExpanded}}" class="plain-button today-button" size="mini" bindtap="onToday" hover-class="control-pressed" aria-label="返回今天的待办与月份">返回今天</button>
+    <button class="plain-button calendar-toggle" size="mini" bindtap="onToggleCalendar" hover-class="control-pressed" aria-expanded="{{calendarExpanded}}" aria-label="{{calendarExpanded ? '收起月历' : '展开月历，按日期查看待办'}}">
+      <view class="calendar-icon" aria-hidden="true">
+        <view class="calendar-icon-binding left"></view><view class="calendar-icon-binding right"></view>
+        <view class="calendar-icon-divider"></view>
+        <view class="calendar-icon-dots"></view>
+      </view>
+      <text>{{calendarExpanded ? '收起月历' : '展开月历'}}</text>
+      <view class="calendar-toggle-chevron {{calendarExpanded ? 'expanded' : ''}}" aria-hidden="true"></view>
+    </button>
   </view>
 
-  <view class="filter-bar" aria-role="tablist">
-    <view
-      class="filter-item {{filter === 'pending' ? 'active' : ''}}"
-      data-filter="pending"
-      bindtap="onFilter"
-      aria-role="tab"
-      aria-selected="{{filter === 'pending'}}"
-    >待完成 <text class="filter-count">{{pendingCount}}</text></view>
-    <view
-      class="filter-item {{filter === 'completed' ? 'active' : ''}}"
-      data-filter="completed"
-      bindtap="onFilter"
-      aria-role="tab"
-      aria-selected="{{filter === 'completed'}}"
-    >已完成 <text class="filter-count">{{completedCount}}</text></view>
+  <view wx:if="{{calendarExpanded}}" class="calendar-panel">
+    <view class="calendar-heading">
+      <button class="plain-button calendar-month-arrow" size="mini" style="width: 88rpx;" bindtap="onPreviousMonth" hover-class="control-pressed" aria-label="浏览上个月，不切换待办日期">
+        <view class="chevron previous" aria-hidden="true"></view>
+      </button>
+      <text class="calendar-month-label">{{calendarMonthLabel}}</text>
+      <button class="plain-button calendar-month-arrow" size="mini" style="width: 88rpx;" bindtap="onNextMonth" hover-class="control-pressed" aria-label="浏览下个月，不切换待办日期">
+        <view class="chevron next" aria-hidden="true"></view>
+      </button>
+    </view>
+    <view class="calendar-weekdays" aria-hidden="true">
+      <text wx:for="{{calendarWeekdays}}" wx:key="*this" class="calendar-weekday">{{item}}</text>
+    </view>
+    <view class="calendar-grid">
+      <button wx:for="{{calendarDays}}" wx:key="date" class="plain-button calendar-day {{!item.inMonth ? 'outside-month' : ''}} {{item.isToday ? 'calendar-today' : ''}} {{item.isSelected ? 'calendar-selected' : ''}}" size="mini" style="width: 14.285714%;" data-date="{{item.date}}" bindtap="onCalendarDate" hover-class="control-pressed" aria-label="{{item.label}}">
+        <view class="calendar-day-face">
+          <text class="calendar-day-number">{{item.day}}</text>
+          <view class="calendar-goal-dot {{item.hasGoals ? 'has-goals' : ''}}" aria-hidden="true"></view>
+        </view>
+      </button>
+    </view>
   </view>
 
-  <view wx:if="{{storageProblem}}" class="problem-panel">
+  <view class="section-heading">
+    <text class="section-title">{{sectionTitle}}</text>
+    <text class="completion-count" aria-label="当日已完成{{completedCount}}个目标，共{{totalCount}}个">已完成 {{completedCount}}/{{totalCount}}</text>
+  </view>
+
+  <view wx:if="{{storageProblem}}" class="problem-panel" aria-role="alert">
     <text class="problem-title">暂时无法读取待办</text>
     <text class="problem-desc">{{storageProblem}}</text>
-    <view class="retry-button" bindtap="onRetry" aria-role="button" aria-label="重新读取待办">重新读取</view>
+    <button class="plain-button retry-button" bindtap="onRetry" hover-class="control-pressed" aria-label="重新读取待办">重新读取</button>
   </view>
 
   <view wx:elif="{{visibleItems.length === 0}}" class="empty-state">
-    <view class="empty-mark" aria-hidden="true">
-      <view class="empty-line line-long"></view>
-      <view class="empty-line"></view>
-      <view class="empty-line line-short"></view>
-    </view>
-    <text class="empty-title">{{emptyTitle}}</text>
-    <text class="empty-desc">{{emptyDescription}}</text>
-    <view wx:if="{{filter === 'pending'}}" class="empty-action" bindtap="onAdd" aria-role="button" aria-label="新建第一条待办">新建第一条待办</view>
+    <text class="empty-title">这一天还没有目标</text>
+    <text class="empty-desc">添加一件要做的事，完成后轻点圆圈。</text>
   </view>
 
   <view wx:else class="todo-list">
     <view class="todo-row {{item.completed ? 'completed' : ''}}" wx:for="{{visibleItems}}" wx:key="id">
-      <view
-        class="check-control {{item.completed ? 'checked' : ''}}"
+      <button
+        class="plain-button check-control"
+        size="mini"
+        style="width: 88rpx;"
         data-id="{{item.id}}"
         bindtap="onToggle"
+        disabled="{{!!storageProblem || savingGoal}}"
+        hover-class="control-pressed"
         aria-role="checkbox"
         aria-checked="{{item.completed}}"
-        aria-label="{{item.completed ? '恢复待办' : '完成待办'}}：{{item.title}}"
+        aria-disabled="{{!!storageProblem || savingGoal}}"
+        aria-label="{{item.completed ? '恢复目标' : (item.expired ? '补记完成目标' : '完成目标')}}：{{item.title}}"
       >
-        <view wx:if="{{item.completed}}" class="check-stem"></view>
-      </view>
-      <view class="todo-content" data-id="{{item.id}}" bindtap="onEdit" aria-role="button" aria-label="编辑待办：{{item.title}}">
-        <text class="todo-title">{{item.title}}</text>
-        <view wx:if="{{item.scheduleText || item.dueText}}" class="todo-meta">
-          <text wx:if="{{item.scheduleText}}" class="schedule-label {{item.scheduleTone}}">{{item.scheduleText}}</text>
-          <text wx:if="{{item.dueText}}" class="due-label {{item.dueTone}}">{{item.dueText}}</text>
+        <view class="check-circle {{item.completed ? 'checked' : ''}}" aria-hidden="true">
+          <view wx:if="{{item.completed}}" class="check-stem"></view>
         </view>
-        <text wx:if="{{item.note}}" class="todo-note">{{item.note}}</text>
+      </button>
+      <view class="todo-content-slot">
+        <button
+          class="plain-button todo-content"
+          size="mini"
+          style="width: 100%;"
+          data-id="{{item.id}}"
+          bindtap="onEdit"
+          disabled="{{!!storageProblem || savingGoal}}"
+          hover-class="content-pressed"
+          aria-disabled="{{!!storageProblem || savingGoal}}"
+          aria-label="编辑目标：{{item.title}}"
+        >
+          <text class="todo-title">{{item.title}}</text>
+          <text wx:if="{{item.expired}}" class="expired-label">已过期 · 可补记完成</text>
+          <text wx:if="{{item.note}}" class="todo-note">{{item.note}}</text>
+        </button>
       </view>
-      <view class="more-control" data-id="{{item.id}}" bindtap="onMore" aria-role="button" aria-label="更多操作：{{item.title}}">
-        <view class="more-dot"></view>
-        <view class="more-dot"></view>
-        <view class="more-dot"></view>
+      <button
+        class="plain-button more-control"
+        size="mini"
+        style="width: 72rpx;"
+        data-id="{{item.id}}"
+        bindtap="onMore"
+        disabled="{{!!storageProblem || savingGoal}}"
+        hover-class="control-pressed"
+        aria-disabled="{{!!storageProblem || savingGoal}}"
+        aria-label="更多操作：{{item.title}}"
+      >
+        <view class="more-dot" aria-hidden="true"></view>
+        <view class="more-dot" aria-hidden="true"></view>
+        <view class="more-dot" aria-hidden="true"></view>
+      </button>
+    </view>
+  </view>
+
+  <view class="goal-editor">
+    <button wx:if="{{!editorOpen}}" class="plain-button add-goal" bindtap="onAdd" disabled="{{!!storageProblem || savingGoal}}" hover-class="content-pressed" aria-disabled="{{!!storageProblem || savingGoal}}" aria-label="添加当日目标">
+      <view class="add-mark" aria-hidden="true"><view class="plus-line horizontal"></view><view class="plus-line vertical"></view></view>
+      <text>添加目标</text>
+    </button>
+    <view wx:else class="editor-content">
+      <view class="editor-heading">
+        <view wx:if="{{!editorId}}" class="add-mark" aria-hidden="true"><view class="plus-line horizontal"></view><view class="plus-line vertical"></view></view>
+        <text>{{editorId ? '编辑目标' : '添加目标'}}</text>
+      </view>
+      <input
+        class="title-input"
+        value="{{title}}"
+        maxlength="60"
+        placeholder="写下一件要做的事"
+        placeholder-class="placeholder"
+        bindinput="onTitle"
+        bindconfirm="onSaveGoal"
+        confirm-type="done"
+        disabled="{{!!storageProblem || savingGoal}}"
+        adjust-position="{{true}}"
+        cursor-spacing="32"
+        aria-label="目标标题，最多60个字"
+      />
+      <button class="plain-button note-toggle" bindtap="onExpandNote" disabled="{{!!storageProblem || savingGoal}}" hover-class="content-pressed" aria-disabled="{{!!storageProblem || savingGoal}}" aria-expanded="{{noteExpanded}}" aria-label="{{noteExpanded ? '收起可选备注' : '展开可选备注'}}">
+        <text>备注（可选）</text>
+        <view class="note-chevron {{noteExpanded ? 'expanded' : ''}}" aria-hidden="true"></view>
+      </button>
+      <textarea
+        wx:if="{{noteExpanded}}"
+        class="goal-note-input"
+        value="{{note}}"
+        maxlength="200"
+        auto-height="{{true}}"
+        placeholder="补充说明，可留空"
+        placeholder-class="placeholder"
+        bindinput="onNote"
+        disabled="{{!!storageProblem || savingGoal}}"
+        adjust-position="{{true}}"
+        cursor-spacing="32"
+        aria-label="可选备注，最多200个字"
+      ></textarea>
+      <text wx:if="{{goalProblem}}" class="inline-problem" aria-role="alert">{{goalProblem}}</text>
+      <view class="editor-actions">
+        <button class="plain-button cancel-button" bindtap="onCancelEditor" disabled="{{!!storageProblem || savingGoal}}" hover-class="control-pressed" aria-disabled="{{!!storageProblem || savingGoal}}">取消</button>
+        <button class="save-button" bindtap="onSaveGoal" loading="{{savingGoal}}" disabled="{{!!storageProblem || savingGoal}}" hover-class="save-button-pressed" aria-disabled="{{!!storageProblem || savingGoal}}" aria-label="{{goalProblem ? '重试保存目标' : '保存目标'}}">{{goalProblem ? '重试保存' : '保存'}}</button>
       </view>
     </view>
   </view>
+
+  <view wx:if="{{goalProblem && !editorOpen}}" class="goal-read-problem" aria-role="alert">
+    <text class="inline-problem">{{goalProblem}}</text>
+    <button class="plain-button retry-button" bindtap="onRetry" hover-class="control-pressed" aria-label="重新读取当日目标">重新读取</button>
+  </view>
+
+  <view class="section-heading reflection-heading">
+    <text class="section-title">随想记录</text>
+    <view class="note-status {{noteSaveState}}" aria-label="随想{{noteStatusLabel}}">
+      <view wx:if="{{noteSaveState === 'saved'}}" class="status-check" aria-hidden="true"><view class="status-stem"></view></view>
+      <text>{{noteStatusLabel}}</text>
+    </view>
+  </view>
+  <view class="reflection-panel">
+    <textarea
+      class="daily-note-input"
+      data-date="{{selectedDate}}"
+      value="{{dailyNote}}"
+      maxlength="2000"
+      auto-height="{{true}}"
+      placeholder="记录这一天的想法、感悟和收获…"
+      placeholder-class="placeholder"
+      bindinput="onDailyNoteInput"
+      bindfocus="onDailyNoteFocus"
+      bindblur="onDailyNoteBlur"
+      disabled="{{!!storageProblem}}"
+      adjust-position="{{true}}"
+      cursor-spacing="48"
+      aria-label="当日随想，输入后自动保存，最多2000个字"
+      aria-disabled="{{!!storageProblem}}"
+    ></textarea>
+  </view>
+  <view class="reflection-footer">
+    <text>输入后自动保存</text>
+    <text>{{dailyNote.length}}/2000</text>
+  </view>
+  <view wx:if="{{noteSaveProblem}}" class="note-save-problem" aria-role="alert">
+    <text class="inline-problem">{{noteSaveProblem}}</text>
+    <button class="plain-button retry-button" bindtap="onRetryDailyNote" disabled="{{!!storageProblem || noteSaveState === 'saving'}}" hover-class="control-pressed" aria-disabled="{{!!storageProblem || noteSaveState === 'saving'}}" aria-label="重试保存当日随想">重试保存</button>
+  </view>
+  <text class="expiry-hint">未完成目标次日过期，历史记录仍保留</text>
 </view>
 </block>

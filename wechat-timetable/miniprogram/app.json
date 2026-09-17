@@ -2,7 +2,6 @@
   "pages": [
     "pages/timetable/index",
     "pages/todo/index",
-    "pages/todo-edit/index",
     "pages/settings/index",
     "pages/period-settings/index",
     "pages/period-time-edit/index",
