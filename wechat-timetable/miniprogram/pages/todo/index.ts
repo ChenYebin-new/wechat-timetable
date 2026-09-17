@@ -1,90 +1,79 @@
 import type { TodoItem } from '../../models/todo'
-import { getTodoSnapshot, removeTodo, toggleTodo } from '../../services/todo-storage'
+import { getTodoById, getTodoSnapshot, migrateTodosToV3, removeTodo, saveDailyNote, saveTodo, toggleTodo } from '../../services/todo-storage'
 import { initializeHomeSharing, shareHomeToFriend, shareHomeToTimeline } from '../../utils/share'
-import { formatLocalDate } from '../../utils/local-date'
-
-type TodoFilter = 'pending' | 'completed'
-type DueTone = 'normal' | 'today' | 'overdue'
-type ScheduleTone = 'normal' | 'missed'
+import { formatLocalDate, parseLocalDate } from '../../utils/local-date'
+import { buildTodoCalendar, offsetTodoCalendarMonth } from '../../utils/todo-calendar'
+import type { TodoCalendarDay } from '../../utils/todo-calendar'
 
 interface TodoView extends TodoItem {
-  dueText: string
-  dueTone: DueTone
-  scheduleText: string
-  scheduleTone: ScheduleTone
+  expired: boolean
 }
 
-function offsetDateKey(date: Date, days: number): string {
-  const copy = new Date(date.getFullYear(), date.getMonth(), date.getDate() + days)
-  return formatLocalDate(copy)
+interface PageState {
+  visible: boolean
+  followingToday: boolean
+  noteFocused: boolean
+  noteDate: string
+  savedNote: string
+  originalGoal: { title: string; note: string } | null
+  noteTimer: ReturnType<typeof setTimeout> | null
+  midnightTimer: ReturnType<typeof setTimeout> | null
+  goalDates: Set<string>
 }
 
-function dueView(dueDate: string, completed: boolean, today: Date): { dueText: string; dueTone: DueTone } {
-  if (!dueDate) return { dueText: '', dueTone: 'normal' }
-  const [year, month, day] = dueDate.split('-').map(Number)
-  const todayKey = formatLocalDate(today)
-  if (dueDate === todayKey) return { dueText: '今天截止', dueTone: completed ? 'normal' : 'today' }
-  if (dueDate === offsetDateKey(today, 1)) return { dueText: '明天截止', dueTone: 'normal' }
-  const label = year === today.getFullYear() ? `${month}月${day}日` : `${year}年${month}月${day}日`
-  return dueDate < todayKey && !completed
-    ? { dueText: `已逾期 · ${label}`, dueTone: 'overdue' }
-    : { dueText: `${label}截止`, dueTone: 'normal' }
-}
+const pageStates = new WeakMap<object, PageState>()
+// Failed and pending drafts survive page recreation during this app session.
+const unsavedDailyNotes = new Map<string, string>()
+const WEEKDAYS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
 
-function scheduleDateLabel(scheduleDate: string, today: Date): string {
-  if (scheduleDate === formatLocalDate(today)) return '今天'
-  if (scheduleDate === offsetDateKey(today, 1)) return '明天'
-  const [year, month, day] = scheduleDate.split('-').map(Number)
-  return year === today.getFullYear() ? `${month}月${day}日` : `${year}年${month}月${day}日`
-}
-
-function localDateTime(date: string, time: string): Date {
-  const [year, month, day] = date.split('-').map(Number)
-  const [hour, minute] = time.split(':').map(Number)
-  return new Date(year, month - 1, day, hour, minute)
-}
-
-function scheduleView(item: TodoItem, now: Date): { scheduleText: string; scheduleTone: ScheduleTone } {
-  if (!item.scheduleDate) return { scheduleText: '', scheduleTone: 'normal' }
-  const label = `${scheduleDateLabel(item.scheduleDate, now)} ${item.scheduleStartTime}–${item.scheduleEndTime}`
-  const missed = !item.completed && localDateTime(item.scheduleDate, item.scheduleEndTime).getTime() <= now.getTime()
-  return missed
-    ? { scheduleText: `计划时间已过 · ${label}`, scheduleTone: 'missed' }
-    : { scheduleText: label, scheduleTone: 'normal' }
-}
-
-function sortTodos(items: TodoItem[], filter: TodoFilter): TodoItem[] {
-  return [...items]
-    .filter((item) => filter === 'completed' ? item.completed : !item.completed)
-    .sort((left, right) => {
-      if (filter === 'completed') return (right.completedAt ?? right.updatedAt) - (left.completedAt ?? left.updatedAt)
-      if (left.scheduleDate && right.scheduleDate) {
-        const leftSchedule = `${left.scheduleDate}T${left.scheduleStartTime}`
-        const rightSchedule = `${right.scheduleDate}T${right.scheduleStartTime}`
-        if (leftSchedule !== rightSchedule) return leftSchedule.localeCompare(rightSchedule)
-        return right.createdAt - left.createdAt
-      }
-      if (left.scheduleDate !== right.scheduleDate) return left.scheduleDate ? -1 : 1
-      if (left.dueDate && right.dueDate && left.dueDate !== right.dueDate) return left.dueDate.localeCompare(right.dueDate)
-      if (left.dueDate !== right.dueDate) return left.dueDate ? -1 : 1
-      return right.createdAt - left.createdAt
-    })
+function stateFor(page: object): PageState {
+  let state = pageStates.get(page)
+  if (!state) {
+    state = { visible: false, followingToday: true, noteFocused: false, noteDate: '', savedNote: '', originalGoal: null, noteTimer: null, midnightTimer: null, goalDates: new Set() }
+    pageStates.set(page, state)
+  }
+  return state
 }
 
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback
 }
 
+function offsetDate(date: string, days: number): string {
+  const parsed = parseLocalDate(date)
+  if (!parsed) return formatLocalDate(new Date())
+  return formatLocalDate(new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate() + days))
+}
+
 Page({
   data: {
-    filter: 'pending' as TodoFilter,
+    selectedDate: '',
+    dateLabel: '',
+    weekdayLabel: '',
+    isToday: true,
+    calendarExpanded: false,
+    calendarMonth: '',
+    calendarMonthLabel: '',
+    calendarDays: [] as TodoCalendarDay[],
+    calendarWeekdays: ['日', '一', '二', '三', '四', '五', '六'],
+    sectionTitle: '今日目标',
     visibleItems: [] as TodoView[],
-    pendingCount: 0,
     completedCount: 0,
-    overviewText: '把接下来要做的事记下来。',
-    emptyTitle: '还没有待办',
-    emptyDescription: '新建第一条待办，让重要的事情有处可放。',
+    totalCount: 0,
     storageProblem: '',
+    editorOpen: false,
+    editorId: '',
+    editorDate: '',
+    title: '',
+    note: '',
+    noteExpanded: false,
+    savingGoal: false,
+    goalProblem: '',
+    dailyNote: '',
+    dailyNoteDirty: false,
+    noteSaveState: 'saved' as 'saved' | 'saving' | 'dirty' | 'error',
+    noteStatusLabel: '自动保存',
+    noteSaveProblem: '',
     showShareHomePreview: false,
   },
 
@@ -93,134 +82,358 @@ Page({
   },
 
   onShareAppMessage: shareHomeToFriend,
-
   onShareTimeline: shareHomeToTimeline,
 
   onShow() {
     if (this.data.showShareHomePreview) return
+    stateFor(this).visible = true
+    this.checkDayRollover()
+    this.scheduleMidnightRefresh()
+  },
+
+  onHide() {
+    if (this.data.showShareHomePreview) return
+    stateFor(this).visible = false
+    stateFor(this).noteFocused = false
+    this.flushDailyNote()
+    this.stopTimers()
+  },
+
+  onUnload() { this.onHide() },
+
+  checkDayRollover() {
+    if (this.data.showShareHomePreview) return
+    const state = stateFor(this)
+    const today = formatLocalDate(new Date())
+    if (!this.data.selectedDate) this.setData({ selectedDate: today, calendarMonth: today.slice(0, 7) })
+    else if (state.followingToday && this.data.selectedDate !== today && !this.data.editorOpen && !state.noteFocused && !this.data.dailyNoteDirty) {
+      this.setData({ selectedDate: today, calendarMonth: today.slice(0, 7) })
+    }
     this.refresh()
   },
 
   refresh() {
-    const snapshot = getTodoSnapshot()
+    if (this.data.showShareHomePreview) return
+    const today = formatLocalDate(new Date())
+    const selectedDate = this.data.selectedDate || today
+    const date = parseLocalDate(selectedDate)
+    if (!date) return
+    this.setData({
+      selectedDate,
+      dateLabel: `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`,
+      weekdayLabel: WEEKDAYS[date.getDay()],
+      isToday: selectedDate === today,
+      sectionTitle: selectedDate === today ? '今日目标' : '当日目标',
+      ...(!this.data.calendarMonth ? { calendarMonth: selectedDate.slice(0, 7) } : {}),
+    })
+
+    let snapshot = getTodoSnapshot()
+    if (snapshot.kind === 'legacy') {
+      try {
+        migrateTodosToV3(today)
+        snapshot = getTodoSnapshot()
+      } catch (error) {
+        this.showStorageProblem(errorMessage(error, '待办升级失败，原数据未被替换，请重试'))
+        return
+      }
+    }
     if (!('data' in snapshot)) {
-      this.setData({
-        visibleItems: [],
-        pendingCount: 0,
-        completedCount: 0,
-        overviewText: '待办数据暂时无法读取，请重新读取。',
-        storageProblem: snapshot.reason,
-      })
+      this.showStorageProblem(snapshot.reason)
       return
     }
-    const now = new Date()
-    const pendingCount = snapshot.data.items.filter((item) => !item.completed).length
-    const completedCount = snapshot.data.items.length - pendingCount
-    const todayKey = formatLocalDate(now)
-    const scheduledToday = snapshot.data.items.filter((item) => !item.completed && item.scheduleDate === todayKey).length
-    const dueToday = snapshot.data.items.filter((item) => !item.completed && item.dueDate === todayKey).length
-    const visibleItems = sortTodos(snapshot.data.items, this.data.filter).map((item) => ({
-      ...item,
-      ...scheduleView(item, now),
-      ...dueView(item.dueDate, item.completed, now),
-    }))
-    const todayParts = [
-      ...(scheduledToday ? [`今天计划 ${scheduledToday} 项`] : []),
-      ...(dueToday ? [`今天截止 ${dueToday} 项`] : []),
-    ]
-    const overviewText = pendingCount === 0
-      ? snapshot.data.items.length === 0
-        ? '把接下来要做的事记下来。'
-        : '待办已经清空，可以轻装上阵。'
-      : `还有 ${pendingCount} 项待完成${todayParts.length ? ` · ${todayParts.join(' · ')}` : ''}`
-    const emptyTitle = this.data.filter === 'completed'
-      ? '还没有完成记录'
-      : completedCount > 0
-        ? '待完成列表已清空'
-        : '还没有待办'
-    const emptyDescription = this.data.filter === 'completed'
-      ? '完成一项待办后，它会保留在这里。'
-      : '新建第一条待办，让重要的事情有处可放。'
+
+    const visibleItems = snapshot.data.items
+      .filter((item) => item.taskDate === selectedDate)
+      .sort((left, right) => Number(left.completed) - Number(right.completed) || left.createdAt - right.createdAt)
+      .map((item) => ({ ...item, expired: !item.completed && item.taskDate < today }))
+    const storedNote = snapshot.data.dailyNotes.find((entry) => entry.date === selectedDate)?.content || ''
+    const state = stateFor(this)
+    state.goalDates = new Set(snapshot.data.items.map((item) => item.taskDate))
+    const draft = unsavedDailyNotes.get(selectedDate)
+    const dirty = draft !== undefined && draft !== storedNote
+    if (!dirty) unsavedDailyNotes.delete(selectedDate)
+    const preserveError = dirty && state.noteDate === selectedDate && this.data.noteSaveState === 'error'
+    state.noteDate = selectedDate
+    state.savedNote = storedNote
     this.setData({
       visibleItems,
-      pendingCount,
-      completedCount,
-      overviewText,
-      emptyTitle,
-      emptyDescription,
+      completedCount: visibleItems.filter((item) => item.completed).length,
+      totalCount: visibleItems.length,
       storageProblem: '',
+      dailyNote: dirty ? draft : storedNote,
+      dailyNoteDirty: dirty,
+      noteSaveState: preserveError ? 'error' : dirty ? 'dirty' : 'saved',
+      noteStatusLabel: preserveError ? '未保存，可重试' : dirty ? '未保存' : storedNote ? '已保存' : '自动保存',
+      noteSaveProblem: preserveError ? this.data.noteSaveProblem : '',
+    })
+    this.refreshCalendar()
+  },
+
+  showStorageProblem(reason: string) {
+    stateFor(this).goalDates.clear()
+    this.setData({
+      visibleItems: [],
+      completedCount: 0,
+      totalCount: 0,
+      storageProblem: reason,
+      ...(!this.data.dailyNoteDirty ? { dailyNote: '' } : {}),
+      noteSaveState: 'error',
+      noteStatusLabel: '暂时无法保存',
+      noteSaveProblem: reason,
+    })
+    this.refreshCalendar()
+  },
+
+  refreshCalendar() {
+    if (this.data.showShareHomePreview || !this.data.calendarExpanded) return
+    const calendar = buildTodoCalendar(this.data.calendarMonth, this.data.selectedDate, formatLocalDate(new Date()), stateFor(this).goalDates)
+    this.setData({ calendarMonthLabel: calendar.label, calendarDays: calendar.days })
+  },
+
+  onToggleCalendar() {
+    if (this.data.showShareHomePreview) return
+    const calendarExpanded = !this.data.calendarExpanded
+    this.setData({ calendarExpanded, ...(calendarExpanded ? { calendarMonth: this.data.selectedDate.slice(0, 7) } : { calendarDays: [] }) })
+    this.refreshCalendar()
+  },
+
+  onPreviousMonth() { this.browseCalendarMonth(-1) },
+  onNextMonth() { this.browseCalendarMonth(1) },
+
+  browseCalendarMonth(offset: number) {
+    if (this.data.showShareHomePreview || !this.data.calendarExpanded) return
+    this.setData({ calendarMonth: offsetTodoCalendarMonth(this.data.calendarMonth, offset) })
+    this.refreshCalendar()
+  },
+
+  onCalendarDate(e: WechatMiniprogram.TouchEvent) {
+    if (this.data.showShareHomePreview) return
+    this.switchDate(String(e.currentTarget.dataset.date || ''))
+  },
+
+  onChooseDate(e: WechatMiniprogram.PickerChange) { this.switchDate(String(e.detail.value)) },
+  onPreviousDate() { this.switchDate(offsetDate(this.data.selectedDate, -1)) },
+  onNextDate() { this.switchDate(offsetDate(this.data.selectedDate, 1)) },
+  onToday() { this.switchDate(formatLocalDate(new Date())) },
+
+  switchDate(date: string) {
+    if (this.data.showShareHomePreview || !parseLocalDate(date)) return
+    if (date === this.data.selectedDate) {
+      this.setData({ calendarMonth: date.slice(0, 7) })
+      this.refreshCalendar()
+      return
+    }
+    if (!this.flushDailyNote()) return
+    this.afterDiscardingGoal(() => {
+      this.closeEditor()
+      stateFor(this).followingToday = date === formatLocalDate(new Date())
+      this.setData({ selectedDate: date, calendarMonth: date.slice(0, 7) })
+      this.refresh()
     })
   },
 
-  onFilter(e: WechatMiniprogram.TouchEvent) {
-    const filter = e.currentTarget.dataset.filter as TodoFilter
-    if (filter === this.data.filter) return
-    this.setData({ filter })
-    this.refresh()
+  afterDiscardingGoal(action: () => void) {
+    const original = stateFor(this).originalGoal
+    const dirty = this.data.editorOpen && original !== null
+      && (this.data.title !== original.title || this.data.note !== original.note)
+    if (!dirty) { action(); return }
+    wx.showModal({
+      title: '目标尚未保存',
+      content: '继续操作会放弃尚未保存的目标内容。',
+      cancelText: '继续编辑',
+      confirmText: '放弃修改',
+      success: (result) => { if (result.confirm) action() },
+    })
   },
 
   onAdd() {
-    wx.navigateTo({ url: '/pages/todo-edit/index' })
+    if (this.data.showShareHomePreview || this.data.storageProblem || this.data.editorOpen) return
+    stateFor(this).originalGoal = { title: '', note: '' }
+    this.setData({ editorOpen: true, editorId: '', editorDate: this.data.selectedDate, title: '', note: '', noteExpanded: false, goalProblem: '' })
   },
 
-  onEdit(e: WechatMiniprogram.TouchEvent) {
-    const id = e.currentTarget.dataset.id as string
-    wx.navigateTo({ url: `/pages/todo-edit/index?id=${encodeURIComponent(id)}` })
+  onEdit(e: WechatMiniprogram.TouchEvent) { this.editGoal(e.currentTarget.dataset.id as string) },
+
+  editGoal(id: string) {
+    if (this.data.showShareHomePreview || this.data.storageProblem || this.data.savingGoal) return
+    this.afterDiscardingGoal(() => {
+      try {
+        const item = getTodoById(id)
+        if (!item) throw new Error('这条目标可能已经被删除，请重新读取')
+        stateFor(this).originalGoal = { title: item.title, note: item.note }
+        this.setData({ editorOpen: true, editorId: id, editorDate: item.taskDate, title: item.title, note: item.note, noteExpanded: !!item.note, goalProblem: '' })
+      } catch (error) {
+        this.setData({ goalProblem: errorMessage(error, '无法读取目标，请重新读取') })
+        this.refresh()
+      }
+    })
   },
 
-  onToggle(e: WechatMiniprogram.TouchEvent) {
-    const id = e.currentTarget.dataset.id as string
+  onTitle(e: WechatMiniprogram.Input) {
+    if (this.data.storageProblem || !this.data.editorOpen) return
+    this.setData({ title: e.detail.value, goalProblem: '' })
+  },
+
+  onNote(e: WechatMiniprogram.Input) {
+    if (this.data.storageProblem || !this.data.editorOpen) return
+    this.setData({ note: e.detail.value, goalProblem: '' })
+  },
+
+  onExpandNote() {
+    if (!this.data.storageProblem) this.setData({ noteExpanded: !this.data.noteExpanded })
+  },
+
+  closeEditor() {
+    stateFor(this).originalGoal = null
+    this.setData({ editorOpen: false, editorId: '', editorDate: '', title: '', note: '', noteExpanded: false, savingGoal: false, goalProblem: '' })
+  },
+
+  onCancelEditor() {
+    if (this.data.savingGoal) return
+    this.closeEditor()
+    this.checkDayRollover()
+  },
+
+  onSaveGoal() {
+    if (this.data.showShareHomePreview || this.data.storageProblem || this.data.savingGoal || !this.data.editorOpen) return
+    this.setData({ savingGoal: true, goalProblem: '' })
     try {
-      toggleTodo(id)
-      this.refresh()
+      const editing = !!this.data.editorId
+      saveTodo({ ...(editing ? { id: this.data.editorId } : {}), title: this.data.title, note: this.data.note, taskDate: this.data.editorDate })
+      this.closeEditor()
+      this.checkDayRollover()
+      wx.showToast({ title: editing ? '修改已保存' : '目标已添加', icon: 'success' })
     } catch (error) {
-      wx.showModal({
-        title: '无法更新待办',
-        content: errorMessage(error, '待办数据写入失败，请稍后重试'),
-        showCancel: false,
-        confirmText: '知道了',
-      })
+      this.setData({ savingGoal: false, goalProblem: errorMessage(error, '目标保存失败，请重试') })
+      this.refresh()
     }
   },
 
+  onToggle(e: WechatMiniprogram.TouchEvent) {
+    if (this.data.showShareHomePreview || this.data.storageProblem) return
+    try {
+      toggleTodo(e.currentTarget.dataset.id as string)
+      this.checkDayRollover()
+    } catch (error) { this.showGoalError('无法更新目标', error) }
+  },
+
   onMore(e: WechatMiniprogram.TouchEvent) {
+    if (this.data.showShareHomePreview || this.data.storageProblem) return
     const id = e.currentTarget.dataset.id as string
     wx.showActionSheet({
       itemList: ['编辑', '删除'],
       success: (result) => {
-        if (result.tapIndex === 0) {
-          wx.navigateTo({ url: `/pages/todo-edit/index?id=${encodeURIComponent(id)}` })
-          return
-        }
-        this.confirmDelete(id)
+        if (result.tapIndex === 0) this.editGoal(id)
+        else if (result.tapIndex === 1) this.confirmDelete(id)
       },
     })
   },
 
   confirmDelete(id: string) {
+    if (this.data.showShareHomePreview || this.data.storageProblem) return
     wx.showModal({
-      title: '删除待办',
-      content: '确定删除这条待办吗？删除后无法恢复。',
+      title: '删除目标',
+      content: '确定删除这条目标吗？删除后无法恢复。',
       confirmColor: '#e64340',
       success: (result) => {
-        if (!result.confirm) return
+        if (!result.confirm || this.data.storageProblem) return
         try {
           removeTodo(id)
-          this.refresh()
+          if (this.data.editorId === id) this.closeEditor()
+          this.checkDayRollover()
           wx.showToast({ title: '已删除', icon: 'success' })
-        } catch (error) {
-          wx.showModal({
-            title: '无法删除',
-            content: errorMessage(error, '待办数据写入失败，请稍后重试'),
-            showCancel: false,
-            confirmText: '知道了',
-          })
-        }
+        } catch (error) { this.showGoalError('无法删除目标', error) }
       },
     })
   },
 
-  onRetry() {
+  showGoalError(title: string, error: unknown) {
     this.refresh()
+    wx.showModal({ title, content: errorMessage(error, '目标更新失败，请重试'), showCancel: false, confirmText: '知道了' })
+  },
+
+  onDailyNoteInput(e: WechatMiniprogram.Input) {
+    if (this.data.showShareHomePreview || this.data.storageProblem || !this.data.selectedDate) return
+    const eventDate = e.currentTarget?.dataset.date as string | undefined
+    if (eventDate && eventDate !== this.data.selectedDate) return
+    const state = stateFor(this)
+    if (state.noteTimer !== null) clearTimeout(state.noteTimer)
+    state.noteTimer = null
+    const content = e.detail.value
+    const dirty = content !== state.savedNote
+    const date = state.noteDate
+    if (dirty) unsavedDailyNotes.set(date, content)
+    else unsavedDailyNotes.delete(date)
+    this.setData({ dailyNote: content, dailyNoteDirty: dirty, noteSaveState: dirty ? 'dirty' : 'saved', noteStatusLabel: dirty ? '未保存' : content ? '已保存' : '自动保存', noteSaveProblem: '' })
+    if (dirty && state.visible) {
+      state.noteTimer = setTimeout(() => {
+        state.noteTimer = null
+        if (state.visible && state.noteDate === date) this.flushDailyNote()
+      }, 500)
+    }
+  },
+
+  onDailyNoteFocus() {
+    if (!this.data.showShareHomePreview && !this.data.storageProblem) stateFor(this).noteFocused = true
+  },
+
+  onDailyNoteBlur() {
+    stateFor(this).noteFocused = false
+    this.flushDailyNote()
+  },
+
+  flushDailyNote(): boolean {
+    const state = stateFor(this)
+    if (state.noteTimer !== null) clearTimeout(state.noteTimer)
+    state.noteTimer = null
+    if (this.data.showShareHomePreview) return false
+    if (!this.data.dailyNoteDirty) return true
+    if (this.data.storageProblem || !state.noteDate) return false
+    const content = unsavedDailyNotes.get(state.noteDate) ?? this.data.dailyNote
+    this.setData({ noteSaveState: 'saving', noteStatusLabel: '保存中', noteSaveProblem: '' })
+    try {
+      saveDailyNote(state.noteDate, content)
+      unsavedDailyNotes.delete(state.noteDate)
+      state.savedNote = content
+      this.setData({ dailyNoteDirty: false, noteSaveState: 'saved', noteStatusLabel: content ? '已保存' : '自动保存', noteSaveProblem: '' })
+      return true
+    } catch (error) {
+      this.setData({ dailyNoteDirty: true, noteSaveState: 'error', noteStatusLabel: '未保存，可重试', noteSaveProblem: errorMessage(error, '随想保存失败，请重试') })
+      this.refresh()
+      return false
+    }
+  },
+
+  onRetryDailyNote() {
+    if (this.flushDailyNote()) this.checkDayRollover()
+  },
+
+  onRetry() {
+    this.setData({ goalProblem: '' })
+    this.checkDayRollover()
+    if (!this.data.storageProblem && this.data.dailyNoteDirty && this.flushDailyNote()) this.checkDayRollover()
+  },
+
+  scheduleMidnightRefresh() {
+    const state = stateFor(this)
+    if (state.midnightTimer !== null) clearTimeout(state.midnightTimer)
+    state.midnightTimer = null
+    if (!state.visible || this.data.showShareHomePreview) return
+    const now = new Date()
+    const nextDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+    state.midnightTimer = setTimeout(() => {
+      state.midnightTimer = null
+      if (!state.visible) return
+      this.checkDayRollover()
+      this.scheduleMidnightRefresh()
+    }, nextDay.getTime() - now.getTime() + 50)
+  },
+
+  stopTimers() {
+    const state = stateFor(this)
+    if (state.noteTimer !== null) clearTimeout(state.noteTimer)
+    if (state.midnightTimer !== null) clearTimeout(state.midnightTimer)
+    state.noteTimer = null
+    state.midnightTimer = null
   },
 })

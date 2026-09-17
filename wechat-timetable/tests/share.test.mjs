@@ -133,7 +133,7 @@ test('朋友圈桥接进入完整小程序后切换首页并在失败时兜底',
     setData(changes) { Object.assign(this.data, changes) },
   }
   assert.equal(
-    share.initializeHomeSharing(context, '/pages/todo-edit/index', { qige_share: 'home' }),
+    share.initializeHomeSharing(context, '/pages/todo/index', { qige_share: 'home' }),
     true,
   )
   assert.equal(context.data.showShareHomePreview, true)
