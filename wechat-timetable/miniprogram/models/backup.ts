@@ -1,12 +1,12 @@
 // models/backup.ts
 // 课表数据备份相关类型与常量。
 
-import type { SupportedTimetableStorage } from './course'
+import type { SupportedTimetableStorage } from './course-legacy'
 
 /** 本项目备份的应用标识，用于识别是否为本项目生成的备份。 */
 export const APP_ID = 'qige-timetable'
 /** 外层备份格式版本。当前为 1。 */
-export const BACKUP_VERSION = 1
+export { TIMETABLE_BACKUP_VERSION, TIMETABLE_BACKUP_VERSION as BACKUP_VERSION } from '../constants/data-versions'
 /** 单次粘贴内容上限：1 MiB。 */
 export const MAX_BACKUP_BYTES = 1024 * 1024
 /** 最近自动备份的 Storage key（只保留最近一份）。 */

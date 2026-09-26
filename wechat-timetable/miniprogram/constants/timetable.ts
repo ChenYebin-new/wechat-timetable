@@ -4,7 +4,7 @@
 import type { PeriodSettings, WeekMode } from '../models/course'
 
 export const STORAGE_KEY = 'timetable_courses'
-export const SCHEMA_VERSION = 5
+export { TIMETABLE_SCHEMA_VERSION, TIMETABLE_SCHEMA_VERSION as SCHEMA_VERSION } from './data-versions'
 export const GRID_HOLD_DURATION_MS = 1200
 export const MIN_PERIODS = 1
 export const MAX_PERIODS = 14

@@ -3,24 +3,24 @@
 // 页面不要直接调用 wx.getStorageSync / setStorageSync 操作课表。
 
 import type { Course, CourseDraft, CourseRange, PeriodSettings, TermSettings, TimetableStorage, WeekMode } from '../models/course'
-import { DEFAULT_PERIOD_SETTINGS, DAYS, MAX_PERIODS, SCHEMA_VERSION } from '../constants/timetable'
+import { DEFAULT_PERIOD_SETTINGS, DAYS, TIMETABLE_SCHEMA_VERSION } from '../constants/timetable'
 import { expandWeeks, normalizeWeeks, validateTerm } from '../utils/term'
-import { isOverlapping, validate } from '../utils/course-validator'
-import { APP_ID, BACKUP_VERSION, RECENT_BACKUP_KEY } from '../models/backup'
+import { validate } from '../utils/course-validator'
+import { firstCourseConflict } from '../utils/course-data-rules'
+import { APP_ID, TIMETABLE_BACKUP_VERSION, RECENT_BACKUP_KEY } from '../models/backup'
 import { cellsToRanges, rangesToCells } from '../utils/grid-selection'
-import { clonePeriodSettings, migrateV4PeriodSettings, validatePeriodSettings } from '../utils/period-settings'
+import { clonePeriodSettings, validatePeriodSettings } from '../utils/period-settings'
 import {
   type StorageReadKind,
   type StorageReadResult,
   type TimetableStorageView,
   classifyStorageValue,
-  isLegacySchemaVersion,
   isSupportedSchemaVersion,
-  isValidCourseColor,
   validateCurrentStorage,
 } from './storage-codec'
 import { clearTimetableRaw, readTimetableRaw, writeTimetableRaw } from './storage-repository'
 import { restoreStorageKey, sameStoredValue } from './storage-safety'
+import { decodeStoredTimetable } from './timetable-compat'
 
 interface LoadedStorage extends TimetableStorageView {
   /** 仅存在于内存中，不会写入 Storage。 */
@@ -28,135 +28,8 @@ interface LoadedStorage extends TimetableStorageView {
   readKind?: Exclude<StorageReadKind, 'io-error'>
 }
 
-function defaultStorage(): TimetableStorage {
-  return {
-    schemaVersion: SCHEMA_VERSION,
-    term: null,
-    courses: [],
-    periodSettings: clonePeriodSettings(DEFAULT_PERIOD_SETTINGS),
-  }
-}
-
-const LEGACY_ROOT_KEYS: Record<number, Set<string>> = {
-  1: new Set(['schemaVersion', 'courses']),
-  2: new Set(['schemaVersion', 'term', 'courses']),
-  3: new Set(['schemaVersion', 'term', 'courses']),
-  4: new Set(['schemaVersion', 'term', 'courses', 'periodSettings']),
-}
-const LEGACY_TERM_KEYS = new Set(['startDate', 'totalWeeks'])
-const LEGACY_COURSE_BASE_KEYS = [
-  'id', 'name', 'day', 'startPeriod', 'endPeriod', 'teacher', 'location',
-  'color', 'createdAt', 'updatedAt',
-]
-const LEGACY_COURSE_KEYS: Record<number, Set<string>> = {
-  1: new Set(LEGACY_COURSE_BASE_KEYS),
-  2: new Set([...LEGACY_COURSE_BASE_KEYS, 'weekMode', 'weeks']),
-  3: new Set([...LEGACY_COURSE_BASE_KEYS, 'weekMode', 'weeks', 'groupId']),
-  4: new Set([...LEGACY_COURSE_BASE_KEYS, 'weekMode', 'weeks', 'groupId']),
-  5: new Set([...LEGACY_COURSE_BASE_KEYS, 'weekMode', 'weeks', 'groupId']),
-}
-const LEGACY_V4_PERIOD_SETTINGS_KEYS = new Set(['durationMinutes', 'breakMinutes', 'periods'])
-const LEGACY_PERIOD_KEYS = new Set(['start', 'end'])
-
-function hasOnlyKeys(value: Record<string, unknown>, allowed: Set<string>): boolean {
-  return Object.keys(value).every((key) => allowed.has(key))
-}
-
 function toWeekMode(v: unknown): WeekMode {
   return v === 'odd' || v === 'even' || v === 'custom' ? v : 'all'
-}
-
-function sanitizeTerm(raw: unknown): TermSettings | null {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
-  const t = raw as Record<string, unknown>
-  if (!hasOnlyKeys(t, LEGACY_TERM_KEYS)) return null
-  const startDate = typeof t.startDate === 'string' ? t.startDate : ''
-  const totalWeeks = typeof t.totalWeeks === 'number' ? t.totalWeeks : 0
-  const result = validateTerm({ startDate, totalWeeks })
-  return result.ok ? { startDate, totalWeeks } : null
-}
-
-function sanitizeCourse(raw: unknown, totalWeeks: number, schemaVersion: number, maxPeriod: number): Course | null {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
-  const c = raw as Record<string, unknown>
-  const allowedKeys = LEGACY_COURSE_KEYS[schemaVersion]
-  if (!allowedKeys || !hasOnlyKeys(c, allowedKeys)) return null
-  if (typeof c.id !== 'string' || !c.id.trim() || c.id !== c.id.trim()) return null
-  if (typeof c.name !== 'string' || !c.name.trim()) return null
-  if (typeof c.day !== 'number' || !Number.isInteger(c.day) || c.day < 1 || c.day > DAYS.length) return null
-  if (typeof c.startPeriod !== 'number' || !Number.isInteger(c.startPeriod) || c.startPeriod < 1 || c.startPeriod > maxPeriod) return null
-  if (typeof c.endPeriod !== 'number' || !Number.isInteger(c.endPeriod) || c.endPeriod < 1 || c.endPeriod > maxPeriod) return null
-  if (c.startPeriod > c.endPeriod) return null
-  if (!isValidCourseColor(c.color)) return null
-  if (!Number.isSafeInteger(c.createdAt) || (c.createdAt as number) < 0) return null
-  if (!Number.isSafeInteger(c.updatedAt) || (c.updatedAt as number) < 0) return null
-  if (c.teacher !== undefined && typeof c.teacher !== 'string') return null
-  if (c.location !== undefined && typeof c.location !== 'string') return null
-
-  let weekMode: WeekMode = 'all'
-  let weeks = totalWeeks > 0 ? expandWeeks('all', totalWeeks) : []
-  if (schemaVersion >= 2) {
-    if (c.weekMode !== 'all' && c.weekMode !== 'odd' && c.weekMode !== 'even' && c.weekMode !== 'custom') return null
-    if (!Array.isArray(c.weeks) || c.weeks.some((week) => !Number.isInteger(week))) return null
-    weekMode = c.weekMode
-    const rawWeeks = c.weeks as number[]
-    if (weekMode === 'custom') {
-      weeks = normalizeWeeks(rawWeeks, totalWeeks)
-      if (
-        !weeks.length ||
-        weeks.length !== rawWeeks.length ||
-        weeks.some((week, index) => week !== rawWeeks[index])
-      ) return null
-    } else {
-      const expectedWeeks = expandWeeks(weekMode, totalWeeks)
-      const legacyAllWeeksSentinel = weekMode === 'all' && rawWeeks.length === 0
-      if (
-        !legacyAllWeeksSentinel &&
-        (rawWeeks.length !== expectedWeeks.length || rawWeeks.some((week, index) => week !== expectedWeeks[index]))
-      ) return null
-      weeks = expectedWeeks
-    }
-  }
-  const groupId =
-    schemaVersion >= 3
-      ? typeof c.groupId === 'string' && c.groupId.trim()
-        ? c.groupId
-        : ''
-      : c.id
-  if (!groupId || groupId !== groupId.trim()) return null
-  return {
-    id: c.id,
-    groupId,
-    name: c.name,
-    day: c.day,
-    startPeriod: c.startPeriod,
-    endPeriod: c.endPeriod,
-    teacher: typeof c.teacher === 'string' ? c.teacher : undefined,
-    location: typeof c.location === 'string' ? c.location : undefined,
-    color: c.color,
-    createdAt: c.createdAt as number,
-    updatedAt: c.updatedAt as number,
-    weekMode,
-    weeks,
-  }
-}
-
-function isStrictLegacyRoot(data: Record<string, unknown>, schemaVersion: number): boolean {
-  const allowedKeys = LEGACY_ROOT_KEYS[schemaVersion]
-  return !!allowedKeys && Object.keys(data).length === allowedKeys.size && hasOnlyKeys(data, allowedKeys)
-}
-
-function isStrictV4PeriodSettings(raw: unknown): boolean {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return false
-  const value = raw as Record<string, unknown>
-  return hasOnlyKeys(value, LEGACY_V4_PERIOD_SETTINGS_KEYS)
-    && Array.isArray(value.periods)
-    && value.periods.every((period) => (
-      !!period
-      && typeof period === 'object'
-      && !Array.isArray(period)
-      && hasOnlyKeys(period as Record<string, unknown>, LEGACY_PERIOD_KEYS)
-    ))
 }
 
 function persist(data: TimetableStorage): void {
@@ -179,7 +52,7 @@ function restoreCurrentStorage(previous: TimetableStorage): boolean {
 
 function cloneStorage(data: TimetableStorage): TimetableStorage {
   return {
-    schemaVersion: SCHEMA_VERSION,
+    schemaVersion: TIMETABLE_SCHEMA_VERSION,
     term: data.term ? { ...data.term } : null,
     courses: data.courses.map((course) => ({ ...course, weeks: [...course.weeks] })),
     periodSettings: clonePeriodSettings(data.periodSettings),
@@ -204,114 +77,42 @@ function markLoaded(storage: LoadedStorage, kind: Exclude<StorageReadKind, 'io-e
 }
 
 function load(): TimetableStorageView {
-    const readResult = readTimetableRaw()
-    if (!readResult.ok) throw new Error(readResult.reason)
-    const raw = readResult.value
-    const classification = classifyStorageValue(raw)
-    if (classification.kind === 'missing') {
-      return markLoaded(defaultStorage(), 'missing')
+  const readResult = readTimetableRaw()
+  if (!readResult.ok) throw new Error(readResult.reason)
+  const raw = readResult.value
+  const result = decodeStoredTimetable(raw)
+  const storage = result.data
+  const next = result.next
+  if (!next) return markLoaded(storage, result.kind, result.reason)
+  if (!snapshotCurrentRaw()) {
+    return markLoaded(storage, 'legacy', '无法创建升级前备份，为保护原数据已停止写入')
+  }
+  try {
+    persist(next)
+    const writtenResult = readTimetableRaw()
+    if (!writtenResult.ok) throw new Error(writtenResult.reason)
+    const written = writtenResult.value
+    const checked = validateCurrentStorage(written)
+    if (checked.ok && checked.data && JSON.stringify(checked.data) === JSON.stringify(next)) {
+      return markLoaded(next, 'current')
     }
-    if (classification.kind === 'current') return markLoaded(classification.data, 'current')
-    if (classification.kind === 'corrupt' && (!raw || typeof raw !== 'object' || Array.isArray(raw))) {
-      return markLoaded(defaultStorage(), 'corrupt', `${classification.reason}，为保护原数据已停止写入`)
-    }
-    const data = raw as Record<string, unknown>
-    const schemaVersion =
-      typeof data.schemaVersion === 'number' ? data.schemaVersion : SCHEMA_VERSION
-    const legacySchema = isLegacySchemaVersion(schemaVersion)
-    const legacyRootInvalid = legacySchema && !isStrictLegacyRoot(data, schemaVersion)
-    const term = sanitizeTerm(data.term)
-    const totalWeeks = term ? term.totalWeeks : 0
-    const rawCourses = Array.isArray(data.courses) ? (data.courses as unknown[]) : []
-    const periodCheck = validatePeriodSettings(data.periodSettings)
-    const migratedV4Settings = schemaVersion === 4 && isStrictV4PeriodSettings(data.periodSettings)
-      ? migrateV4PeriodSettings(data.periodSettings)
-      : null
-    const periodSettings = schemaVersion === SCHEMA_VERSION && periodCheck.ok
-      ? clonePeriodSettings(data.periodSettings as PeriodSettings)
-      : migratedV4Settings || clonePeriodSettings(DEFAULT_PERIOD_SETTINGS)
-    const periodSettingsInvalid =
-      (schemaVersion === SCHEMA_VERSION && !periodCheck.ok) || (schemaVersion === 4 && !migratedV4Settings)
-    const maxPeriod = periodSettingsInvalid ? MAX_PERIODS : periodSettings.periods.length
-    const courses: Course[] = []
-    for (const r of rawCourses) {
-      const course = sanitizeCourse(r, totalWeeks, schemaVersion, maxPeriod)
-      if (course) courses.push(course)
-    }
-    const storage: LoadedStorage = { schemaVersion, term, courses, periodSettings }
-
-    if (
-      legacySchema && (
-        legacyRootInvalid ||
-        !Array.isArray(data.courses) ||
-        (
-          schemaVersion >= 2 && (
-            (data.term !== null && !term) ||
-            (!term && rawCourses.length > 0)
-          )
-        ) ||
-        rawCourses.length !== courses.length ||
-        periodSettingsInvalid
-      )
-    ) {
-      return markLoaded(storage, 'corrupt', '旧版课表字段缺失或损坏，为保护原数据已停止写入')
-    }
-
-    if (schemaVersion === SCHEMA_VERSION) {
-      const reason = classification.kind === 'corrupt' ? classification.reason : '字段无效'
-      return markLoaded(storage, 'corrupt', `当前 V5 课表数据缺失或损坏：${reason}，为保护原数据已停止写入`)
-    }
-
-    if (
-      (schemaVersion === 2 || schemaVersion === 3 || schemaVersion === 4) &&
-      (term || rawCourses.length === 0) &&
-      rawCourses.length === courses.length &&
-      !periodSettingsInvalid
-    ) {
-      const migrated: TimetableStorage = {
-        schemaVersion: SCHEMA_VERSION,
-        term,
-        courses: courses.map((course) => ({ ...course, groupId: schemaVersion === 2 ? course.id : course.groupId })),
-        periodSettings: clonePeriodSettings(periodSettings),
-      }
-      const migrationCheck = validateCurrentStorage(migrated)
-      if (!migrationCheck.ok || !migrationCheck.data) {
-        return markLoaded(storage, 'corrupt', `旧版课表无法安全升级：${migrationCheck.reason || '字段无效'}，为保护原数据已停止写入`)
-      }
-      if (!snapshotCurrentRaw()) {
-        return markLoaded(storage, 'legacy', '无法创建升级前备份，为保护原数据已停止写入')
-      }
-      try {
-        persist(migrationCheck.data)
-        const writtenResult = readTimetableRaw()
-        if (!writtenResult.ok) throw new Error(writtenResult.reason)
-        const written = writtenResult.value
-        const checked = validateCurrentStorage(written)
-        if (checked.ok && checked.data && JSON.stringify(checked.data) === JSON.stringify(migrationCheck.data)) {
-          return markLoaded(migrationCheck.data, 'current')
-        }
-      } catch {
-        // 下方统一恢复旧版原数据。
-      }
-      const restored = writeRawAndVerify(raw)
-      return markLoaded(
-        storage,
-        restored ? 'legacy' : 'corrupt',
-        restored
-          ? '旧版课表自动升级未完成，为保护原数据已停止写入'
-          : '旧版课表自动升级失败且无法确认原数据状态，请暂时不要继续操作',
-      )
-    }
-
-    // V1（待设置学期）、无法迁移的旧版或未知更高版本：不降级写回。
-    if (isLegacySchemaVersion(schemaVersion)) return markLoaded(storage, 'legacy')
-    return markLoaded(storage, 'unsupported', `当前课表数据版本为 V${schemaVersion}，此版本小程序无法安全修改`)
+  } catch {
+    // 下方统一恢复旧版原数据。
+  }
+  const restored = writeRawAndVerify(raw)
+  return markLoaded(
+    storage,
+    restored ? 'legacy' : 'corrupt',
+    restored
+      ? '旧版课表自动升级未完成，为保护原数据已停止写入'
+      : '旧版课表自动升级失败且无法确认原数据状态，请暂时不要继续操作',
+  )
 }
 
 function assertWritableStorage(data: TimetableStorageView): asserts data is TimetableStorage {
-  if (data.schemaVersion !== SCHEMA_VERSION) {
+  if (data.schemaVersion !== TIMETABLE_SCHEMA_VERSION) {
     throw new Error(
-      `当前课表数据版本为 V${data.schemaVersion}，此版本小程序仅支持修改 V${SCHEMA_VERSION}。请先完成数据升级或使用更新版本。`,
+      `当前课表数据版本为 V${data.schemaVersion}，此版本小程序仅支持修改 V${TIMETABLE_SCHEMA_VERSION}。请先完成数据升级或使用更新版本。`,
     )
   }
   if ((data as LoadedStorage).storageProblem) throw new Error((data as LoadedStorage).storageProblem)
@@ -338,7 +139,7 @@ function snapshotCurrentRaw(): boolean {
       savedAt: Date.now(),
       export: {
         app: APP_ID,
-        backupVersion: BACKUP_VERSION,
+        backupVersion: TIMETABLE_BACKUP_VERSION,
         exportedAt: new Date().toISOString(),
         data: raw,
       },
@@ -397,7 +198,7 @@ export function getStorageSnapshot(): StorageReadResult<TimetableStorageView> {
   try {
     const data = load()
     const loaded = data as LoadedStorage
-    const kind: Exclude<StorageReadKind, 'io-error'> = loaded.readKind || (data.schemaVersion === SCHEMA_VERSION ? 'current' : 'legacy')
+    const kind: Exclude<StorageReadKind, 'io-error'> = loaded.readKind || (data.schemaVersion === TIMETABLE_SCHEMA_VERSION ? 'current' : 'legacy')
     if (kind === 'unsupported') {
       return { kind, data, raw: data, reason: loaded.storageProblem || '当前数据版本不受支持' }
     }
@@ -457,7 +258,7 @@ export function getTerm(): TermSettings | null {
 
 /** 是否仍为旧数据、需要迁移。 */
 export function needsMigration(): boolean {
-  return load().schemaVersion !== SCHEMA_VERSION
+  return load().schemaVersion !== TIMETABLE_SCHEMA_VERSION
 }
 
 /** 读取全部课程（周次已展开）。 */
@@ -730,7 +531,7 @@ export function applyTerm(term: TermSettings): { ok: boolean; reason?: string; m
     }
   }
 
-  const migrated = current.schemaVersion !== SCHEMA_VERSION
+  const migrated = current.schemaVersion !== TIMETABLE_SCHEMA_VERSION
 
   const newCourses: Course[] = []
   for (const c of current.courses) {
@@ -749,22 +550,19 @@ export function applyTerm(term: TermSettings): { ok: boolean; reason?: string; m
   }
 
   // 校验调整后的全部课程没有冲突。
-  for (let i = 0; i < newCourses.length; i++) {
-    for (let j = i + 1; j < newCourses.length; j++) {
-      if (isOverlapping(newCourses[i], newCourses[j])) {
-        return {
-          ok: false,
-          reason: `调整后「${newCourses[i].name}」与「${newCourses[j].name}」存在时间冲突，未保存`,
-        }
-      }
+  const conflict = firstCourseConflict(newCourses)
+  if (conflict) {
+    return {
+      ok: false,
+      reason: `调整后「${conflict[0].name}」与「${conflict[1].name}」存在时间冲突，未保存`,
     }
   }
 
   const storage: TimetableStorage = {
-    schemaVersion: SCHEMA_VERSION,
+    schemaVersion: TIMETABLE_SCHEMA_VERSION,
     term: { startDate: term.startDate, totalWeeks: term.totalWeeks },
     courses: newCourses,
-    periodSettings: current.schemaVersion === SCHEMA_VERSION
+    periodSettings: current.schemaVersion === TIMETABLE_SCHEMA_VERSION
       ? clonePeriodSettings(current.periodSettings)
       : clonePeriodSettings(DEFAULT_PERIOD_SETTINGS),
   }

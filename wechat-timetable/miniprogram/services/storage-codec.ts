@@ -1,8 +1,17 @@
-import { SCHEMA_VERSION } from '../constants/timetable'
+import { TIMETABLE_SCHEMA_VERSION } from '../constants/timetable'
+import { isLegacySchemaVersion } from '../constants/data-versions'
 import type { Course, PeriodSettings, TermSettings, TimetableStorage } from '../models/course'
-import { isOverlapping } from '../utils/course-validator'
+import { isValidCourseColor, resolveStoredWeeks, registerCourseId, sameCourseGroup, firstCourseConflict } from '../utils/course-data-rules'
 import { clonePeriodSettings, validatePeriodSettings } from '../utils/period-settings'
-import { expandWeeks, normalizeWeeks, validateTerm } from '../utils/term'
+import { validateTerm } from '../utils/term'
+
+export { isValidCourseColor } from '../utils/course-data-rules'
+export {
+  LEGACY_TIMETABLE_SCHEMA_VERSIONS as LEGACY_SCHEMA_VERSIONS,
+  SUPPORTED_TIMETABLE_SCHEMA_VERSIONS as SUPPORTED_SCHEMA_VERSIONS,
+  isLegacySchemaVersion,
+  isSupportedSchemaVersion,
+} from '../constants/data-versions'
 
 export type StorageReadKind =
   | 'missing'
@@ -35,7 +44,6 @@ export type StorageClassification =
   | { kind: 'unsupported'; schemaVersion: number; raw: Record<string, unknown>; reason: string }
   | { kind: 'corrupt'; raw: unknown; reason: string }
 
-const HEX_COLOR = /^#[0-9a-fA-F]{6}$/
 const WEEK_MODES = new Set(['all', 'odd', 'even', 'custom'])
 const ROOT_KEYS = new Set(['schemaVersion', 'term', 'courses', 'periodSettings'])
 const TERM_KEYS = new Set(['startDate', 'totalWeeks'])
@@ -46,16 +54,6 @@ const COURSE_KEYS = new Set([
 const PERIOD_SETTINGS_KEYS = new Set(['durationMinutes', 'breakMinutes', 'firstStart', 'overrides', 'periods'])
 const PERIOD_KEYS = new Set(['start', 'end'])
 const OVERRIDE_KEYS = new Set(['period', 'start', 'durationMinutes'])
-export const LEGACY_SCHEMA_VERSIONS = [1, 2, 3, 4] as const
-export const SUPPORTED_SCHEMA_VERSIONS = [...LEGACY_SCHEMA_VERSIONS, SCHEMA_VERSION] as const
-
-export function isLegacySchemaVersion(value: number): boolean {
-  return (LEGACY_SCHEMA_VERSIONS as readonly number[]).includes(value)
-}
-
-export function isSupportedSchemaVersion(value: number): boolean {
-  return (SUPPORTED_SCHEMA_VERSIONS as readonly number[]).includes(value)
-}
 
 /** 只识别和验证 Storage 值，不访问 wx API，也不执行迁移或写入。 */
 export function classifyStorageValue(raw: unknown): StorageClassification {
@@ -68,7 +66,7 @@ export function classifyStorageValue(raw: unknown): StorageClassification {
     return { kind: 'corrupt', raw, reason: '当前课表数据版本缺失或格式不正确' }
   }
   const schemaVersion = value.schemaVersion as number
-  if (schemaVersion === SCHEMA_VERSION) {
+  if (schemaVersion === TIMETABLE_SCHEMA_VERSION) {
     const checked = validateCurrentStorage(raw)
     return checked.ok && checked.data
       ? { kind: 'current', data: checked.data }
@@ -83,16 +81,8 @@ export function classifyStorageValue(raw: unknown): StorageClassification {
   }
 }
 
-export function isValidCourseColor(value: unknown): value is string {
-  return typeof value === 'string' && HEX_COLOR.test(value)
-}
-
 function hasOnlyKeys(value: Record<string, unknown>, allowed: Set<string>): boolean {
   return Object.keys(value).every((key) => allowed.has(key))
-}
-
-function sameNumbers(a: number[], b: number[]): boolean {
-  return a.length === b.length && a.every((value, index) => value === b[index])
 }
 
 function validateCourse(course: unknown, totalWeeks: number, maxPeriod: number, index: number): string | null {
@@ -115,10 +105,8 @@ function validateCourse(course: unknown, totalWeeks: number, maxPeriod: number, 
   if (!Array.isArray(value.weeks) || value.weeks.some((week) => !Number.isInteger(week))) return `第 ${index + 1} 个课程周次数组无效`
 
   const weeks = value.weeks as number[]
-  const expected = value.weekMode === 'custom'
-    ? normalizeWeeks(weeks, totalWeeks)
-    : expandWeeks(value.weekMode as Course['weekMode'], totalWeeks)
-  if (!expected.length || !sameNumbers(weeks, expected)) return `第 ${index + 1} 个课程周次与模式或学期不一致`
+  const expected = resolveStoredWeeks(value.weekMode as Course['weekMode'], weeks, totalWeeks)
+  if (!expected?.length) return `第 ${index + 1} 个课程周次与模式或学期不一致`
   return null
 }
 
@@ -126,7 +114,7 @@ function validateCourse(course: unknown, totalWeeks: number, maxPeriod: number, 
 export function validateCurrentStorage(raw: unknown): StorageValidationResult {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, reason: '当前课表数据不是有效对象' }
   const value = raw as Record<string, unknown>
-  if (value.schemaVersion !== SCHEMA_VERSION) return { ok: false, reason: `当前课表不是 V${SCHEMA_VERSION} 数据` }
+  if (value.schemaVersion !== TIMETABLE_SCHEMA_VERSION) return { ok: false, reason: `当前课表不是 V${TIMETABLE_SCHEMA_VERSION} 数据` }
   if (!hasOnlyKeys(value, ROOT_KEYS)) return { ok: false, reason: '当前课表根数据包含未知字段' }
 
   const term = value.term as TermSettings | null
@@ -164,34 +152,21 @@ export function validateCurrentStorage(raw: unknown): StorageValidationResult {
   for (let index = 0; index < courses.length; index++) {
     const reason = validateCourse(courses[index], totalWeeks, periodSettings.periods.length, index)
     if (reason) return { ok: false, reason }
-    if (ids.has(courses[index].id)) return { ok: false, reason: `课程包含重复 ID：${courses[index].id}` }
-    ids.add(courses[index].id)
+    if (!registerCourseId(ids, courses[index].id)) return { ok: false, reason: `课程包含重复 ID：${courses[index].id}` }
     const head = groupHeads.get(courses[index].groupId)
     if (!head) groupHeads.set(courses[index].groupId, courses[index])
-    else if (
-      head.name !== courses[index].name ||
-      head.teacher !== courses[index].teacher ||
-      head.location !== courses[index].location ||
-      head.color !== courses[index].color ||
-      head.weekMode !== courses[index].weekMode ||
-      !sameNumbers(head.weeks, courses[index].weeks)
-    ) {
+    else if (!sameCourseGroup(head, courses[index])) {
       return { ok: false, reason: `课程组「${courses[index].name}」的共同信息不一致` }
     }
   }
 
-  for (let i = 0; i < courses.length; i++) {
-    for (let j = i + 1; j < courses.length; j++) {
-      if (isOverlapping(courses[i], courses[j])) {
-        return { ok: false, reason: `课程「${courses[i].name}」与「${courses[j].name}」存在时间冲突` }
-      }
-    }
-  }
+  const conflict = firstCourseConflict(courses)
+  if (conflict) return { ok: false, reason: `课程「${conflict[0].name}」与「${conflict[1].name}」存在时间冲突` }
 
   return {
     ok: true,
     data: {
-      schemaVersion: SCHEMA_VERSION,
+      schemaVersion: TIMETABLE_SCHEMA_VERSION,
       term: term ? { ...term } : null,
       courses: courses.map((course) => ({ ...course, weeks: [...course.weeks] })),
       periodSettings,

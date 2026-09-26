@@ -1,0 +1,554 @@
+[
+  {
+    "name": "course-v1",
+    "readKind": "legacy",
+    "accepted": true,
+    "digest": "08263d4e4c2f725874933998b6613ab971cf633f5401f5a83b78bf94b8f5fc09"
+  },
+  {
+    "name": "course-v1-empty",
+    "readKind": "legacy",
+    "accepted": true,
+    "digest": "9eca216e7ffb328b14089f9c0073a8fa831b87d2e8dfc95edbb2418308d25fca"
+  },
+  {
+    "name": "course-v1-root-extra",
+    "readKind": "corrupt",
+    "accepted": true,
+    "digest": "f047ff4c0b215d7fd1d04965c4c5d4cfc113fe34b8f5083484f8b19a866fba05"
+  },
+  {
+    "name": "course-v1-course-extra",
+    "readKind": "corrupt",
+    "accepted": true,
+    "digest": "eb06d6a38b0cfa549b679cf431dadb9d64e2b71a586eb8679d1f38a830870142"
+  },
+  {
+    "name": "course-v1-blank-optionals",
+    "readKind": "legacy",
+    "accepted": true,
+    "digest": "d423be69bfe16f477949dba1c9b190f4e2566d099bf9a8afb908a5d24dbed3ca"
+  },
+  {
+    "name": "course-v1-bad-period",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "c8107c22e8f7d376add2597aca3afdacb7a89eb08c39671685889c5fe8ecff68"
+  },
+  {
+    "name": "course-v1-bad-timestamp",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "4a9467ac4260d5bae4357d04b82fc42758e29898b23bdc1eff327d5eac96d722"
+  },
+  {
+    "name": "course-v1-duplicate-id",
+    "readKind": "legacy",
+    "accepted": false,
+    "digest": "4fc258fcb9e31864c6a8b8cd77f2526df45169a6287de1c64ffcbbc73e2a8372"
+  },
+  {
+    "name": "course-v1-conflict",
+    "readKind": "legacy",
+    "accepted": false,
+    "digest": "e558f6d6b2415b3c4b05a759a2887faf598b38755d8ef30d56efe7da7829062e"
+  },
+  {
+    "name": "course-v2",
+    "readKind": "current",
+    "accepted": true,
+    "digest": "9cd1e79c855f8e1157ea2d21961239303734e296bc4219f4f6121f8405ea4247"
+  },
+  {
+    "name": "course-v2-empty",
+    "readKind": "current",
+    "accepted": true,
+    "digest": "32746166c02772dd61a96eaa5e0db13d332671a75c93b668f6d8ca9f18a0ef85"
+  },
+  {
+    "name": "course-v2-root-extra",
+    "readKind": "corrupt",
+    "accepted": true,
+    "digest": "967ee676c98d1993453a477f8215ad6c3e514b4c00c0887734f3a41434fa5b65"
+  },
+  {
+    "name": "course-v2-course-extra",
+    "readKind": "corrupt",
+    "accepted": true,
+    "digest": "92b1701c778af82713b59101664925a956b0686b84f899dbc2edb4d3b0d94958"
+  },
+  {
+    "name": "course-v2-blank-optionals",
+    "readKind": "current",
+    "accepted": true,
+    "digest": "3bce6cc8fc70cad8772cd8c3f91459f2858f3bcfd453b22ffbccd6176d9c2921"
+  },
+  {
+    "name": "course-v2-bad-period",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "b344da9b12bfa65dd2df825a10453053f9fa03184079292584a181976b66edca"
+  },
+  {
+    "name": "course-v2-bad-timestamp",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "3aa7b620f81470f0580fd181c01882052dd4b40868706f0c7e0e5f8ff58a68d7"
+  },
+  {
+    "name": "course-v2-duplicate-id",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "a656fabed460a11c44e2de409163657d873e0f0f6e345bfb5e82b37449877a8b"
+  },
+  {
+    "name": "course-v2-conflict",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "003f26797364ae3eb6ba15fa436ade2ee78f943476c8a7e13f7e0f2df0bd3ef9"
+  },
+  {
+    "name": "course-v2-all-empty",
+    "readKind": "current",
+    "accepted": true,
+    "digest": "9cd1e79c855f8e1157ea2d21961239303734e296bc4219f4f6121f8405ea4247"
+  },
+  {
+    "name": "course-v2-odd-valid",
+    "readKind": "current",
+    "accepted": true,
+    "digest": "33f9640aa60fb433548b3522edb6ed6fe594d3799997fed3c06a6ab36b0d83b3"
+  },
+  {
+    "name": "course-v2-custom-unordered",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "bb7043a54c53732c0c867b41ce4f66828f3a14317742a60bcfc8fe40eaa803d0"
+  },
+  {
+    "name": "course-v2-missing-term",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "71c7ff534e6032843bfcfd09a5b088d38cd1f2bac85aacf788d03a0603a59345"
+  },
+  {
+    "name": "course-v2-term-extra",
+    "readKind": "corrupt",
+    "accepted": true,
+    "digest": "7a98a62c1bc78ca424c605b73e302732b133483ef971e4652466cc3db196d87f"
+  },
+  {
+    "name": "course-v3",
+    "readKind": "current",
+    "accepted": true,
+    "digest": "67f8f91c8ab49925cfd0817b449a823cb07de17a981e90c4b85a6efc3be59b6b"
+  },
+  {
+    "name": "course-v3-empty",
+    "readKind": "current",
+    "accepted": true,
+    "digest": "6e8ee6a8f3f6398d0afb7674493d80a6ab694832e1d20ac077e05a517c602231"
+  },
+  {
+    "name": "course-v3-root-extra",
+    "readKind": "corrupt",
+    "accepted": true,
+    "digest": "b928e4385819a07105338b5384c5d3e7147a8a47dbe3c86920f5916ee26697ad"
+  },
+  {
+    "name": "course-v3-course-extra",
+    "readKind": "corrupt",
+    "accepted": true,
+    "digest": "b064c962c5c10ee7171c9a3d141d256d12bb72224fdc247aa9296ba2a7ec1acc"
+  },
+  {
+    "name": "course-v3-blank-optionals",
+    "readKind": "current",
+    "accepted": true,
+    "digest": "27f6a2a1e53e21aaa605c957a06a3cd5a5d125d722758758f5a56b4626d9390d"
+  },
+  {
+    "name": "course-v3-bad-period",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "1f478e70abdfb76a0c622c6d244b34949446c598e897747e9e5992d32953515e"
+  },
+  {
+    "name": "course-v3-bad-timestamp",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "425896d3a8c930563b0472f797be85f57a83bcb7ac3526b6f86d04067b64f0d2"
+  },
+  {
+    "name": "course-v3-duplicate-id",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "2700365748dfb86991f1a7879729e1e13cf97875f9214f4d762803e01154ab33"
+  },
+  {
+    "name": "course-v3-conflict",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "54b3b7666596caa2fda35f16bc91b36575ccc6e0289d8f813601a5a3f8708608"
+  },
+  {
+    "name": "course-v3-all-empty",
+    "readKind": "current",
+    "accepted": true,
+    "digest": "67f8f91c8ab49925cfd0817b449a823cb07de17a981e90c4b85a6efc3be59b6b"
+  },
+  {
+    "name": "course-v3-odd-valid",
+    "readKind": "current",
+    "accepted": true,
+    "digest": "40dd976823857e983db3f6de5e65664e3ca382b9fb2afcc819d485c7d858f139"
+  },
+  {
+    "name": "course-v3-custom-unordered",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "4c783fb3f9895f147b1ea55a1370f8af4f9eb0039dbf7b4b2d4d644ff8ce24ad"
+  },
+  {
+    "name": "course-v3-missing-term",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "9b653cb0debda62310ed513152174b69e92a450d2bd635fadea3b7323ff622e9"
+  },
+  {
+    "name": "course-v3-term-extra",
+    "readKind": "corrupt",
+    "accepted": true,
+    "digest": "ebb6296e3ee42a5ba7038ea8a42c68f25f01b532d972b19ecb04f5ff5f8f0594"
+  },
+  {
+    "name": "course-v3-group-mismatch",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "49c969a2f22556c218c89f3980186a3e79f53eb8e50968a92b78a328732aa4a0"
+  },
+  {
+    "name": "course-v4",
+    "readKind": "current",
+    "accepted": true,
+    "digest": "a00f40f4aa17c3de271825cae0659cd6a486fe202837208dcbb2086f970f6369"
+  },
+  {
+    "name": "course-v4-empty",
+    "readKind": "current",
+    "accepted": true,
+    "digest": "014c8f7bbb7bd9396e380845ae97fcb43a82257fa6104daea54335de5cb54864"
+  },
+  {
+    "name": "course-v4-root-extra",
+    "readKind": "corrupt",
+    "accepted": true,
+    "digest": "d94eebfe534a06aa9cd133a57819f240419ed4fd4182558755bb8253748fd232"
+  },
+  {
+    "name": "course-v4-course-extra",
+    "readKind": "corrupt",
+    "accepted": true,
+    "digest": "3c2a4c9d8856141b2aaa066bbbd14ea2e05e66dfca942a5802647d0506ee7e06"
+  },
+  {
+    "name": "course-v4-blank-optionals",
+    "readKind": "current",
+    "accepted": true,
+    "digest": "6fdff350cf5175177c4cf910fce76ae092048e81a239b0f80d383943058ca216"
+  },
+  {
+    "name": "course-v4-bad-period",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "3e0554dd535c0168f25bdcbdc2fe6f9e72be47e1e8013bb8263f47f82d50fafc"
+  },
+  {
+    "name": "course-v4-bad-timestamp",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "caa38fe76982e517dd03962484bffd98bfa9eb8229ee0c905498a0e78e141fbd"
+  },
+  {
+    "name": "course-v4-duplicate-id",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "b9968986f3a058b3e7cba91dc397a21e30d63debb22ebe3e1fd3f78be01a1ead"
+  },
+  {
+    "name": "course-v4-conflict",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "ca8703d31595d940c90c340055aaebe65d323ab6d200cf2dbbb548c1ba8a9ec1"
+  },
+  {
+    "name": "course-v4-all-empty",
+    "readKind": "current",
+    "accepted": true,
+    "digest": "a00f40f4aa17c3de271825cae0659cd6a486fe202837208dcbb2086f970f6369"
+  },
+  {
+    "name": "course-v4-odd-valid",
+    "readKind": "current",
+    "accepted": true,
+    "digest": "e53ee79eef9ab9fb59a07379de87bbbe7d99dbb790c414b72d5d3a3c087d1c92"
+  },
+  {
+    "name": "course-v4-custom-unordered",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "79ec4d9fe415924f18feebf2a56b953a60a16c75ca02a39b98656b2bfdc31ec9"
+  },
+  {
+    "name": "course-v4-missing-term",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "7f56376df1b460e712735597b18294907e9121ab7fc521882a85cbfc621c3ee6"
+  },
+  {
+    "name": "course-v4-term-extra",
+    "readKind": "corrupt",
+    "accepted": true,
+    "digest": "d0c6d23908e43c49da7db66af81bd3b61bb5ed0bb6f09cc17b98c0719fc43899"
+  },
+  {
+    "name": "course-v4-group-mismatch",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "c68de1e38ed253ad37dc323ee9beed53d6a09a943376ead862ac05f887f0131f"
+  },
+  {
+    "name": "course-v5",
+    "readKind": "current",
+    "accepted": true,
+    "digest": "862b9e72d28bd1eb96c36b6158947c35000d31d52c08a8a727ff16b5226b220b"
+  },
+  {
+    "name": "course-v5-empty",
+    "readKind": "current",
+    "accepted": true,
+    "digest": "aaa0690d984ed1a23a0f38841c2245ec47f844ed873426454949942747d6d3ee"
+  },
+  {
+    "name": "course-v5-root-extra",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "90a27c649ccc9b296791cb3cb0c88143ec0be9d6d7cac8ac378ee1b56ecf8d38"
+  },
+  {
+    "name": "course-v5-course-extra",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "ea3ed602b82599d83dd8271c4c88b6f20fadd056dfa71cbd66a4da015aca96ff"
+  },
+  {
+    "name": "course-v5-blank-optionals",
+    "readKind": "current",
+    "accepted": true,
+    "digest": "cff64dde6b5b690c31eeca8ea8c39295fa72223a72f6689b3cb2eec772f69b06"
+  },
+  {
+    "name": "course-v5-bad-period",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "9e062017e9ce943ff6a1d41e4099381366c33095ff49ce583c058eefdf7383b1"
+  },
+  {
+    "name": "course-v5-bad-timestamp",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "b1b4111934ef5c03b78d4be61b3f49102a4caecfcd5b8b341c43cb49f49dd94b"
+  },
+  {
+    "name": "course-v5-duplicate-id",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "885641bb9621e915f7123812c89107d89fb82c1de833193dc8d31e060250f351"
+  },
+  {
+    "name": "course-v5-conflict",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "0ddca5b7270791ca14547b994689c581173e026d5f3175dc682613d4ecff6000"
+  },
+  {
+    "name": "course-v5-all-empty",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "7f54b97fc2a2d7cfb5515cac81c22853a0d19fa3330b45ae6f6fa48213935ead"
+  },
+  {
+    "name": "course-v5-odd-valid",
+    "readKind": "current",
+    "accepted": true,
+    "digest": "1846fb963f61c0254b3c5b12a50a4c437878b38559dbcff1214c2fa32d9095bf"
+  },
+  {
+    "name": "course-v5-custom-unordered",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "d4624af9ff4e40ba763d85446c7cfa5b4338e4f60464e2d6fb614d6413751b66"
+  },
+  {
+    "name": "course-v5-missing-term",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "c7c6bf3073d85e986745ff307539e95e17e5dfdae3f267497cba4d24b7778c25"
+  },
+  {
+    "name": "course-v5-term-extra",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "2f35f02fd6cc8e1da86ff1dd301be1e996cfa3b8d97cbe8ceaeba64126ba1037"
+  },
+  {
+    "name": "course-v5-group-mismatch",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "1264cfd5ff80051ad3b0b7b020c267edc259a2a4d9f14620fd5f54f4c15cbe4c"
+  },
+  {
+    "name": "course-v4-period-extra",
+    "readKind": "corrupt",
+    "accepted": true,
+    "digest": "bfb4c68e606357643df71ae6f5f0a575e358f26d68b8ea8983e03c885739fd67"
+  },
+  {
+    "name": "todo-v1",
+    "readKind": "legacy",
+    "accepted": true,
+    "digest": "9c251f0b5625533b0f889101ff434e6ebf9ac270cedd5c0702bb0d1c412c3f57"
+  },
+  {
+    "name": "todo-v1-empty",
+    "readKind": "legacy",
+    "accepted": true,
+    "digest": "f367d3a9f2967e3c8d520a726e87f3d63713e4c0e8b50b96af8a276480aa4c5d"
+  },
+  {
+    "name": "todo-v1-unfinished",
+    "readKind": "legacy",
+    "accepted": true,
+    "digest": "4be67c60e63ed0ceb09ded52bf63a67342be8bd67bb1af7decb96ddef8b2d07e"
+  },
+  {
+    "name": "todo-v1-duplicate",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "71c149adcddfa1c56e6a8268fc9d470ad1f10d200f5a8b398d53f403fac0a87c"
+  },
+  {
+    "name": "todo-v1-extra",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "7aa7288a74e5bab3d645e86709edeaee60b22b7de28a2bdd0267597af35ecead"
+  },
+  {
+    "name": "todo-v2",
+    "readKind": "legacy",
+    "accepted": true,
+    "digest": "365885cb00aee3757961f8bfb7f5cc78473496f619cf03b9e9198b4448236fc9"
+  },
+  {
+    "name": "todo-v2-empty",
+    "readKind": "legacy",
+    "accepted": true,
+    "digest": "f367d3a9f2967e3c8d520a726e87f3d63713e4c0e8b50b96af8a276480aa4c5d"
+  },
+  {
+    "name": "todo-v2-unfinished",
+    "readKind": "legacy",
+    "accepted": true,
+    "digest": "cee20e247e1584672737b8208b603123abda6727748371441b2be2a1237596ee"
+  },
+  {
+    "name": "todo-v2-duplicate",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "b4652c65da804588fb4b995426dc715d9efad199ad596a7b52f3c612df5a356a"
+  },
+  {
+    "name": "todo-v2-extra",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "3534427ee9bf81c88fbb635efaef75a5b8b0acca8cfcfd4da6e4bc586fe833ff"
+  },
+  {
+    "name": "todo-v3",
+    "readKind": "current",
+    "accepted": true,
+    "digest": "6cccb07549a182acce09b981b37ac92fbbcda752d21159334ba5cb2a38aced40"
+  },
+  {
+    "name": "todo-v3-empty",
+    "readKind": "current",
+    "accepted": true,
+    "digest": "078264c43f7f228c1179cb89be5cf38eb35b284e4fb23cd5bfd1dac828ee3739"
+  },
+  {
+    "name": "todo-v3-unfinished",
+    "readKind": "current",
+    "accepted": true,
+    "digest": "9233a89a55bdb3dd25eb7f5aeab8d6803f41e611045f9198d6c8c21d99178009"
+  },
+  {
+    "name": "todo-v3-duplicate",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "7cd7f5309a087882dcb4b40c5bc74610f4cb3a4f8e346cddb141760f8ecc6cb1"
+  },
+  {
+    "name": "todo-v3-extra",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "d929067c739ec5e6b551a560cd71bf4039d0e74912d5aaae74108fdbdba55da9"
+  },
+  {
+    "name": "course-missing",
+    "readKind": "missing",
+    "accepted": false,
+    "digest": "d7af346ec1b8b3facd119086cdb5d781b7c4acde0650553940f4140a64f22288"
+  },
+  {
+    "name": "course-unknown",
+    "readKind": "unsupported",
+    "accepted": false,
+    "digest": "529e9b8aff3a440de2b5e6eeadb567c6a0604be20127c97e775f5ee380dc6f23"
+  },
+  {
+    "name": "course-corrupt",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "696e2e9347a5553f0c0ce58c307262bbcfb34d462b95b9d73d50817595808631"
+  },
+  {
+    "name": "course-non-object",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "9862fe7b660d4ebe16590a4d7c7001ba63d293dae5ff5d5446dcb0d82eff455c"
+  },
+  {
+    "name": "todo-missing",
+    "readKind": "missing",
+    "accepted": true,
+    "digest": "a322f3e6ee5a5ef59da45e290d75b5a68a517db07e565929da2fe8a4a580362e"
+  },
+  {
+    "name": "todo-unknown",
+    "readKind": "unsupported",
+    "accepted": false,
+    "digest": "5caff5454208436300934a11bbc0bf980b3adcf67998d7223331e75efd62477a"
+  },
+  {
+    "name": "todo-corrupt",
+    "readKind": "unsupported",
+    "accepted": false,
+    "digest": "779b9aacb042450f6a5fe3deab1c4993e6238dd30ee5c7a382841de0dcf0c8fa"
+  },
+  {
+    "name": "todo-non-object",
+    "readKind": "corrupt",
+    "accepted": false,
+    "digest": "cf97aa581216e1cdce77ab76a1cf5390cb9f03777f0f53741c465cf690eafae2"
+  }
+]

@@ -1,3 +1,4 @@
+import { TODO_SCHEMA_VERSION, TODO_BACKUP_VERSION } from '../constants/data-versions'
 import { APP_ID, MAX_BACKUP_BYTES } from '../models/backup'
 import { TODO_RECENT_BACKUP_KEY } from '../models/todo-backup'
 import type { TodoBackupEnvelope, TodoBackupSummary, TodoRestorePreview } from '../models/todo-backup'
@@ -22,7 +23,7 @@ function readCurrent(): { raw: unknown; data: TodoStorage } {
   assertTodoWritable()
   const raw: unknown = wx.getStorageSync(TODO_STORAGE_KEY)
   if (raw === '' || raw === undefined || raw === null) {
-    return { raw, data: { schemaVersion: 3, items: [], dailyNotes: [] } }
+    return { raw, data: { schemaVersion: TODO_SCHEMA_VERSION, items: [], dailyNotes: [] } }
   }
   if (typeof raw === 'object' && raw && 'schemaVersion' in raw && (raw.schemaVersion === 1 || raw.schemaVersion === 2)) {
     throw new Error('请先进入待办页完成旧版数据升级，再使用备份恢复')
@@ -31,7 +32,7 @@ function readCurrent(): { raw: unknown; data: TodoStorage } {
 }
 
 function envelope(data: TodoStorage): TodoBackupEnvelope {
-  return { app: APP_ID, kind: 'todo-journal', backupVersion: 1, exportedAt: new Date().toISOString(), data }
+  return { app: APP_ID, kind: 'todo-journal', backupVersion: TODO_BACKUP_VERSION, exportedAt: new Date().toISOString(), data }
 }
 
 function serialize(value: TodoBackupEnvelope): string {
@@ -47,13 +48,13 @@ export function parseTodoBackup(text: string): TodoBackupEnvelope {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('备份格式无效')
   const value = raw as Record<string, unknown>
   if (value.app !== APP_ID || value.kind !== 'todo-journal') throw new Error('请使用待办与随想备份；课表备份不能在此恢复')
-  if (value.backupVersion !== 1) throw new Error('不支持此待办备份版本')
+  if (value.backupVersion !== TODO_BACKUP_VERSION) throw new Error('不支持此待办备份版本')
   if (Object.keys(value).some((key) => !['app', 'kind', 'backupVersion', 'exportedAt', 'data'].includes(key))) {
     throw new Error('备份包含不支持的字段')
   }
   if (typeof value.exportedAt !== 'string' || !Number.isFinite(Date.parse(value.exportedAt))
     || new Date(value.exportedAt).toISOString() !== value.exportedAt) throw new Error('备份导出时间无效')
-  return { app: APP_ID, kind: 'todo-journal', backupVersion: 1, exportedAt: value.exportedAt, data: validateTodoStorage(value.data) }
+  return { app: APP_ID, kind: 'todo-journal', backupVersion: TODO_BACKUP_VERSION, exportedAt: value.exportedAt, data: validateTodoStorage(value.data) }
 }
 
 function summary(value: TodoBackupEnvelope): TodoBackupSummary {

@@ -1,10 +1,11 @@
+import { TODO_SCHEMA_VERSION } from '../constants/data-versions'
 import type { TodoDailyNote, TodoDraft, TodoItem, TodoLegacyTiming, TodoStorage } from '../models/todo'
 import { restoreStorageKey } from './storage-safety'
 import { formatLocalDate, parseLocalDate } from '../utils/local-date'
 import { assertTodoWritable, todoWriteProblem } from './todo-session'
 
 export const TODO_STORAGE_KEY = 'timetable_todos'
-export const TODO_SCHEMA_VERSION = 3
+export { TODO_SCHEMA_VERSION } from '../constants/data-versions'
 
 export type TodoStorageSnapshot =
   | { kind: 'missing' | 'current'; data: TodoStorage }

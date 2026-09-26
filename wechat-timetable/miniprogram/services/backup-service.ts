@@ -1,27 +1,27 @@
 // services/backup-service.ts
 // 课表数据的导出、导入校验、预览、覆盖、合并与最近自动备份（V5，兼容 V1–V4）。
 
-import type { Course, PeriodSettings, SupportedTimetableStorage, TermSettings, TimetableStorage, WeekMode } from '../models/course'
-import { DEFAULT_PERIOD_SETTINGS, SCHEMA_VERSION } from '../constants/timetable'
+import type { Course, PeriodSettings, TermSettings, TimetableStorage } from '../models/course'
+import type { SupportedTimetableStorage } from '../models/course-legacy'
+import { DEFAULT_PERIOD_SETTINGS, TIMETABLE_SCHEMA_VERSION } from '../constants/timetable'
 import {
   APP_ID,
-  BACKUP_VERSION,
+  TIMETABLE_BACKUP_VERSION,
   MAX_BACKUP_BYTES,
   RECENT_BACKUP_KEY,
 } from '../models/backup'
 import type { ImportPreview, RecentBackup, TimetableBackupEnvelope } from '../models/backup'
 import { getStorage, getStorageProblem, writeStorage } from './course-storage'
 import type { TimetableStorageView } from './storage-codec'
-import { isOverlapping } from '../utils/course-validator'
-import { expandWeeks, normalizeWeeks, validateTerm } from '../utils/term'
+import { validateTerm } from '../utils/term'
 import {
   clonePeriodSettings,
-  migrateV4PeriodSettings,
   samePeriodSettings,
 } from '../utils/period-settings'
-import { isSupportedSchemaVersion, isValidCourseColor, validateCurrentStorage } from './storage-codec'
+import { isSupportedSchemaVersion } from './storage-codec'
 import { courseGroupCount, planCourseGroupMerge } from '../utils/course-groups'
 import { restoreStorageKey, sameStoredValue } from './storage-safety'
+import { decodeBackupTimetable, expandV1CoursesWithTerm } from './timetable-compat'
 
 // ---------- 基础工具 ----------
 
@@ -57,103 +57,12 @@ function isValidDateString(s: string): boolean {
   return date.toISOString() === s
 }
 
-function toWeekMode(v: unknown): WeekMode {
-  return v === 'odd' || v === 'even' || v === 'custom' ? v : 'all'
-}
-
-function sameWeeks(a: number[], b: number[]): boolean {
-  return a.length === b.length && a.every((week, index) => week === b[index])
-}
-
 function sameTerm(a: TermSettings, b: TermSettings): boolean {
   return a.startDate === b.startDate && a.totalWeeks === b.totalWeeks
 }
 
-interface CourseValidationResult {
-  course?: Course
-  reason?: string
-}
-
 function unsupportedStorageReason(schemaVersion: number): string {
-  return `当前课表数据版本为 V${schemaVersion}，此版本小程序仅支持 V${SCHEMA_VERSION}。请使用更新版本处理课表。`
-}
-
-/** 严格校验单门备份课程的基础字段，返回规范化结果（周次在 analyzeBackup 中按学期处理）。 */
-function validateBackupCourse(raw: unknown, schemaVersion: number, maxPeriod: number): CourseValidationResult {
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-    return { reason: '课程不是有效对象' }
-  }
-  const c = raw as Record<string, unknown>
-  if (typeof c.id !== 'string' || !c.id.trim() || c.id !== c.id.trim()) {
-    return { reason: '课程 ID 缺失或格式不正确' }
-  }
-  const groupId = schemaVersion >= 3 ? c.groupId : c.id
-  if (typeof groupId !== 'string' || !groupId.trim() || groupId !== groupId.trim()) {
-    return { reason: '课程组 ID 缺失或格式不正确' }
-  }
-  if (typeof c.name !== 'string' || !c.name.trim()) {
-    return { reason: '课程名称不能为空' }
-  }
-  if (typeof c.day !== 'number' || !Number.isInteger(c.day) || c.day < 1 || c.day > 7) {
-    return { reason: '星期必须是 1–7 的整数' }
-  }
-  if (
-    typeof c.startPeriod !== 'number' ||
-    !Number.isInteger(c.startPeriod) ||
-    c.startPeriod < 1 ||
-    c.startPeriod > maxPeriod
-  ) {
-    return { reason: `开始节次必须是 1–${maxPeriod} 的整数` }
-  }
-  if (
-    typeof c.endPeriod !== 'number' ||
-    !Number.isInteger(c.endPeriod) ||
-    c.endPeriod < 1 ||
-    c.endPeriod > maxPeriod
-  ) {
-    return { reason: `结束节次必须是 1–${maxPeriod} 的整数` }
-  }
-  if (c.startPeriod > c.endPeriod) {
-    return { reason: '开始节次不能晚于结束节次' }
-  }
-  if (!isValidCourseColor(c.color)) {
-    return { reason: '课程颜色必须是六位十六进制颜色' }
-  }
-  if (typeof c.createdAt !== 'number' || !Number.isSafeInteger(c.createdAt) || c.createdAt < 0) {
-    return { reason: '创建时间戳必须是非负安全整数' }
-  }
-  if (typeof c.updatedAt !== 'number' || !Number.isSafeInteger(c.updatedAt) || c.updatedAt < 0) {
-    return { reason: '更新时间戳必须是非负安全整数' }
-  }
-  if (c.teacher !== undefined && typeof c.teacher !== 'string') {
-    return { reason: '教师字段必须是文本' }
-  }
-  if (c.location !== undefined && typeof c.location !== 'string') {
-    return { reason: '教室字段必须是文本' }
-  }
-  const weekMode = toWeekMode(c.weekMode)
-  if (c.weekMode !== undefined && c.weekMode !== weekMode) {
-    return { reason: '课程周次模式无效' }
-  }
-  if (c.weeks !== undefined && (!Array.isArray(c.weeks) || c.weeks.some((w) => !Number.isInteger(w)))) {
-    return { reason: '课程周次数组无效' }
-  }
-  const course: Course = {
-    id: c.id,
-    groupId,
-    name: c.name.trim(),
-    day: c.day,
-    startPeriod: c.startPeriod,
-    endPeriod: c.endPeriod,
-    color: c.color,
-    createdAt: c.createdAt,
-    updatedAt: c.updatedAt,
-    weekMode,
-    weeks: Array.isArray(c.weeks) ? (c.weeks as number[]) : [],
-  }
-  if (typeof c.teacher === 'string' && c.teacher.trim()) course.teacher = c.teacher.trim()
-  if (typeof c.location === 'string' && c.location.trim()) course.location = c.location.trim()
-  return { course }
+  return `当前课表数据版本为 V${schemaVersion}，此版本小程序仅支持 V${TIMETABLE_SCHEMA_VERSION}。请使用更新版本处理课表。`
 }
 
 // ---------- 导出 ----------
@@ -164,11 +73,11 @@ export function exportBackup(): string {
   if (!isSupportedSchemaVersion(storage.schemaVersion)) {
     throw new Error(unsupportedStorageReason(storage.schemaVersion))
   }
-  if (storage.schemaVersion === SCHEMA_VERSION) {
+  if (storage.schemaVersion === TIMETABLE_SCHEMA_VERSION) {
     const storageProblem = getStorageProblem(storage)
     if (storageProblem) throw new Error(storageProblem)
   }
-  if (storage.schemaVersion >= 2 && storage.schemaVersion <= SCHEMA_VERSION) {
+  if (storage.schemaVersion >= 2 && storage.schemaVersion <= TIMETABLE_SCHEMA_VERSION) {
     const termCheck = validateTerm(storage.term)
     if (!termCheck.ok) {
       throw new Error(termCheck.reason || '请先设置有效学期再导出')
@@ -176,7 +85,7 @@ export function exportBackup(): string {
   }
   const envelope: TimetableBackupEnvelope = {
     app: APP_ID,
-    backupVersion: BACKUP_VERSION,
+    backupVersion: TIMETABLE_BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
     data: {
       schemaVersion: storage.schemaVersion,
@@ -204,7 +113,7 @@ function validateEnvelopeObject(obj: unknown): ParseResult {
   if (envelope.app !== APP_ID) {
     return { ok: false, reason: '应用标识不正确，无法识别为本项目备份' }
   }
-  if (envelope.backupVersion !== BACKUP_VERSION) {
+  if (envelope.backupVersion !== TIMETABLE_BACKUP_VERSION) {
     return { ok: false, reason: `不支持的备份版本：${String(envelope.backupVersion)}` }
   }
   if (typeof envelope.exportedAt !== 'string' || !isValidDateString(envelope.exportedAt)) {
@@ -249,169 +158,14 @@ export function analyzeBackup(envelope: TimetableBackupEnvelope, currentSnapshot
     return { ok: false, errors: [parsed.reason || '备份外层结构不正确'] }
   }
   envelope = parsed.envelope
-  const errors: string[] = []
-
-  const schemaVersion = envelope.data.schemaVersion
-  if (!Number.isInteger(schemaVersion)) {
-    errors.push('备份数据版本缺失或格式不正确')
-  } else if (!isSupportedSchemaVersion(schemaVersion)) {
-    errors.push(`不支持的课表数据版本：${schemaVersion}`)
-  }
-
-  let checkedV5: TimetableStorage | undefined
-  if (!errors.length && schemaVersion === SCHEMA_VERSION) {
-    const checked = validateCurrentStorage(envelope.data)
-    if (!checked.ok || !checked.data) {
-      return { ok: false, errors: [`备份 V5 快照无效：${checked.reason || '字段不完整'}`] }
-    }
-    checkedV5 = checked.data
-  }
-
-  // V2–V4 的空课表可尚未设置学期；只要存在课程就必须带有效学期。V1 备份无学期。
-  let term: TermSettings | null = null
-  const needsTerm = schemaVersion === 1
-  if (schemaVersion === SCHEMA_VERSION) {
-    term = checkedV5 ? checkedV5.term : null
-  } else if (schemaVersion === 2 || schemaVersion === 3 || schemaVersion === 4) {
-    const emptyWithoutTerm = envelope.data.term === null
-      && Array.isArray(envelope.data.courses)
-      && envelope.data.courses.length === 0
-    if (!emptyWithoutTerm) {
-      const termCheck = validateTerm(envelope.data.term as TermSettings | null)
-      if (!termCheck.ok) {
-        errors.push(`备份学期设置无效：${termCheck.reason || '缺少学期设置'}`)
-      } else {
-        term = envelope.data.term as TermSettings
-      }
-    } else {
-      term = null
-    }
-  }
-
-  const totalWeeks = term ? term.totalWeeks : 0
-  let periodSettings = clonePeriodSettings(DEFAULT_PERIOD_SETTINGS)
-  if (schemaVersion === SCHEMA_VERSION) {
-    if (checkedV5) periodSettings = clonePeriodSettings(checkedV5.periodSettings)
-  } else if (schemaVersion === 4) {
-    const migrated = migrateV4PeriodSettings(envelope.data.periodSettings)
-    if (!migrated) errors.push('备份课程时间设置无效：无法识别 V4 作息')
-    else periodSettings = migrated
-  }
-  const maxPeriod = periodSettings.periods.length
-
-  const backupCourses: Course[] = []
-  const courseIds = new Set<string>()
-  if (Array.isArray(envelope.data.courses)) {
-    for (let index = 0; index < envelope.data.courses.length; index++) {
-      const rawCourse = envelope.data.courses[index]
-      if (
-        (schemaVersion === 2 || schemaVersion === 3 || schemaVersion === 4 || schemaVersion === SCHEMA_VERSION) &&
-        (!rawCourse ||
-          typeof rawCourse !== 'object' ||
-          Array.isArray(rawCourse) ||
-          !('weekMode' in rawCourse) ||
-          !('weeks' in rawCourse))
-      ) {
-        errors.push(`第 ${index + 1} 门课程缺少周次字段`)
-        break
-      }
-      if (
-        schemaVersion >= 3 &&
-        (!rawCourse || typeof rawCourse !== 'object' || Array.isArray(rawCourse) || !('groupId' in rawCourse))
-      ) {
-        errors.push(`第 ${index + 1} 门课程缺少 V3 课程组字段`)
-        break
-      }
-      const validated = validateBackupCourse(rawCourse, schemaVersion, maxPeriod)
-      if (!validated.course) {
-        errors.push(`第 ${index + 1} 门课程无效：${validated.reason || '字段不完整'}`)
-        break
-      }
-      if (courseIds.has(validated.course.id)) {
-        errors.push(`备份包含重复课程 ID：${validated.course.id}`)
-        break
-      }
-      courseIds.add(validated.course.id)
-
-      // 按学期规范化周次；V1 备份的课程先以"全部周"处理（导入时按所选学期展开）。
-      let course = validated.course
-      if (totalWeeks > 0) {
-        if (course.weekMode === 'custom') {
-          const weeks = normalizeWeeks(course.weeks, totalWeeks)
-          if (!weeks.length || weeks.length !== course.weeks.length || !sameWeeks(weeks, course.weeks)) {
-            errors.push(`课程「${course.name}」的指定周次无效或超出学期范围`)
-            break
-          }
-          course = { ...course, weeks }
-        } else {
-          const expectedWeeks = expandWeeks(course.weekMode, totalWeeks)
-          const legacyAllWeeksSentinel = (
-            schemaVersion >= 2 &&
-            schemaVersion <= 4 &&
-            course.weekMode === 'all' &&
-            course.weeks.length === 0
-          )
-          if (!legacyAllWeeksSentinel && !sameWeeks(course.weeks, expectedWeeks)) {
-            errors.push(`课程「${course.name}」的周次模式与实际上课周次不一致`)
-            break
-          }
-          course = { ...course, weeks: expectedWeeks }
-        }
-      } else if (needsTerm) {
-        course = { ...course, weekMode: 'all', weeks: [] }
-      }
-      backupCourses.push(course)
-    }
-  } else {
-    errors.push('备份课程数据不是数组')
-  }
-
-  // 同一课程组的共同字段必须一致，避免导入后出现无法整体编辑的脏数据。
-  if (!errors.length && schemaVersion >= 3) {
-    const groupHeads = new Map<string, Course>()
-    for (const course of backupCourses) {
-      const head = groupHeads.get(course.groupId)
-      if (!head) {
-        groupHeads.set(course.groupId, course)
-        continue
-      }
-      if (
-        head.name !== course.name ||
-        head.teacher !== course.teacher ||
-        head.location !== course.location ||
-        head.color !== course.color ||
-        head.weekMode !== course.weekMode ||
-        !sameWeeks(head.weeks, course.weeks)
-      ) {
-        errors.push(`课程组「${course.name}」的共同信息不一致`)
-        break
-      }
-    }
-  }
-
-  // 备份内部不得存在冲突课程（星期 + 节次 + 周次三者都重叠）。
-  if (!errors.length) {
-    for (let i = 0; i < backupCourses.length; i++) {
-      for (let j = i + 1; j < backupCourses.length; j++) {
-        if (isOverlapping(backupCourses[i], backupCourses[j])) {
-          errors.push(`备份内部存在冲突：${backupCourses[i].name} 与 ${backupCourses[j].name}`)
-          break
-        }
-      }
-      if (errors.length) break
-    }
-  }
-
-  if (errors.length) return { ok: false, errors }
-
+  const decoded = decodeBackupTimetable(envelope.data)
+  if (!decoded.ok) return decoded
+  const { courses, term, periodSettings, needsTerm } = decoded
   return {
     ok: true,
     errors: [],
-    preview: computePreview(envelope, backupCourses, term, periodSettings, needsTerm, currentSnapshot),
-    courses: backupCourses,
-    term,
-    periodSettings,
-    needsTerm,
+    preview: computePreview(envelope, courses, term, periodSettings, needsTerm, currentSnapshot),
+    courses, term, periodSettings, needsTerm,
   }
 }
 
@@ -488,7 +242,7 @@ function buildRecentBackup(current: TimetableStorage): RecentBackup {
     savedAt: Date.now(),
     export: {
       app: APP_ID,
-      backupVersion: BACKUP_VERSION,
+      backupVersion: TIMETABLE_BACKUP_VERSION,
       exportedAt: new Date().toISOString(),
       data: {
         schemaVersion: current.schemaVersion,
@@ -568,7 +322,7 @@ function getCurrentForMutation(): { current?: TimetableStorage; reason?: string 
   const current = getStorage()
   const problem = getStorageProblem(current)
   if (problem) return { reason: problem }
-  if (current.schemaVersion !== SCHEMA_VERSION) return { reason: unsupportedStorageReason(current.schemaVersion) }
+  if (current.schemaVersion !== TIMETABLE_SCHEMA_VERSION) return { reason: unsupportedStorageReason(current.schemaVersion) }
   return { current: current as TimetableStorage }
 }
 
@@ -586,16 +340,6 @@ function recoverAfterMutationFailure(current: TimetableStorage): MutationResult 
     return { ok: false, reason: '写入失败，原课表已恢复，自动备份已保留' }
   }
   return { ok: false, reason: '写入失败，无法确认原课表状态；请使用最近自动备份恢复' }
-}
-
-/** V1 备份导入时，把课程按所选学期展开为"全部周"。 */
-function expandV1CoursesWithTerm(courses: Course[], term: TermSettings): Course[] {
-  return courses.map((c) => ({
-    ...c,
-    groupId: c.groupId || c.id,
-    weekMode: 'all' as WeekMode,
-    weeks: expandWeeks('all', term.totalWeeks),
-  }))
 }
 
 function generateImportId(): string {
@@ -627,7 +371,7 @@ export function overwriteFromBackup(envelope: TimetableBackupEnvelope, term?: Te
   }
   try {
     writeStorage({
-      schemaVersion: SCHEMA_VERSION,
+      schemaVersion: TIMETABLE_SCHEMA_VERSION,
       term: targetTerm,
       courses: targetCourses,
       periodSettings: targetPeriodSettings,
@@ -717,7 +461,7 @@ export function mergeFromBackup(envelope: TimetableBackupEnvelope, term?: TermSe
 
   try {
     writeStorage({
-      schemaVersion: SCHEMA_VERSION,
+      schemaVersion: TIMETABLE_SCHEMA_VERSION,
       term: targetTerm,
       courses: result,
       periodSettings: clonePeriodSettings(current.periodSettings),
@@ -773,7 +517,7 @@ export function restoreRecentBackup(): MutationResult {
     targetCourses = backupData.courses
   } else if (
     backupData.schemaVersion >= 2 &&
-    backupData.schemaVersion <= SCHEMA_VERSION &&
+    backupData.schemaVersion <= TIMETABLE_SCHEMA_VERSION &&
     backupData.term === null &&
     backupData.courses.length === 0
   ) {
@@ -787,7 +531,7 @@ export function restoreRecentBackup(): MutationResult {
   }
   try {
     writeStorage({
-      schemaVersion: SCHEMA_VERSION,
+      schemaVersion: TIMETABLE_SCHEMA_VERSION,
       term: targetTerm,
       courses: targetCourses,
       periodSettings: targetPeriodSettings,

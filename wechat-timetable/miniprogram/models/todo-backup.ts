@@ -1,3 +1,4 @@
+import { TODO_BACKUP_VERSION } from '../constants/data-versions'
 import type { TodoStorage } from './todo'
 
 export const TODO_RECENT_BACKUP_KEY = 'timetable_todos_recent_backup'
@@ -5,7 +6,7 @@ export const TODO_RECENT_BACKUP_KEY = 'timetable_todos_recent_backup'
 export interface TodoBackupEnvelope {
   app: string
   kind: 'todo-journal'
-  backupVersion: 1
+  backupVersion: typeof TODO_BACKUP_VERSION
   exportedAt: string
   data: TodoStorage
 }
