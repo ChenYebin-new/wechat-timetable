@@ -2,8 +2,8 @@
 <block wx:else>
 <view class="page">
   <view class="intro">
-    <text class="intro-title">课表设置</text>
-    <text class="intro-desc">管理学期、每日课程时间和本地备份。所有数据仍只保存在当前设备。</text>
+    <text class="intro-title">设置</text>
+    <text class="intro-desc">管理学期、每日课程时间，以及课表、待办与随想的本地备份。</text>
   </view>
 
   <view class="menu-card">
@@ -23,10 +23,18 @@
       <text class="chevron">›</text>
     </view>
     <view class="divider"></view>
-    <view class="menu-row" bindtap="onDataManage" aria-role="button" aria-label="数据管理">
+    <view class="menu-row" bindtap="onDataManage" aria-role="button" aria-label="课表数据管理">
       <view class="menu-copy">
-        <text class="menu-title">数据管理</text>
+        <text class="menu-title">课表数据管理</text>
         <text class="menu-desc">导出、导入与最近自动备份</text>
+      </view>
+      <text class="chevron">›</text>
+    </view>
+    <view class="divider"></view>
+    <view class="menu-row" bindtap="onTodoBackup" aria-role="button" aria-label="待办与随想备份">
+      <view class="menu-copy">
+        <text class="menu-title">待办与随想备份</text>
+        <text class="menu-desc">独立导出、覆盖恢复与撤回</text>
       </view>
       <text class="chevron">›</text>
     </view>

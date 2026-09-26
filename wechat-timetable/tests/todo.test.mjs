@@ -103,6 +103,8 @@ globalThis.Page = (definition) => definitions.push(definition)
 installClock()
 installWx()
 const todoStorage = await import('../miniprogram/services/todo-storage.ts')
+const todoSession = await import('../miniprogram/services/todo-session.ts')
+const todoBackup = await import('../miniprogram/services/todo-backup-service.ts')
 await import('../miniprogram/pages/todo/index.ts')
 const todoPage = definitions[0]
 globalThis.Date = RealDate
@@ -112,6 +114,7 @@ globalThis.setInterval = realSetInterval
 globalThis.clearInterval = realClearInterval
 
 beforeEach(() => {
+  todoSession.unsavedDailyNotes.clear()
   setClock(2026, 9, 16)
   timers = new Map()
   timerId = 0
@@ -134,7 +137,7 @@ afterEach(() => {
   try {
     failWrites = 0
     failReads = false
-    for (const context of contexts) context.onHide()
+    for (const context of contexts) { context.onHide(); todoSession.setGoalDraft(context, null) }
     assert.equal(timers.size, 0, 'all page and autosave timers must be cleared on hide')
   } finally {
     contexts.clear()
@@ -182,6 +185,126 @@ function pageContext(show = true) {
   if (show) context.onShow()
   return context
 }
+
+test('目标脏状态跨 Tab 阻止恢复，保存或取消后解除', () => {
+  seed()
+  const page = pageContext()
+  const backupText = todoBackup.exportTodoBackup()
+  page.onAdd()
+  page.onTitle(input('未保存目标'))
+  page.onHide()
+  assert.equal(todoSession.firstTodoDraftDate(), '2026-09-16')
+  assert.throws(() => todoBackup.restoreTodoBackup(todoBackup.previewTodoBackup(backupText)), /未保存/)
+  todoSession.requestTodoDraft()
+  page.onShow()
+  assert.equal(page.data.selectedDate, '2026-09-16')
+  assert.equal(page.data.title, '未保存目标')
+  page.onSaveGoal()
+  assert.equal(todoSession.firstTodoDraftDate(), '')
+  page.onAdd()
+  page.onTitle(input('不要了'))
+  page.onCancelEditor()
+  assert.equal(todoSession.firstTodoDraftDate(), '')
+})
+
+test('确认放弃旧目标并切换编辑对象后，不残留阻止恢复的脏状态', () => {
+  seed([todoItem(), todoItem({ id: 'second', title: '另一个目标' })])
+  const page = pageContext()
+  page.editGoal('todo-1')
+  page.onTitle(input('尚未保存的修改'))
+  page.editGoal('second')
+  modals.at(-1).success({ confirm: true })
+  assert.equal(page.data.editorId, 'second')
+  assert.equal(todoSession.firstTodoDraftDate(), '')
+})
+
+test('触摸放弃按钮后取消手势不会永久暂停随想保存', () => {
+  seed()
+  const page = pageContext()
+  page.onDailyNoteInput(input('继续保留的草稿'))
+  page.onPrepareDiscardNote()
+  page.onCancelDiscardNote()
+  assert.equal(stored().dailyNotes[0].content, '继续保留的草稿')
+  assert.equal(page.data.dailyNoteDirty, false)
+})
+
+test('放弃随想取消计时器并保护已保存原文，取消放弃则继续保存', () => {
+  seed([], [{ date: '2026-09-16', content: '原文\n', updatedAt: 1 }])
+  const page = pageContext()
+  page.onDailyNoteInput(input('新草稿'))
+  page.onPrepareDiscardNote()
+  page.onDailyNoteBlur()
+  advance(600)
+  assert.equal(stored().dailyNotes[0].content, '原文\n')
+  page.onDiscardDailyNote()
+  const dialog = modals.at(-1)
+  dialog.success({ confirm: true })
+  dialog.complete()
+  assert.equal(page.data.dailyNote, '原文\n')
+  assert.equal(page.data.dailyNoteDirty, false)
+  assert.equal(todoSession.firstTodoDraftDate(), '')
+  advance(600)
+  assert.equal(stored().dailyNotes[0].content, '原文\n')
+  page.onDailyNoteInput(input('继续写'))
+  page.onDiscardDailyNote()
+  modals.at(-1).success({ confirm: false })
+  modals.at(-1).complete()
+  assert.equal(stored().dailyNotes[0].content, '继续写')
+})
+
+test('随想草稿保存失败时可返回原日处理，主动放弃解除恢复拦截', () => {
+  seed()
+  const page = pageContext()
+  choose(page, '2026-09-10')
+  page.onDailyNoteInput(input('保留草稿'))
+  failWrites = 1
+  page.onHide()
+  assert.equal(todoSession.firstTodoDraftDate(), '2026-09-10')
+  todoSession.requestTodoDraft()
+  page.onShow()
+  assert.equal(page.data.dailyNote, '保留草稿')
+  page.onDiscardDailyNote()
+  modals.at(-1).success({ confirm: true })
+  modals.at(-1).complete()
+  assert.equal(todoSession.firstTodoDraftDate(), '')
+})
+
+test('恢复后返回缓存待办页关闭旧编辑器并重建目标、随想和月历', () => {
+  seed([todoItem()], [{ date: '2026-09-16', content: '恢复内容', updatedAt: 1 }])
+  const backupText = todoBackup.exportTodoBackup()
+  seed([todoItem({ id: 'old', title: '旧目标' })])
+  const page = pageContext()
+  page.onToggleCalendar()
+  page.editGoal('old') // 未修改，不是未保存草稿。
+  page.onHide()
+  todoBackup.restoreTodoBackup(todoBackup.previewTodoBackup(backupText))
+  page.onShow()
+  assert.equal(page.data.editorOpen, false)
+  assert.equal(page.data.visibleItems[0].id, 'todo-1')
+  assert.equal(page.data.dailyNote, '恢复内容')
+  assert.equal(page.data.totalCount, 1)
+  assert.equal(page.data.calendarExpanded, true)
+})
+
+test('恢复前遗留的删除确认及自动保存回调失效', () => {
+  seed([todoItem()])
+  const page = pageContext()
+  page.confirmDelete('todo-1')
+  const staleDelete = modals.at(-1)
+  page.onDailyNoteInput(input('旧输入'))
+  const staleAutosave = [...timers.values()].find(timer => timer.at === now + 500).callback
+  page.onHide() // 成功保存，允许恢复。
+  const backup = JSON.parse(todoBackup.exportTodoBackup())
+  backup.data.dailyNotes[0].content = '已恢复'
+  todoBackup.restoreTodoBackup(todoBackup.previewTodoBackup(JSON.stringify(backup)))
+  page.onShow()
+  const before = writes
+  staleDelete.success({ confirm: true })
+  staleAutosave()
+  assert.equal(writes, before)
+  assert.equal(stored().items.length, 1)
+  assert.equal(stored().dailyNotes[0].content, '已恢复')
+})
 
 function confirmLast(confirm) {
   assert.ok(modals.length, 'an explicit confirmation modal is required')
