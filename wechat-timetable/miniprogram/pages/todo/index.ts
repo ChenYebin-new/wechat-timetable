@@ -4,12 +4,15 @@ import { initializeHomeSharing, shareHomeToFriend, shareHomeToTimeline } from '.
 import { formatLocalDate, parseLocalDate } from '../../utils/local-date'
 import { buildTodoCalendar, offsetTodoCalendarMonth } from '../../utils/todo-calendar'
 import type { TodoCalendarDay } from '../../utils/todo-calendar'
+import { unsavedDailyNotes, setGoalDraft, todoRevision, takeRequestedDraftDate } from '../../services/todo-session'
 
 interface TodoView extends TodoItem {
   expired: boolean
 }
 
 interface PageState {
+  revision: number
+  discardingNote: boolean
   visible: boolean
   followingToday: boolean
   noteFocused: boolean
@@ -22,14 +25,12 @@ interface PageState {
 }
 
 const pageStates = new WeakMap<object, PageState>()
-// Failed and pending drafts survive page recreation during this app session.
-const unsavedDailyNotes = new Map<string, string>()
 const WEEKDAYS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
 
 function stateFor(page: object): PageState {
   let state = pageStates.get(page)
   if (!state) {
-    state = { visible: false, followingToday: true, noteFocused: false, noteDate: '', savedNote: '', originalGoal: null, noteTimer: null, midnightTimer: null, goalDates: new Set() }
+    state = { revision: todoRevision(), discardingNote: false, visible: false, followingToday: true, noteFocused: false, noteDate: '', savedNote: '', originalGoal: null, noteTimer: null, midnightTimer: null, goalDates: new Set() }
     pageStates.set(page, state)
   }
   return state
@@ -86,7 +87,20 @@ Page({
 
   onShow() {
     if (this.data.showShareHomePreview) return
-    stateFor(this).visible = true
+    const state = stateFor(this)
+    if (state.revision !== todoRevision()) {
+      this.stopTimers()
+      this.closeEditor()
+      state.revision = todoRevision()
+      state.discardingNote = false
+      this.setData({ dailyNoteDirty: false, dailyNote: '', noteSaveProblem: '', noteSaveState: 'saved' })
+    }
+    const requestedDate = takeRequestedDraftDate()
+    if (requestedDate) {
+      state.followingToday = false
+      this.setData({ selectedDate: requestedDate, calendarMonth: requestedDate.slice(0, 7) })
+    }
+    state.visible = true
     this.checkDayRollover()
     this.scheduleMidnightRefresh()
   },
@@ -99,7 +113,7 @@ Page({
     this.stopTimers()
   },
 
-  onUnload() { this.onHide() },
+  onUnload() { this.onHide(); setGoalDraft(this, null) },
 
   checkDayRollover() {
     if (this.data.showShareHomePreview) return
@@ -233,16 +247,18 @@ Page({
   },
 
   afterDiscardingGoal(action: () => void) {
+    const revision = todoRevision()
+    const run = () => { if (stateFor(this).revision === revision && todoRevision() === revision) action() }
     const original = stateFor(this).originalGoal
     const dirty = this.data.editorOpen && original !== null
       && (this.data.title !== original.title || this.data.note !== original.note)
-    if (!dirty) { action(); return }
+    if (!dirty) { run(); return }
     wx.showModal({
       title: '目标尚未保存',
       content: '继续操作会放弃尚未保存的目标内容。',
       cancelText: '继续编辑',
       confirmText: '放弃修改',
-      success: (result) => { if (result.confirm) action() },
+      success: (result) => { if (result.confirm) run() },
     })
   },
 
@@ -262,6 +278,7 @@ Page({
         if (!item) throw new Error('这条目标可能已经被删除，请重新读取')
         stateFor(this).originalGoal = { title: item.title, note: item.note }
         this.setData({ editorOpen: true, editorId: id, editorDate: item.taskDate, title: item.title, note: item.note, noteExpanded: !!item.note, goalProblem: '' })
+        this.trackGoalDraft()
       } catch (error) {
         this.setData({ goalProblem: errorMessage(error, '无法读取目标，请重新读取') })
         this.refresh()
@@ -270,13 +287,22 @@ Page({
   },
 
   onTitle(e: WechatMiniprogram.Input) {
-    if (this.data.storageProblem || !this.data.editorOpen) return
+    if (this.data.storageProblem || !this.data.editorOpen || stateFor(this).revision !== todoRevision()) return
     this.setData({ title: e.detail.value, goalProblem: '' })
+    this.trackGoalDraft()
   },
 
   onNote(e: WechatMiniprogram.Input) {
-    if (this.data.storageProblem || !this.data.editorOpen) return
+    if (this.data.storageProblem || !this.data.editorOpen || stateFor(this).revision !== todoRevision()) return
     this.setData({ note: e.detail.value, goalProblem: '' })
+    this.trackGoalDraft()
+  },
+
+  trackGoalDraft() {
+    const original = stateFor(this).originalGoal
+    const dirty = this.data.editorOpen && original !== null
+      && (this.data.title !== original.title || this.data.note !== original.note)
+    setGoalDraft(this, dirty ? this.data.editorDate : null)
   },
 
   onExpandNote() {
@@ -284,6 +310,7 @@ Page({
   },
 
   closeEditor() {
+    setGoalDraft(this, null)
     stateFor(this).originalGoal = null
     this.setData({ editorOpen: false, editorId: '', editorDate: '', title: '', note: '', noteExpanded: false, savingGoal: false, goalProblem: '' })
   },
@@ -295,7 +322,7 @@ Page({
   },
 
   onSaveGoal() {
-    if (this.data.showShareHomePreview || this.data.storageProblem || this.data.savingGoal || !this.data.editorOpen) return
+    if (this.data.showShareHomePreview || this.data.storageProblem || this.data.savingGoal || !this.data.editorOpen || stateFor(this).revision !== todoRevision()) return
     this.setData({ savingGoal: true, goalProblem: '' })
     try {
       const editing = !!this.data.editorId
@@ -310,7 +337,7 @@ Page({
   },
 
   onToggle(e: WechatMiniprogram.TouchEvent) {
-    if (this.data.showShareHomePreview || this.data.storageProblem) return
+    if (this.data.showShareHomePreview || this.data.storageProblem || stateFor(this).revision !== todoRevision()) return
     try {
       toggleTodo(e.currentTarget.dataset.id as string)
       this.checkDayRollover()
@@ -320,9 +347,11 @@ Page({
   onMore(e: WechatMiniprogram.TouchEvent) {
     if (this.data.showShareHomePreview || this.data.storageProblem) return
     const id = e.currentTarget.dataset.id as string
+    const revision = todoRevision()
     wx.showActionSheet({
       itemList: ['编辑', '删除'],
       success: (result) => {
+        if (todoRevision() !== revision) return
         if (result.tapIndex === 0) this.editGoal(id)
         else if (result.tapIndex === 1) this.confirmDelete(id)
       },
@@ -331,12 +360,13 @@ Page({
 
   confirmDelete(id: string) {
     if (this.data.showShareHomePreview || this.data.storageProblem) return
+    const revision = todoRevision()
     wx.showModal({
       title: '删除目标',
       content: '确定删除这条目标吗？删除后无法恢复。',
       confirmColor: '#e64340',
       success: (result) => {
-        if (!result.confirm || this.data.storageProblem) return
+        if (!result.confirm || this.data.storageProblem || todoRevision() !== revision) return
         try {
           removeTodo(id)
           if (this.data.editorId === id) this.closeEditor()
@@ -353,7 +383,7 @@ Page({
   },
 
   onDailyNoteInput(e: WechatMiniprogram.Input) {
-    if (this.data.showShareHomePreview || this.data.storageProblem || !this.data.selectedDate) return
+    if (this.data.showShareHomePreview || this.data.storageProblem || !this.data.selectedDate || stateFor(this).revision !== todoRevision()) return
     const eventDate = e.currentTarget?.dataset.date as string | undefined
     if (eventDate && eventDate !== this.data.selectedDate) return
     const state = stateFor(this)
@@ -366,9 +396,10 @@ Page({
     else unsavedDailyNotes.delete(date)
     this.setData({ dailyNote: content, dailyNoteDirty: dirty, noteSaveState: dirty ? 'dirty' : 'saved', noteStatusLabel: dirty ? '未保存' : content ? '已保存' : '自动保存', noteSaveProblem: '' })
     if (dirty && state.visible) {
+      const revision = todoRevision()
       state.noteTimer = setTimeout(() => {
         state.noteTimer = null
-        if (state.visible && state.noteDate === date) this.flushDailyNote()
+        if (state.visible && state.noteDate === date && todoRevision() === revision) this.flushDailyNote()
       }, 500)
     }
   },
@@ -379,14 +410,55 @@ Page({
 
   onDailyNoteBlur() {
     stateFor(this).noteFocused = false
+    if (stateFor(this).discardingNote) return
     this.flushDailyNote()
+  },
+
+  onPrepareDiscardNote() {
+    const state = stateFor(this)
+    if (state.noteTimer !== null) clearTimeout(state.noteTimer)
+    state.noteTimer = null
+    state.discardingNote = true
+  },
+
+  onCancelDiscardNote() {
+    stateFor(this).discardingNote = false
+    this.flushDailyNote()
+  },
+
+  onDiscardDailyNote() {
+    if (!this.data.dailyNoteDirty || stateFor(this).revision !== todoRevision()) {
+      stateFor(this).discardingNote = false
+      return
+    }
+    this.onPrepareDiscardNote()
+    const state = stateFor(this)
+    const date = state.noteDate
+    const content = this.data.dailyNote
+    const revision = todoRevision()
+    wx.showModal({
+      title: '放弃随想修改',
+      content: '只放弃尚未保存的修改，已保存的随想会保留。',
+      confirmText: '放弃修改',
+      cancelText: '继续编辑',
+      success: (result) => {
+        if (!result.confirm || todoRevision() !== revision || state.noteDate !== date || this.data.dailyNote !== content) return
+        unsavedDailyNotes.delete(date)
+        this.setData({ dailyNoteDirty: false, noteSaveProblem: '' })
+        this.refresh()
+      },
+      complete: () => {
+        state.discardingNote = false
+        if (state.visible) this.flushDailyNote()
+      },
+    })
   },
 
   flushDailyNote(): boolean {
     const state = stateFor(this)
     if (state.noteTimer !== null) clearTimeout(state.noteTimer)
     state.noteTimer = null
-    if (this.data.showShareHomePreview) return false
+    if (this.data.showShareHomePreview || state.revision !== todoRevision() || state.discardingNote) return false
     if (!this.data.dailyNoteDirty) return true
     if (this.data.storageProblem || !state.noteDate) return false
     const content = unsavedDailyNotes.get(state.noteDate) ?? this.data.dailyNote

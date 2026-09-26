@@ -1,0 +1,27 @@
+@import "../data-manage/index.wxss";
+
+.intro, .footnote {
+  display: block;
+  color: #526963;
+  font-size: 26rpx;
+  line-height: 1.65;
+  margin: 0 4rpx 24rpx;
+}
+.notice {
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+  border-radius: 20rpx;
+  background: #e8f3f1;
+  color: #176c66;
+  font-size: 26rpx;
+  line-height: 1.6;
+}
+.error-box { margin: 0 0 24rpx; }
+.row { gap: 20rpx; align-items: flex-start; }
+.k { flex-shrink: 0; }
+.v { min-width: 0; overflow-wrap: anywhere; text-align: right; }
+.btn { min-height: 88rpx; white-space: normal; line-height: 1.5; padding: 22rpx 20rpx; }
+.page button.btn[disabled] { color: #526963; background: #e7ecea; }
+.input { font-size: 26rpx; }
+.input::placeholder { color: #526963; }
+.preview-card .error-line { margin-top: 16rpx; }

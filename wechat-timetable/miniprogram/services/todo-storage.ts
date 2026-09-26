@@ -1,9 +1,11 @@
+import { TODO_SCHEMA_VERSION } from '../constants/data-versions'
 import type { TodoDailyNote, TodoDraft, TodoItem, TodoLegacyTiming, TodoStorage } from '../models/todo'
 import { restoreStorageKey } from './storage-safety'
 import { formatLocalDate, parseLocalDate } from '../utils/local-date'
+import { assertTodoWritable, todoWriteProblem } from './todo-session'
 
 export const TODO_STORAGE_KEY = 'timetable_todos'
-export const TODO_SCHEMA_VERSION = 3
+export { TODO_SCHEMA_VERSION } from '../constants/data-versions'
 
 export type TodoStorageSnapshot =
   | { kind: 'missing' | 'current'; data: TodoStorage }
@@ -178,7 +180,17 @@ function readRaw(): { ok: true; value: unknown } | { ok: false; reason: string }
   }
 }
 
+/** 严格校验备份中的 V3 数据；不迁移、不规范化、不写盘。 */
+export function validateTodoStorage(raw: unknown): TodoStorage {
+  const decoded = decode(raw)
+  if (decoded.kind !== 'current') {
+    throw new Error('reason' in decoded ? decoded.reason : '备份缺少待办 V3 数据')
+  }
+  return decoded.data
+}
+
 function loadWritable(): { data: TodoStorage; raw: unknown; wasMissing: boolean } {
+  assertTodoWritable()
   const result = readRaw()
   if (!result.ok) throw new Error(result.reason)
   const decoded = decode(result.value)
@@ -187,6 +199,7 @@ function loadWritable(): { data: TodoStorage; raw: unknown; wasMissing: boolean 
 }
 
 function persist(next: TodoStorage, previousRaw: unknown, wasMissing: boolean): void {
+  assertTodoWritable()
   const validated = decode(next)
   if (validated.kind !== 'current') throw new Error('reason' in validated ? validated.reason : '待办数据格式异常')
   try {
@@ -220,6 +233,7 @@ function generateId(): string {
 }
 
 export function getTodoSnapshot(): TodoStorageSnapshot {
+  if (todoWriteProblem()) return { kind: 'io-error', reason: todoWriteProblem() }
   const result = readRaw()
   if (!result.ok) return { kind: 'io-error', reason: result.reason }
   const decoded = decode(result.value)
@@ -228,6 +242,7 @@ export function getTodoSnapshot(): TodoStorageSnapshot {
 
 /** 仅显式迁移写入日期，读取旧版数据不会随当天变化。 */
 export function migrateTodosToV3(date: string): boolean {
+  assertTodoWritable()
   if (!parseLocalDate(date)) throw new Error('迁移日期格式无效')
   const result = readRaw()
   if (!result.ok) throw new Error(result.reason)

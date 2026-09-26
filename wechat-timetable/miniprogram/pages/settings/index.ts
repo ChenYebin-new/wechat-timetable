@@ -24,4 +24,8 @@ Page({
   onDataManage() {
     wx.navigateTo({ url: '/pages/data-manage/index' })
   },
+
+  onTodoBackup() {
+    wx.navigateTo({ url: '/pages/todo-backup/index' })
+  },
 })

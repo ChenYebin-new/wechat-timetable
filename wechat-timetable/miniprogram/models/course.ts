@@ -1,13 +1,13 @@
 // models/course.ts
 // 课程、学期、课程作息与本地存储根数据的数据类型（V5）
 
-/** V1 课程字段（迁移前旧课程，无周次信息）。 */
-export interface CourseV1 {
+/** 所有课程共有的字段，不依赖某一历史版本。 */
+export interface CourseFields {
   id: string;          // 唯一主键
   name: string;        // 课程名称（必填）
   day: number;         // 1=周一 … 7=周日
-  startPeriod: number; // 开始节次，1..9
-  endPeriod: number;   // 结束节次，1..9
+  startPeriod: number; // 开始节次，由当前作息确定上限
+  endPeriod: number;   // 结束节次，由当前作息确定上限
   teacher?: string;    // 教师（可选）
   location?: string;   // 教室（可选）
   color: string;       // 主题色，来自预设色板
@@ -18,15 +18,11 @@ export interface CourseV1 {
 /** 课程周次模式。 */
 export type WeekMode = 'all' | 'odd' | 'even' | 'custom'
 
-/** V2 课程：在 V1 字段基础上增加周次信息。 */
-export interface CourseV2 extends CourseV1 {
+/** 当前课程：每条记录是一个连续时段，groupId 关联同一门课程。 */
+export interface Course extends CourseFields {
   weekMode: WeekMode
-  /** 实际上课周次，升序、去重、非空；旧数据未迁移时可为空表示"每周"。 */
+  /** 已展开、升序且非空的实际上课周次。 */
   weeks: number[]
-}
-
-/** V3 课程：每条记录表示一个连续时段，同一 groupId 表示同一门课程。 */
-export interface Course extends CourseV2 {
   groupId: string
 }
 
@@ -87,44 +83,5 @@ export interface TimetableStorage {
   periodSettings: PeriodSettings
 }
 
-/** V1 旧数据结构（用于迁移识别）。 */
-export interface TimetableStorageV1 {
-  schemaVersion: 1
-  courses: CourseV1[]
-}
-
-/** V2：增加学期与周次。 */
-export interface TimetableStorageV2 {
-  schemaVersion: 2
-  term: TermSettings
-  courses: CourseV2[]
-}
-
-/** V3：增加课程组。 */
-export interface TimetableStorageV3 {
-  schemaVersion: 3
-  term: TermSettings
-  courses: Course[]
-}
-
-/** V4：增加完整课程作息，尚未包含规则锚点。 */
-export interface PeriodSettingsV4 {
-  durationMinutes: number
-  breakMinutes: number
-  periods: PeriodTime[]
-}
-
-export interface TimetableStorageV4 {
-  schemaVersion: 4
-  term: TermSettings
-  courses: Course[]
-  periodSettings: PeriodSettingsV4
-}
-
-export type LegacyTimetableStorage =
-  | TimetableStorageV1
-  | TimetableStorageV2
-  | TimetableStorageV3
-  | TimetableStorageV4
-
-export type SupportedTimetableStorage = LegacyTimetableStorage | TimetableStorage
+// 保留历史类型的导入兼容；业务模型不再继承历史类型。
+export type { CourseV1, CourseV2, TimetableStorageV1, TimetableStorageV2, TimetableStorageV3, TimetableStorageV4, PeriodSettingsV4, LegacyTimetableStorage, SupportedTimetableStorage } from './course-legacy'

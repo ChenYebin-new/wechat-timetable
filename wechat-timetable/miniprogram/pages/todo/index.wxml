@@ -223,6 +223,7 @@ FINISH: 行为与项目检查通过，有限视觉验收发现的问题修复或
     <text class="inline-problem">{{noteSaveProblem}}</text>
     <button class="plain-button retry-button" bindtap="onRetryDailyNote" disabled="{{!!storageProblem || noteSaveState === 'saving'}}" hover-class="control-pressed" aria-disabled="{{!!storageProblem || noteSaveState === 'saving'}}" aria-label="重试保存当日随想">重试保存</button>
   </view>
+  <button wx:if="{{dailyNoteDirty}}" class="plain-button retry-button" bindtouchstart="onPrepareDiscardNote" bindtouchmove="onCancelDiscardNote" bindtouchcancel="onCancelDiscardNote" bindtap="onDiscardDailyNote" aria-label="放弃尚未保存的随想修改">放弃修改</button>
   <text class="expiry-hint">未完成目标次日过期，历史记录仍保留</text>
 </view>
 </block>

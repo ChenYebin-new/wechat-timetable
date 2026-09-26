@@ -1,0 +1,52 @@
+<share-home-preview wx:if="{{showShareHomePreview}}" />
+<block wx:else>
+<view class="page">
+  <text class="intro">独立备份所有日期的目标与随想。课表请到“课表数据管理”备份。</text>
+  <view wx:if="{{draftDate}}" class="notice" aria-role="alert">
+    <text>{{draftDate}} 有尚未保存的编辑。导出只包含已保存内容；恢复前请先保存或放弃修改。</text>
+    <button class="btn btn-secondary" bindtap="onReturnToTodo">返回待办处理</button>
+  </view>
+  <view wx:if="{{writeProblem}}" class="error-box" aria-role="alert"><text class="error-line">{{writeProblem}}</text></view>
+  <view wx:if="{{problem}}" class="error-box" aria-role="alert"><text class="error-line">{{problem}}</text></view>
+
+  <view class="card">
+    <text class="card-title">导出备份</text>
+    <text class="card-desc">复制全部已保存的目标与随想，粘贴到你信任的位置保存。备份含个人记录，不包含课表。</text>
+    <button class="btn btn-primary" bindtap="onExport" disabled="{{busy || !!writeProblem}}">复制待办与随想 JSON</button>
+  </view>
+
+  <view class="card">
+    <text class="card-title">导入备份</text>
+    <text class="card-desc">粘贴完整备份，先查看记录范围，再确认覆盖。本次会替换所有日期的目标与随想。</text>
+    <textarea class="input" value="{{inputText}}" bindinput="onInput" maxlength="-1" disabled="{{busy}}" placeholder="在此粘贴待办与随想备份 JSON" aria-label="待办与随想备份 JSON" cursor-spacing="32" />
+    <button class="btn btn-secondary" bindtap="onParse" disabled="{{busy || !inputText || !!writeProblem}}">解析并预览</button>
+  </view>
+
+  <view class="card">
+    <text class="card-title">最近恢复前备份</text>
+    <text class="card-desc">只保留最近一次恢复前的数据。恢复它时，也会先备份当前记录，方便撤回。</text>
+    <block wx:if="{{recent}}">
+      <view class="row"><text class="k">备份时间</text><text class="v">{{recent.exportedAt}}</text></view>
+      <view class="row"><text class="k">记录</text><text class="v">{{recent.itemCount}} 个目标 · {{recent.noteCount}} 篇随想</text></view>
+      <view class="row"><text class="k">日期范围</text><text class="v">{{recent.dateRange}}</text></view>
+      <button class="btn btn-secondary" bindtap="onPreviewRecent" disabled="{{busy || !!writeProblem}}">预览最近备份</button>
+    </block>
+    <text wx:elif="{{recentProblem}}" class="error-line" aria-role="alert">{{recentProblem}}</text>
+    <text wx:else class="card-desc">暂无备份。第一次覆盖恢复前，会在这里保存当前数据。</text>
+  </view>
+
+  <view wx:if="{{preview}}" class="card preview-card">
+    <text class="card-title">{{previewSource === 'recent' ? '最近备份预览' : '导入预览'}}</text>
+    <view class="row"><text class="k">导出时间</text><text class="v">{{preview.exportedAt}}</text></view>
+    <view class="row"><text class="k">数据版本</text><text class="v">V3</text></view>
+    <view class="row"><text class="k">目标</text><text class="v">{{preview.itemCount}} 个 · 已完成 {{preview.completedCount}} 个</text></view>
+    <view class="row"><text class="k">随想</text><text class="v">{{preview.noteCount}} 篇</text></view>
+    <view class="row"><text class="k">日期范围</text><text class="v">{{preview.dateRange}}</text></view>
+    <view class="row"><text class="k">将替换本机</text><text class="v">{{currentItemCount}} 个目标 · {{currentNoteCount}} 篇随想</text></view>
+    <text wx:if="{{preview.itemCount === 0 && preview.noteCount === 0}}" class="error-line">这是空备份，恢复会清空全部已保存目标与随想。</text>
+    <text wx:if="{{draftDate}}" class="error-line">请先返回待办处理未保存内容，再恢复。</text>
+    <button class="btn btn-danger" bindtap="onRestore" loading="{{busy}}" disabled="{{busy || !!draftDate || !!writeProblem}}">{{previewSource === 'recent' ? '恢复最近备份' : '覆盖待办与随想'}}</button>
+  </view>
+  <text class="footnote">本地最近备份也保存在当前设备。需要保留到其他设备时，请复制 JSON 并自行保存。</text>
+</view>
+</block>
