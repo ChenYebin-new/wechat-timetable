@@ -6,25 +6,25 @@
 }
 
 .card {
-  background: #ffffff;
-  border-radius: 20rpx;
+  background: var(--surface);
+  border-radius: var(--radius);
   padding: 26rpx 26rpx 28rpx;
   margin-bottom: 22rpx;
-  box-shadow: 0 8rpx 20rpx rgba(52, 83, 77, 0.06);
+  box-shadow: none;
 }
 
 .card-title {
   display: block;
   font-size: 30rpx;
   font-weight: 700;
-  color: #223;
+  color: var(--text);
 }
 
 .card-desc {
   display: block;
   margin-top: 10rpx;
   font-size: 24rpx;
-  color: #526963;
+  color: var(--muted);
   line-height: 1.5;
 }
 
@@ -35,14 +35,14 @@
   padding: 16rpx;
   box-sizing: border-box;
   font-size: 24rpx;
-  color: #223;
-  background: #f5f8f8;
-  border-radius: 12rpx;
+  color: var(--text);
+  background: var(--input);
+  border-radius: var(--radius-small);
 }
 
 .btn {
   margin-top: 22rpx;
-  border-radius: 44rpx;
+  border-radius: var(--radius);
   font-size: 28rpx;
 }
 
@@ -51,40 +51,40 @@
 }
 
 .btn-primary {
-  color: #ffffff;
-  background: #267d78;
+  color: var(--on-primary);
+  background: var(--primary);
 }
 
 .btn-secondary {
-  color: #176c66;
-  background: #e8f3f1;
+  color: var(--accent);
+  background: var(--soft);
 }
 
 .btn-danger {
-  color: #c0353a;
-  background: #fdeceb;
+  color: var(--danger);
+  background: var(--danger-soft);
 }
 
 .error-box {
   margin-top: 20rpx;
   padding: 16rpx;
-  background: #fdeceb;
-  border-radius: 12rpx;
+  background: var(--danger-soft);
+  border-radius: var(--radius-small);
 }
 
 .error-line {
   display: block;
   font-size: 24rpx;
-  color: #c0353a;
+  color: var(--danger);
   line-height: 1.5;
 }
 
 .merge-warning {
   margin-top: 16rpx;
   padding: 14rpx 16rpx;
-  border-radius: 12rpx;
-  background: #fdf3e7;
-  color: #8a5a1f;
+  border-radius: var(--radius-small);
+  background: var(--warning-soft);
+  color: var(--warning);
   font-size: 23rpx;
   line-height: 1.5;
 }
@@ -98,7 +98,7 @@
   display: flex;
   justify-content: space-between;
   padding: 12rpx 0;
-  border-bottom: 1rpx solid #f0f3f4;
+  border-bottom: 1rpx solid var(--border);
 }
 
 .row:last-child {
@@ -108,13 +108,13 @@
 .k {
   width: 220rpx;
   font-size: 24rpx;
-  color: #526963;
+  color: var(--muted);
 }
 
 .v {
   flex: 1;
   font-size: 25rpx;
-  color: #223;
+  color: var(--text);
   text-align: right;
   word-break: break-all;
 }
@@ -122,15 +122,15 @@
 .term-setup {
   margin-top: 16rpx;
   padding: 16rpx;
-  background: #fdf3e7;
-  border-radius: 12rpx;
+  background: var(--warning-soft);
+  border-radius: var(--radius-small);
 }
 
 .term-setup-title {
   display: block;
   font-size: 23rpx;
   font-weight: 700;
-  color: #9a5b13;
+  color: var(--warning);
   margin-bottom: 8rpx;
 }
 
@@ -143,7 +143,7 @@
 
 .picker-date {
   text-align: right;
-  color: #223;
+  color: var(--text);
   font-size: 25rpx;
 }
 
@@ -161,3 +161,30 @@
 .btn[disabled] {
   opacity: 0.5;
 }
+
+.card { border: 1rpx solid var(--border); }
+.btn { min-height: 48px; line-height: 1.5; padding: 20rpx 16rpx; }
+.btn[disabled] { opacity: 1; background: var(--disabled); color: var(--muted); }
+.input { border: 1rpx solid var(--border); }
+.input::placeholder { color: var(--muted); }
+
+.page { min-height: 0; padding-top: 22rpx; }
+
+/* Backup actions follow the full-width reference composition. */
+.page { min-height:0; padding:22rpx 24rpx calc(36rpx + env(safe-area-inset-bottom)); }
+.card { padding:24rpx; border-radius:24rpx; }
+.theme-campus .card { border-color:transparent; }
+.card-title { font-size:32rpx; }
+.backup-heading { display:flex; align-items:center; gap:24rpx; }
+.backup-icon { width:78rpx; height:78rpx; padding:16rpx; box-sizing:border-box; flex-shrink:0; border-radius:18rpx; }
+.icon-export { background:var(--icon-export-bg); }
+.icon-import { background:var(--icon-import-bg); }
+.icon-recent { background:var(--icon-recent-bg); }
+.backup-heading + .card-desc { margin:-12rpx 0 22rpx 102rpx; }
+button.btn { width:100% !important; margin:20rpx 0 0; padding:22rpx 20rpx; border-radius:18rpx; font-size:28rpx; box-sizing:border-box; min-height:48px; }
+.actions button.btn { width:auto !important; }
+.input { height:174rpx; padding:22rpx; border-radius:18rpx; }
+.backup-empty { display:flex; flex-direction:column; align-items:center; gap:14rpx; padding:30rpx 18rpx; margin-top:20rpx; border:1rpx dashed var(--border); border-radius:18rpx; background:var(--input); text-align:center; }
+.backup-empty image { width:50rpx; height:50rpx; }
+.backup-empty .empty-title { font-size:28rpx; font-weight:600; color:var(--muted); }
+.backup-empty .card-desc { margin:0; }

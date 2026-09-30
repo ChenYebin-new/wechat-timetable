@@ -1,3 +1,4 @@
+import { appearanceData, syncAppearance } from '../../utils/appearance-page'
 import type { PeriodSettings } from '../../models/course'
 import { MAX_PERIODS, MIN_PERIODS } from '../../constants/timetable'
 import { getStorageSnapshot, savePeriodSettings } from '../../services/course-storage'
@@ -16,6 +17,7 @@ const breakOptions = Array.from({ length: 121 }, (_, index) => index)
 
 Page({
   data: {
+    ...appearanceData(),
     settings: null as PeriodSettings | null,
     periods: [] as ReturnType<typeof buildPeriodViews>,
     durationOptions,
@@ -27,8 +29,17 @@ Page({
     showShareHomePreview: false,
   },
 
+  onShow() { syncAppearance(this) },
+
+  onPageScroll(event: WechatMiniprogram.Page.IPageScrollOption) {
+    this.selectComponent('.page-masthead')?.updateScroll(event.scrollTop)
+  },
+
+  onReady() { syncAppearance(this) },
+
   onLoad(options: Record<string, string | undefined>) {
     if (initializeHomeSharing(this, '/pages/period-settings/index', options)) return
+    syncAppearance(this)
     const snapshot = getStorageSnapshot()
     if (snapshot.kind === 'io-error' || snapshot.kind === 'corrupt' || snapshot.kind === 'unsupported') {
       wx.showModal({ title: '无法读取课程时间', content: snapshot.reason, showCancel: false })

@@ -1,7 +1,7 @@
-<view class="share-preview" aria-label="拾课课表，课表与待办">
+<view class="share-preview" style="{{appearanceStyle}}" aria-label="拾课课表，课表与待办">
   <image
     class="share-preview-art"
-    src="/assets/share/timeline-square.jpg"
+    src="{{appearanceIcon}}"
     mode="aspectFill"
     aria-hidden="true"
   />

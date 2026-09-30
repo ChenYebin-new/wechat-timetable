@@ -1,4 +1,5 @@
 <picker
+  style="{{appearanceStyle}}"
   mode="multiSelector"
   range="{{picker.range}}"
   value="{{picker.indices}}"

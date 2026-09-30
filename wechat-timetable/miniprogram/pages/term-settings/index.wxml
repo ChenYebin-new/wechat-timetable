@@ -1,11 +1,13 @@
+<page-meta page-style="{{appearanceStyle}}background:var(--page);background-image:var(--page-texture);font-family:var(--font-family);color:var(--text);" />
 <!-- pages/term-settings/index.wxml -->
 <share-home-preview wx:if="{{showShareHomePreview}}" />
 <block wx:else>
-<view class="page">
+<page-header class="page-masthead" title="学期设置" subtitle="" home="{{false}}" theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}" art="{{appearanceArt}}" />
+<view class="page theme-{{themeId}}" style="{{appearanceStyle}}">
   <view class="card">
     <text class="card-title">第一教学周的星期一</text>
     <text class="card-desc">请选择新学期开始的第一周对应的星期一，教学周从这一天起每 7 天为一周。日期列表仅显示星期一。</text>
-    <monday-picker id="term-monday-picker" value="{{startDate}}" bindchange="onDateChange">
+    <monday-picker theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}" id="term-monday-picker" value="{{startDate}}" bindchange="onDateChange">
       <view class="picker-value">{{startDate}}（周一）</view>
     </monday-picker>
   </view>

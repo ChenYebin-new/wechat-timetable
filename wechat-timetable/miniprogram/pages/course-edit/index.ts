@@ -1,3 +1,4 @@
+import { appearanceData, syncAppearance } from '../../utils/appearance-page'
 // pages/course-edit/index.ts
 import type { Course, CourseDraft, CourseRange, WeekMode } from '../../models/course'
 import { COLOR_PALETTE, DAYS, WEEK_MODES } from '../../constants/timetable'
@@ -14,6 +15,8 @@ import { expandWeeks, rangeWeeks } from '../../utils/term'
 import { cellsToRanges, formatRanges, rangesToCells } from '../../utils/grid-selection'
 import { buildPeriodViews } from '../../utils/period-settings'
 import { initializeHomeSharing, shareHomeToFriend, shareHomeToTimeline } from '../../utils/share'
+
+const legacyCourseColors = new WeakMap<object, string>()
 
 const dayOptions = DAYS
 const weekModeLabels = WEEK_MODES.map((m) => m.label)
@@ -36,6 +39,7 @@ function mutationErrorMessage(error: unknown, fallback: string): string {
 
 Page({
   data: {
+    ...appearanceData(),
     id: '',
     groupId: '',
     groupSize: 0,
@@ -47,10 +51,8 @@ Page({
     sourceWeek: 1,
     ranges: [] as CourseRange[],
     rangeItems: [] as string[],
-    rangeSummary: '',
     dayOptions,
     periodOptions: [] as string[],
-    colors: COLOR_PALETTE,
     weekModeLabels,
     name: '',
     dayIndex: 0,
@@ -58,7 +60,6 @@ Page({
     endIndex: 0,
     teacher: '',
     location: '',
-    color: COLOR_PALETTE[0],
     totalWeeks: 0,
     weekMode: 'all' as WeekMode,
     weekModeIndex: 0,
@@ -67,8 +68,17 @@ Page({
     showShareHomePreview: false,
   },
 
+  onShow() { syncAppearance(this) },
+
+  onPageScroll(event: WechatMiniprogram.Page.IPageScrollOption) {
+    this.selectComponent('.page-masthead')?.updateScroll(event.scrollTop)
+  },
+
+  onReady() { syncAppearance(this) },
+
   onLoad(options: Record<string, string | undefined>) {
     if (initializeHomeSharing(this, '/pages/course-edit/index', options)) return
+    syncAppearance(this)
     const snapshot = getStorageSnapshot()
     if (snapshot.kind === 'io-error' || snapshot.kind === 'corrupt' || snapshot.kind === 'unsupported') {
       wx.showModal({ title: '课表暂时不可编辑', content: snapshot.reason, showCancel: false })
@@ -131,6 +141,7 @@ Page({
   onShareTimeline: shareHomeToTimeline,
 
   applyCourse(course: Course, groupSize: number) {
+    legacyCourseColors.set(this, course.color)
     const weekMode = course.weekMode as WeekMode
     const customWeeks = weekMode === 'custom' ? [...course.weeks] : []
     this.setData({
@@ -143,7 +154,6 @@ Page({
       endIndex: course.endPeriod - 1,
       teacher: course.teacher || '',
       location: course.location || '',
-      color: course.color,
       weekMode,
       weekModeIndex: Math.max(0, WEEK_MODES.findIndex((m) => m.value === weekMode)),
       customWeeks,
@@ -156,7 +166,6 @@ Page({
     this.setData({
       ranges: normalized,
       rangeItems: normalized.map((range) => formatRanges([range])),
-      rangeSummary: formatRanges(normalized),
     })
   },
 
@@ -186,10 +195,6 @@ Page({
 
   onLocation(e: WechatMiniprogram.Input) {
     this.setData({ location: e.detail.value })
-  },
-
-  onColor(e: WechatMiniprogram.TouchEvent) {
-    this.setData({ color: e.currentTarget.dataset.color as string })
   },
 
   onWeekMode(e: WechatMiniprogram.PickerChange) {
@@ -243,7 +248,7 @@ Page({
       endPeriod: range ? range.endPeriod : this.data.endIndex + 1,
       teacher: this.data.teacher.trim() || undefined,
       location: this.data.location.trim() || undefined,
-      color: this.data.color,
+      color: legacyCourseColors.get(this) || COLOR_PALETTE[0],
       weekMode,
       weeks: weekMode === 'custom' ? [...this.data.customWeeks] : [],
     }
@@ -256,6 +261,14 @@ Page({
       showCancel: false,
       confirmText: '知道了',
     })
+  },
+
+  onClearField(event: WechatMiniprogram.TouchEvent) {
+    const field = event.currentTarget.dataset.field
+    if (this.data.saving) return
+    if (field === 'name') this.setData({ name: '' })
+    else if (field === 'teacher') this.setData({ teacher: '' })
+    else if (field === 'location') this.setData({ location: '' })
   },
 
   onSave() {

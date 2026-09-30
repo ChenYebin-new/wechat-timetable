@@ -1,6 +1,8 @@
+<page-meta page-style="{{appearanceStyle}}background:var(--page);background-image:var(--page-texture);font-family:var(--font-family);color:var(--text);" />
 <share-home-preview wx:if="{{showShareHomePreview}}" />
 <block wx:else>
-<view class="page">
+<page-header class="page-masthead" title="待办与随想备份" subtitle="" home="{{false}}" theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}" art="{{appearanceArt}}" />
+<view class="page theme-{{themeId}}" style="{{appearanceStyle}}">
   <text class="intro">独立备份所有日期的目标与随想。课表请到“课表数据管理”备份。</text>
   <view wx:if="{{draftDate}}" class="notice" aria-role="alert">
     <text>{{draftDate}} 有尚未保存的编辑。导出只包含已保存内容；恢复前请先保存或放弃修改。</text>
@@ -10,20 +12,20 @@
   <view wx:if="{{problem}}" class="error-box" aria-role="alert"><text class="error-line">{{problem}}</text></view>
 
   <view class="card">
-    <text class="card-title">导出备份</text>
+    <view class="backup-heading"><image class="backup-icon icon-export" src="{{appearanceIcons.backupExport}}" aria-hidden="true" /><text class="card-title">导出备份</text></view>
     <text class="card-desc">复制全部已保存的目标与随想，粘贴到你信任的位置保存。备份含个人记录，不包含课表。</text>
     <button class="btn btn-primary" bindtap="onExport" disabled="{{busy || !!writeProblem}}">复制待办与随想 JSON</button>
   </view>
 
   <view class="card">
-    <text class="card-title">导入备份</text>
+    <view class="backup-heading"><image class="backup-icon icon-import" src="{{appearanceIcons.backupImport}}" aria-hidden="true" /><text class="card-title">导入备份</text></view>
     <text class="card-desc">粘贴完整备份，先查看记录范围，再确认覆盖。本次会替换所有日期的目标与随想。</text>
     <textarea class="input" value="{{inputText}}" bindinput="onInput" maxlength="-1" disabled="{{busy}}" placeholder="在此粘贴待办与随想备份 JSON" aria-label="待办与随想备份 JSON" cursor-spacing="32" />
     <button class="btn btn-secondary" bindtap="onParse" disabled="{{busy || !inputText || !!writeProblem}}">解析并预览</button>
   </view>
 
   <view class="card">
-    <text class="card-title">最近恢复前备份</text>
+    <view class="backup-heading"><image class="backup-icon icon-recent" src="{{appearanceIcons.backupRecent}}" aria-hidden="true" /><text class="card-title">最近恢复前备份</text></view>
     <text class="card-desc">只保留最近一次恢复前的数据。恢复它时，也会先备份当前记录，方便撤回。</text>
     <block wx:if="{{recent}}">
       <view class="row"><text class="k">备份时间</text><text class="v">{{recent.exportedAt}}</text></view>
@@ -32,7 +34,7 @@
       <button class="btn btn-secondary" bindtap="onPreviewRecent" disabled="{{busy || !!writeProblem}}">预览最近备份</button>
     </block>
     <text wx:elif="{{recentProblem}}" class="error-line" aria-role="alert">{{recentProblem}}</text>
-    <text wx:else class="card-desc">暂无备份。第一次覆盖恢复前，会在这里保存当前数据。</text>
+    <view wx:else class="backup-empty"><image wx:if="{{themeId === 'campus' || themeId === 'paper'}}" src="{{appearanceIcons.backupEmpty}}" aria-hidden="true" /><text class="empty-title">暂无备份</text><text class="card-desc">首次覆盖恢复前，会保留当前数据。</text></view>
   </view>
 
   <view wx:if="{{preview}}" class="card preview-card">

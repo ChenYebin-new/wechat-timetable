@@ -10,7 +10,7 @@ export interface CourseFields {
   endPeriod: number;   // 结束节次，由当前作息确定上限
   teacher?: string;    // 教师（可选）
   location?: string;   // 教室（可选）
-  color: string;       // 主题色，来自预设色板
+  color: string;       // 历史配色兼容字段；当前显示由主题与 groupId 决定
   createdAt: number;   // 创建时间戳
   updatedAt: number;   // 更新时间戳
 }

@@ -1,39 +1,30 @@
+<page-meta page-style="{{appearanceStyle}}background:var(--page);background-image:var(--page-texture);font-family:var(--font-family);color:var(--text);" />
 <!-- pages/timetable/index.wxml -->
 <share-home-preview wx:if="{{showShareHomePreview}}" />
 <block wx:else>
-<view class="page {{selectionMode ? 'selecting' : ''}}">
-  <view class="overview">
-    <text class="overview-text">{{overviewText}}</text>
-    <view class="overview-actions {{selectionMode ? 'actions-disabled' : ''}}">
-      <view class="action-btn" bindtap="onSettings" aria-role="button" aria-label="设置" aria-disabled="{{selectionMode}}">设置</view>
-      <view class="action-btn action-primary" bindtap="onAdd" aria-role="button" aria-label="新增课程" aria-disabled="{{selectionMode}}">＋新增</view>
+<page-header class="page-masthead" title="拾课课表" subtitle="{{termLabel}}" home="{{true}}" theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}" art="{{appearanceArt}}" />
+<view class="page theme-{{themeId}} {{selectionMode ? 'selecting' : ''}}" style="{{appearanceStyle}}">
+  <view class="schedule-toolbar {{selectionMode ? 'actions-disabled' : ''}}">
+    <view wx:if="{{themeId === 'cream' || themeId === 'paper' || themeId === 'swiss'}}" class="term-label" bindtap="onTermSettings" aria-role="button" aria-label="修改学期，{{termLabel}}"><text class="term-text">{{termLabel}}</text><view class="down-mark" /></view>
+    <view class="tool-settings tool-button" bindtap="onSettings" aria-role="button" aria-label="设置" aria-disabled="{{selectionMode}}"><view class="tool-face"><image src="{{appearanceIcons.settings}}" aria-hidden="true" /><text>设置</text></view></view>
+    <view wx:if="{{termReady}}" class="week-bar {{selectionMode ? 'week-bar-disabled' : ''}}">
+      <view class="week-nav {{currentWeek <= 1 ? 'disabled' : ''}}" bindtap="onPrevWeek" aria-role="button" aria-label="上一周" aria-disabled="{{selectionMode || currentWeek <= 1}}"><view class="week-chevron previous" /></view>
+      <text wx:if="{{themeId === 'swiss'}}" class="week-display" aria-hidden="true">{{currentWeek >= 10 ? '' : '0'}}{{currentWeek}}</text>
+      <picker mode="selector" range="{{weekOptions}}" value="{{weekIndex}}" bindchange="onWeekChange" disabled="{{selectionMode}}" aria-label="选择教学周"><view class="week-label"><text>第{{currentWeek}}周</text><view class="down-mark" /></view></picker>
+      <view class="week-nav {{currentWeek >= weekOptions.length ? 'disabled' : ''}}" bindtap="onNextWeek" aria-role="button" aria-label="下一周" aria-disabled="{{selectionMode || currentWeek >= weekOptions.length}}"><view class="week-chevron next" /></view>
     </view>
+    <view class="tool-add tool-button" bindtap="onAdd" aria-role="button" aria-label="新增课程" aria-disabled="{{selectionMode}}"><view class="tool-face"><view class="plus-icon" /><text>新增</text></view></view>
+    <view wx:if="{{themeId !== 'cream'}}" class="tool-term tool-button" bindtap="onTermSettings" aria-role="button" aria-label="修改学期" aria-disabled="{{selectionMode}}"><view class="tool-face"><image src="{{appearanceIcons.term}}" aria-hidden="true" /><text>学期</text></view></view>
   </view>
-
   <view wx:if="{{storageProblem}}" class="term-banner">
     <text class="term-banner-text">{{storageProblem}}</text>
     <view class="term-banner-btn" bindtap="onRetry" aria-role="button" aria-label="重新读取课表">重新读取</view>
   </view>
-
   <view wx:if="{{!storageProblem && (!termReady || needsMigration)}}" class="term-banner">
     <text class="term-banner-text">{{needsMigration ? (termReady ? '旧版课表自动升级未完成，原数据已保留' : '检测到旧版课表数据，设置学期后自动升级') : '请先设置学期，才能按教学周查看课表'}}</text>
     <view wx:if="{{needsMigration && termReady}}" class="term-banner-btn" bindtap="onRetryMigration" aria-role="button" aria-label="重试数据升级">重试</view>
     <view wx:else class="term-banner-btn" bindtap="onTermSettings" aria-role="button" aria-label="设置学期">去设置</view>
   </view>
-
-  <view wx:if="{{termReady}}" class="week-bar {{selectionMode ? 'week-bar-disabled' : ''}}">
-    <view class="week-nav {{currentWeek <= 1 ? 'disabled' : ''}}" bindtap="onPrevWeek" aria-role="button" aria-label="上一周" aria-disabled="{{selectionMode || currentWeek <= 1}}">‹</view>
-    <picker mode="selector" range="{{weekOptions}}" value="{{weekIndex}}" bindchange="onWeekChange" disabled="{{selectionMode}}" aria-label="选择教学周" aria-disabled="{{selectionMode}}">
-      <view class="week-label">第 {{currentWeek}} 周</view>
-    </picker>
-    <view class="week-nav {{currentWeek >= weekOptions.length ? 'disabled' : ''}}" bindtap="onNextWeek" aria-role="button" aria-label="下一周" aria-disabled="{{selectionMode || currentWeek >= weekOptions.length}}">›</view>
-    <view class="term-edit" bindtap="onTermSettings" aria-role="button" aria-label="修改学期" aria-disabled="{{selectionMode}}">学期</view>
-  </view>
-
-  <view wx:if="{{termReady && weekStatus}}" class="week-status">{{weekStatus}}</view>
-
-  <view wx:if="{{termReady && !selectionMode}}" class="selection-hint">左右滑动切换周次；长按空白格 1.2 秒可多选时段</view>
-
   <view wx:if="{{!storageProblem && isEmpty}}" class="empty-notice">
     <view class="empty-copy">
       <text class="empty-title">课表还是空的</text>
@@ -58,7 +49,7 @@
     >
       <swiper-item wx:for="{{weekPanels}}" wx:key="week">
         <view wx:if="{{item.active}}" class="grid-frame">
-          <timetable-grid
+          <timetable-grid class="course-grid" theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}"
             periods="{{periods}}"
             day-slots="{{item.daySlots}}"
             selection-mode="{{selectionMode}}"
@@ -76,7 +67,7 @@
     <view wx:else class="week-static" style="height: {{swiperHeightRpx}}rpx;">
       <block wx:for="{{weekPanels}}" wx:key="week">
         <view wx:if="{{item.week === currentWeek}}" class="grid-frame">
-          <timetable-grid
+          <timetable-grid class="course-grid" theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}"
             periods="{{periods}}"
             day-slots="{{item.daySlots}}"
             selection-mode="{{true}}"
@@ -93,6 +84,8 @@
     </view>
   </view>
 
+  <text wx:if="{{termReady && weekStatus}}" class="week-status">{{weekStatus}}</text>
+  <text wx:if="{{termReady && !selectionMode}}" class="selection-hint">左右滑动切换周次 · 长按空白格多选</text>
   <view wx:if="{{selectionMode}}" class="selection-bar">
     <view class="selection-copy">
       <text class="selection-title">已选 {{selectedCount}} 格 · {{selectedRangeCount}} 个时段</text>

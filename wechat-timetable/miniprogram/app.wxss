@@ -1,8 +1,10 @@
-/**app.wxss**/
+@import "styles/theme-pages.wxss";
 page {
-  background: #f2f5f7;
-  color: #223;
-  font-size: 28rpx;
-  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica,
-    'PingFang SC', 'Hiragino Sans GB', 'Microsoft Yahei', sans-serif;
+  background: var(--page, #F7F3EB); color: var(--text, #2E2923); font-size: 28rpx;
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, 'PingFang SC', 'Microsoft Yahei', sans-serif;
 }
+.page { background: var(--page); color: var(--text); }
+button { font-family: inherit; }
+button[disabled] { opacity: .7; }
+.menu-icon { width: 68rpx; height: 68rpx; padding: 12rpx; box-sizing: border-box; background: var(--soft); border-radius: var(--radius-small); flex-shrink: 0; }
+.page button.save-btn,.page button.apply-button { width: 100% !important; min-height: 48px; padding: 22rpx 24rpx; margin-left: 0; margin-right: 0; border-radius: 20rpx; box-sizing: border-box; line-height: 1.5; }

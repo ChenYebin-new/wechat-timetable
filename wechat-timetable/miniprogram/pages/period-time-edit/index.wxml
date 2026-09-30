@@ -1,6 +1,8 @@
+<page-meta page-style="{{appearanceStyle}}background:var(--page);background-image:var(--page-texture);font-family:var(--font-family);color:var(--text);" />
 <share-home-preview wx:if="{{showShareHomePreview}}" />
 <block wx:else>
-<view class="page" wx:if="{{ready}}">
+<page-header class="page-masthead" title="{{ready ? '编辑第 ' + (index + 1) + ' 节' : '编辑课程时间'}}" subtitle="" home="{{false}}" theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}" art="{{appearanceArt}}" />
+<view class="page theme-{{themeId}}" style="{{appearanceStyle}}" wx:if="{{ready}}">
   <view class="intro">
     <text class="intro-title">{{title}}</text>
     <text class="intro-desc">修改开始时间会自动计算结束时间；修改结束时间会保存为本节专属时长。返回上一级后仍需点击总保存。</text>

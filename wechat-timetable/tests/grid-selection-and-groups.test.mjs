@@ -282,7 +282,7 @@ test('课程卡片按星期分组并复用统一布局信息', () => {
   assert.deepEqual(slots[0].map((item) => item.id), ['monday'])
   assert.deepEqual(slots[6].map((item) => item.id), ['sunday'])
   assert.match(slots[0][0].style, /^top: \d+rpx; height: \d+rpx;$/)
-  assert.match(slots[0][0].textColor, /^#[0-9a-f]{6}$/i)
+  assert.equal(slots[0][0].course, courses[0])
 })
 
 test('课程色板生成的文字前景色均达到 WCAG 4.5:1', () => {

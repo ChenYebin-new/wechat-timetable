@@ -1,3 +1,4 @@
+import { appearanceData, syncAppearance } from '../../utils/appearance-page'
 import type { TodoBackupSummary, TodoRestorePreview } from '../../models/todo-backup'
 import { exportTodoBackup, getRecentTodoBackup, previewRecentTodoBackup, previewTodoBackup, restoreTodoBackup } from '../../services/todo-backup-service'
 import { firstTodoDraftDate, requestTodoDraft, todoWriteProblem } from '../../services/todo-session'
@@ -13,6 +14,7 @@ function displaySummary(value: TodoBackupSummary): TodoBackupSummary {
 
 Page({
   data: {
+    ...appearanceData(),
     showShareHomePreview: false,
     inputText: '',
     preview: null as TodoBackupSummary | null,
@@ -27,12 +29,20 @@ Page({
     busy: false,
   },
 
+  onPageScroll(event: WechatMiniprogram.Page.IPageScrollOption) {
+    this.selectComponent('.page-masthead')?.updateScroll(event.scrollTop)
+  },
+
+  onReady() { syncAppearance(this) },
+
   onLoad(options: Record<string, string | undefined>) {
     if (initializeHomeSharing(this, '/pages/todo-backup/index', options)) return
+    syncAppearance(this)
   },
   onShareAppMessage: shareHomeToFriend,
   onShareTimeline: shareHomeToTimeline,
   onShow() {
+    syncAppearance(this)
     if (this.data.showShareHomePreview) return
     this.clearPreview()
     this.refreshStatus()

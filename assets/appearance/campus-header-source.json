@@ -1,0 +1,10 @@
+{
+  "generator": "Built-in image_gen",
+  "source": "assets/appearance/campus-header-original.png",
+  "runtime": "wechat-timetable/miniprogram/assets/appearance/campus-header.jpg",
+  "dimensions": [
+    1086,
+    362
+  ],
+  "prompt": "Create ONLY a production-ready decorative header illustration asset for the CAMPUS theme in the reference, NOT a UI screenshot. Very wide landscape 3:1 ratio. Original flat cheerful Chinese university campus in warm sunlight: small coral and cream academic building towards the right, leafy green trees at right and along bottom, low green lawn, pale sky blue #EAF7FE background filling edge-to-edge with a few white clouds and small yellow sun. Preserve the reference's inviting illustrated campus aesthetic. The LEFT HALF must be mostly clear very pale blue sky, so separate UI text can later be placed above it; keep main building in right half. No text, letters, numbers, signage, slogans, phone, frame, UI controls, status bar, icons, people, watermark or gradient banding. Clean illustration with very subtle organic shapes, high quality crisp edges. Full rectangular artwork, no transparency required. This is a header asset to be rendered about 375px wide and 120px tall; prioritize clear shapes at that size."
+}

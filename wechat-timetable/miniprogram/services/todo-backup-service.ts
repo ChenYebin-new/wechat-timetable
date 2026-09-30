@@ -6,15 +6,10 @@ import type { TodoStorage } from '../models/todo'
 import { TODO_STORAGE_KEY, validateTodoStorage } from './todo-storage'
 import { restoreStorageKey, sameStoredValue } from './storage-safety'
 import { assertTodoWritable, firstTodoDraftDate, lockTodoWrites, markTodosReplaced, todoWriteProblem } from './todo-session'
+import { utf8ByteLength } from '../utils/utf8'
 
 function checkSize(text: string): void {
-  // 按 Unicode 码点计数，合法代理对 4 字节，孤立代理项 3 字节。
-  let bytes = 0
-  for (const character of text) {
-    const point = character.codePointAt(0) as number
-    bytes += point < 0x80 ? 1 : point < 0x800 ? 2 : point <= 0xffff ? 3 : 4
-    if (bytes > MAX_BACKUP_BYTES) throw new Error('备份超过 1 MiB，无法完整复制或导入；内容未被截断')
-  }
+  if (utf8ByteLength(text) > MAX_BACKUP_BYTES) throw new Error('备份超过 1 MiB，无法完整复制或导入；内容未被截断')
 }
 
 function token(raw: unknown): string { return JSON.stringify(raw) ?? 'undefined' }

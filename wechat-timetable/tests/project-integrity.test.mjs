@@ -244,7 +244,8 @@ test('WXML 中的事件绑定都指向对应 Page 或 Component 处理器', () =
     const bindings = [...markup.matchAll(bindingPattern)].map((match) => match[2])
     if (bindings.length === 0) continue
     const scriptPath = markupPath.slice(0, -extname(markupPath).length) + '.ts'
-    const registrationName = markupPath.includes(`${sep}components${sep}`) ? 'Component' : 'Page'
+    const componentConfig = JSON.parse(readFileSync(markupPath.slice(0, -5) + '.json', 'utf8'))
+    const registrationName = componentConfig.component ? 'Component' : 'Page'
     const handlers = registeredHandlers(scriptPath, registrationName)
     for (const handler of bindings) {
       assert.ok(handlers.has(handler), `${relative(projectRoot, markupPath)} 绑定了不存在的处理器 ${handler}`)

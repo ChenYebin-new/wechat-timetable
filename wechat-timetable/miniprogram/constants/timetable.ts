@@ -64,7 +64,7 @@ export const DEFAULT_PERIOD_SETTINGS: PeriodSettings = {
   ],
 }
 
-/** 蓝绿色系为主的课程颜色板。 */
+/** 历史写入/备份兼容色板；新建记录取首项，当前界面不使用此色板。 */
 export const COLOR_PALETTE = [
   '#0ea5a4',
   '#10b981',

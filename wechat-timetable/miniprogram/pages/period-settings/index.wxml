@@ -1,6 +1,8 @@
+<page-meta page-style="{{appearanceStyle}}background:var(--page);background-image:var(--page-texture);font-family:var(--font-family);color:var(--text);" />
 <share-home-preview wx:if="{{showShareHomePreview}}" />
 <block wx:else>
-<view class="page">
+<page-header class="page-masthead" title="课程时间设置" subtitle="" home="{{false}}" theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}" art="{{appearanceArt}}" />
+<view class="page theme-{{themeId}}" style="{{appearanceStyle}}">
   <view class="rule-card">
     <picker mode="selector" range="{{durationOptions}}" value="{{durationIndex}}" bindchange="onDurationChange" aria-label="选择每节课时长">
       <view class="rule-row">
