@@ -1,14 +1,10 @@
-<!--
-THESIS: 用日期、目标和随想完成每天的轻量记录，不再安排起止时间。
-OWN-WORLD: 灰蓝背景、青绿操作、白色列表、原生选日与可收起月历。
-STORY: 从日期栏或月历选一天，记录目标和随想；切日前保护草稿。
-FIRST VIEWPORT: 日期与月历入口在上，展开时显示七列六行，下面仍是目标和随想。
-FORM: 沿用原生课表/待办双入口，以已批准的每日视图和月历图为依据。
-FINISH: 行为与项目检查通过，有限视觉验收发现的问题修复或报告。
--->
+<page-meta page-style="{{appearanceStyle}}background:var(--page);background-image:var(--page-texture);font-family:var(--font-family);color:var(--text);" />
+<!-- 每日目标、月历与随想共用主题；主题刷新只更新外观，不重置草稿与日期。 -->
 <share-home-preview wx:if="{{showShareHomePreview}}" />
 <block wx:else>
-<view class="page">
+<page-header class="page-masthead" title="待办" subtitle="专注当下 · 逐步前进" home="{{true}}" theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}" art="{{appearanceArt}}" />
+<view class="page theme-{{themeId}} {{calendarExpanded ? 'calendar-open' : ''}}" style="{{appearanceStyle}}">
+  <view class="date-controls">
   <view class="date-navigation">
     <button class="plain-button date-arrow" size="mini" style="width: 88rpx;" bindtap="onPreviousDate" hover-class="control-pressed" aria-label="前一天">
       <view class="chevron previous" aria-hidden="true"></view>
@@ -17,7 +13,7 @@ FINISH: 行为与项目检查通过，有限视觉验收发现的问题修复或
       <picker class="date-picker" style="width: 100%;" mode="date" value="{{selectedDate}}" bindchange="onChooseDate" aria-label="选择待办日期，当前为{{dateLabel}}">
         <view class="date-picker-content">
           <view class="date-heading">
-            <text class="date-label">{{dateLabel}}</text>
+            <text class="date-label">{{shortDateLabel}}</text>
             <view class="date-dropdown" aria-hidden="true"></view>
           </view>
           <text class="weekday-label">{{weekdayLabel}}{{isToday ? ' · 今天' : ''}}</text>
@@ -41,6 +37,9 @@ FINISH: 行为与项目检查通过，有限视觉验收发现的问题修复或
     </button>
   </view>
 
+  </view>
+
+  <text wx:if="{{themeId === 'pixel' && !calendarExpanded}}" class="pixel-weekday">{{weekdayLabel}}{{isToday ? ' · 今天' : ''}}</text>
   <view wx:if="{{calendarExpanded}}" class="calendar-panel">
     <view class="calendar-heading">
       <button class="plain-button calendar-month-arrow" size="mini" style="width: 88rpx;" bindtap="onPreviousMonth" hover-class="control-pressed" aria-label="浏览上个月，不切换待办日期">
@@ -64,7 +63,9 @@ FINISH: 行为与项目检查通过，有限视觉验收发现的问题修复或
     </view>
   </view>
 
+  <view class="goals-section">
   <view class="section-heading">
+    <image wx:if="{{themeId === 'campus' || themeId === 'paper' || themeId === 'pixel'}}" class="section-icon" src="{{appearanceIcons.goal}}" aria-hidden="true" />
     <text class="section-title">{{sectionTitle}}</text>
     <text class="completion-count" aria-label="当日已完成{{completedCount}}个目标，共{{totalCount}}个">已完成 {{completedCount}}/{{totalCount}}</text>
   </view>
@@ -189,7 +190,11 @@ FINISH: 行为与项目检查通过，有限视觉验收发现的问题修复或
     <button class="plain-button retry-button" bindtap="onRetry" hover-class="control-pressed" aria-label="重新读取当日目标">重新读取</button>
   </view>
 
+  </view>
+
+  <view class="journal-section">
   <view class="section-heading reflection-heading">
+    <image wx:if="{{themeId === 'campus' || themeId === 'paper' || themeId === 'pixel'}}" class="section-icon" src="{{appearanceIcons.journal}}" aria-hidden="true" />
     <text class="section-title">随想记录</text>
     <view class="note-status {{noteSaveState}}" aria-label="随想{{noteStatusLabel}}">
       <view wx:if="{{noteSaveState === 'saved'}}" class="status-check" aria-hidden="true"><view class="status-stem"></view></view>
@@ -225,5 +230,6 @@ FINISH: 行为与项目检查通过，有限视觉验收发现的问题修复或
   </view>
   <button wx:if="{{dailyNoteDirty}}" class="plain-button retry-button" bindtouchstart="onPrepareDiscardNote" bindtouchmove="onCancelDiscardNote" bindtouchcancel="onCancelDiscardNote" bindtap="onDiscardDailyNote" aria-label="放弃尚未保存的随想修改">放弃修改</button>
   <text class="expiry-hint">未完成目标次日过期，历史记录仍保留</text>
+  </view>
 </view>
 </block>

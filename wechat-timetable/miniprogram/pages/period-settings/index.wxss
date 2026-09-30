@@ -7,9 +7,9 @@
 .rule-card,
 .count-card,
 .period-card {
-  background: #ffffff;
-  border-radius: 20rpx;
-  box-shadow: 0 8rpx 20rpx rgba(52, 83, 77, 0.06);
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: none;
 }
 
 .rule-card,
@@ -36,7 +36,7 @@
 }
 
 .row-title {
-  color: #263d38;
+  color: var(--text);
   font-size: 28rpx;
   font-weight: 500;
 }
@@ -46,7 +46,7 @@
   align-items: center;
   gap: 12rpx;
   flex-shrink: 0;
-  color: #526963;
+  color: var(--muted);
   font-size: 25rpx;
   font-variant-numeric: tabular-nums;
 }
@@ -57,7 +57,7 @@
   align-items: center;
   justify-content: flex-end;
   gap: 10rpx;
-  color: #526963;
+  color: var(--muted);
   font-size: 25rpx;
   font-variant-numeric: tabular-nums;
 }
@@ -69,27 +69,27 @@
 .custom-badge {
   padding: 4rpx 10rpx;
   border-radius: 10rpx;
-  color: #176c66;
-  background: #e8f3f1;
+  color: var(--accent);
+  background: var(--soft);
   font-size: 19rpx;
   font-weight: 600;
   white-space: nowrap;
 }
 
 .chevron {
-  color: #526963;
+  color: var(--muted);
   font-size: 42rpx;
   font-weight: 300;
 }
 
 .divider {
   height: 2rpx;
-  background: #eef2f1;
+  background: var(--border);
 }
 
 .helper {
   margin: 14rpx 6rpx 0;
-  color: #526963;
+  color: var(--muted);
   font-size: 21rpx;
   line-height: 1.5;
 }
@@ -99,8 +99,8 @@
   display: flex;
   align-items: center;
   overflow: hidden;
-  border: 2rpx solid #d8e3e0;
-  border-radius: 12rpx;
+  border: 2rpx solid var(--border);
+  border-radius: var(--radius-small);
 }
 
 .step-btn,
@@ -114,19 +114,19 @@
 }
 
 .step-btn {
-  color: #267d78;
-  background: #f5faf9;
+  color: var(--accent);
+  background: var(--soft);
   font-size: 34rpx;
 }
 
 .step-btn.disabled {
-  color: #b8c4c1;
+  color: var(--muted);
 }
 
 .step-value {
-  border-right: 2rpx solid #d8e3e0;
-  border-left: 2rpx solid #d8e3e0;
-  color: #263d38;
+  border-right: 2rpx solid var(--border);
+  border-left: 2rpx solid var(--border);
+  color: var(--text);
   font-size: 27rpx;
   font-weight: 600;
 }
@@ -137,9 +137,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #176c66;
-  background: #e8f3f1;
-  border-radius: 18rpx;
+  color: var(--accent);
+  background: var(--soft);
+  border-radius: var(--radius-small);
   font-size: 25rpx;
   font-weight: 600;
 }
@@ -151,13 +151,13 @@
   bottom: 0;
   z-index: 20;
   padding: 18rpx 0 calc(20rpx + env(safe-area-inset-bottom));
-  background: linear-gradient(to bottom, rgba(242, 245, 247, 0), #f2f5f7 28rpx);
+  background: var(--page);
 }
 
 .save-btn {
-  border-radius: 44rpx;
-  background: #267d78;
-  color: #ffffff;
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: var(--on-primary);
   font-size: 30rpx;
 }
 
@@ -166,6 +166,13 @@
 }
 
 .save-btn-pressed {
-  background: #1d5f5b;
+  background: var(--primary);
   transform: scale(0.98);
 }
+
+.rule-card,.count-card,.period-card { border: 1rpx solid var(--border); }
+.stepper { height: auto; }
+.step-btn,.step-value { width: 44px; min-height: 44px; height: auto; }
+.regenerate,.save-btn { min-height: 44px; }
+
+.page { min-height: 0; padding-top: 22rpx; }

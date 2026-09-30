@@ -1,3 +1,4 @@
+import { appearanceData, syncAppearance } from '../../utils/appearance-page'
 // pages/term-settings/index.ts
 import type { TermSettings } from '../../models/course'
 import {
@@ -19,6 +20,7 @@ function errorMessage(error: unknown, fallback: string): string {
 
 Page({
   data: {
+    ...appearanceData(),
     startDate: '',
     totalWeeks: DEFAULT_TOTAL_WEEKS,
     commonWeeks: COMMON_TOTAL_WEEKS,
@@ -28,8 +30,17 @@ Page({
     showShareHomePreview: false,
   },
 
+  onShow() { syncAppearance(this) },
+
+  onPageScroll(event: WechatMiniprogram.Page.IPageScrollOption) {
+    this.selectComponent('.page-masthead')?.updateScroll(event.scrollTop)
+  },
+
+  onReady() { syncAppearance(this) },
+
   onLoad(options: Record<string, string | undefined>) {
     if (initializeHomeSharing(this, '/pages/term-settings/index', options)) return
+    syncAppearance(this)
     try {
       const snapshot = getStorageSnapshot()
       if (snapshot.kind === 'io-error') throw new Error(snapshot.reason)

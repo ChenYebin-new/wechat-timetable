@@ -1,3 +1,4 @@
+import { appearanceData, syncAppearance } from '../../utils/appearance-page'
 // pages/timetable/index.ts
 import type { Course, CourseRange, TermSettings } from '../../models/course'
 import { DAYS } from '../../constants/timetable'
@@ -27,14 +28,18 @@ interface CourseEditorInit {
 
 Page({
   data: {
+    ...appearanceData(),
     weekPanels: [] as WeekPanel[],
     periods: [] as PeriodView[],
     swiperHeightRpx: timetableGridHeightRpx(9),
     isEmpty: true,
     overviewText: '',
+    termLabel: '设置学期',
     termReady: false,
     needsMigration: false,
     currentWeek: 1,
+    termStartDate: '',
+    preserveSettingsWeek: false,
     weekIndex: 0,
     weekOptions: [] as string[],
     weekStatus: '',
@@ -47,8 +52,15 @@ Page({
     showShareHomePreview: false,
   },
 
+  onPageScroll(event: WechatMiniprogram.Page.IPageScrollOption) {
+    this.selectComponent('.page-masthead')?.updateScroll(event.scrollTop)
+  },
+
+  onReady() { syncAppearance(this) },
+
   onLoad(options: Record<string, string | undefined>) {
     if (initializeHomeSharing(this, HOME_PAGE_PATH, options)) return
+    syncAppearance(this)
   },
 
   onShareAppMessage: shareHomeToFriend,
@@ -56,6 +68,7 @@ Page({
   onShareTimeline: shareHomeToTimeline,
 
   onShow() {
+    syncAppearance(this)
     if (this.data.showShareHomePreview) return
     this.refresh()
   },
@@ -93,7 +106,8 @@ Page({
     const term = storage.term
     const periods = buildPeriodViews(storage.periodSettings)
     const todayWeek = calcCurrentWeek(term, new Date())
-    let currentWeek = todayWeek || 1
+    const preserve = this.data.preserveSettingsWeek && this.data.termStartDate === (term?.startDate || '')
+    let currentWeek = preserve ? this.data.currentWeek : todayWeek || 1
     const weekOptions: string[] = []
     if (term) {
       for (let w = 1; w <= term.totalWeeks; w++) weekOptions.push(`第 ${w} 周`)
@@ -102,6 +116,9 @@ Page({
     const weekStatus = term && todayWeek === null ? '当前不在教学周内，可手动选择周次查看' : ''
     this.setData({
       weekOptions,
+      termStartDate: term?.startDate || '',
+      termLabel: term ? `${term.startDate.slice(0, 4)} ${Number(term.startDate.slice(5, 7)) >= 7 ? '秋季' : '春季'}学期` : '设置学期',
+      preserveSettingsWeek: false,
       termReady: !!term,
       needsMigration: snapshot.kind === 'legacy',
       storageProblem: snapshot.kind === 'corrupt' || snapshot.kind === 'unsupported' ? snapshot.reason : '',
@@ -208,7 +225,8 @@ Page({
 
   onSettings() {
     if (this.data.selectionMode) return
-    wx.navigateTo({ url: '/pages/settings/index' })
+    this.setData({ preserveSettingsWeek: true })
+    wx.navigateTo({ url: '/pages/settings/index', fail: () => this.setData({ preserveSettingsWeek: false }) })
   },
 
   onTermSettings() {

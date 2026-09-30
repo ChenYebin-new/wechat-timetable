@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { afterEach, beforeEach, test } from 'node:test'
 import './helpers/register-typescript.mjs'
+import { sessionTest } from './helpers/isolated-test.mjs'
+const isolatedTest = sessionTest(import.meta.url)
 
 const RealDate = globalThis.Date
 const realSetTimeout = globalThis.setTimeout
@@ -897,7 +899,7 @@ test('清空随想删除当天记录，不影响其它日期', () => {
   assert.equal(context.data.noteSaveState, 'saved')
 })
 
-test('返回页面和重新刷新不会以落盘旧记录覆盖保存失败的随想草稿', () => {
+isolatedTest('返回页面和重新刷新不会以落盘旧记录覆盖保存失败的随想草稿', () => {
   seed([], [{ date: '2026-09-16', content: '旧记录', updatedAt: 1 }])
   const context = pageContext()
   context.onDailyNoteInput(input('未落盘的草稿'))
@@ -910,6 +912,11 @@ test('返回页面和重新刷新不会以落盘旧记录覆盖保存失败的�
   assert.equal(context.data.dailyNoteDirty, true)
   assert.equal(context.data.noteSaveState, 'error')
   assert.equal(stored().dailyNotes[0].content, '旧记录')
+  assert.match(context.data.storageProblem, /暂停写入/)
+  failWrites = 0
+  const before = writes
+  context.onRetryDailyNote()
+  assert.equal(writes, before, '回滚无法确认后，重试按钮也不能绕过会话锁')
 })
 
 test('卸载时保存失败的随想在本次会话重新创建页面后仍可找回和重试', () => {
@@ -1391,6 +1398,6 @@ test('月历使用七列原生按钮与44px高度，保留日期picker及分享�
   assert.match(markup, /style="width: 14\.285714%;"[^>]*data-date="{{item\.date}}"/)
   assert.match(markup, /bindtap="onCalendarDate"[^>]*aria-label="{{item\.label}}"/)
   assert.match(css, /\.plain-button\.calendar-day\s*{[^}]*min-height:\s*44px;/)
-  assert.match(css, /\.calendar-selected \.calendar-day-number\s*{[^}]*color:\s*#ffffff;/)
+  assert.match(css, /\.calendar-selected \.calendar-day-number\s*{[^}]*color:\s*var\(--on-primary\);/)
   assert.equal((css.match(/{/g) || []).length, (css.match(/}/g) || []).length)
 })

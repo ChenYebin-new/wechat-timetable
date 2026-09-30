@@ -6,35 +6,38 @@
 }
 
 .card {
-  background: #ffffff;
-  border-radius: 20rpx;
+  background: var(--surface);
+  border-radius: var(--radius);
   padding: 26rpx 26rpx 28rpx;
   margin-bottom: 22rpx;
-  box-shadow: 0 8rpx 20rpx rgba(52, 83, 77, 0.06);
+  box-shadow: none;
 }
 
 .card-title {
   display: block;
   font-size: 30rpx;
   font-weight: 700;
-  color: #223;
+  color: var(--text);
 }
 
 .card-desc {
   display: block;
   margin-top: 10rpx;
   font-size: 24rpx;
-  color: #526963;
+  color: var(--muted);
   line-height: 1.5;
 }
 
 .picker-value {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
   margin-top: 18rpx;
   padding: 20rpx 24rpx;
-  background: #f5f8f8;
-  border-radius: 12rpx;
+  background: var(--input);
+  border-radius: var(--radius-small);
   font-size: 28rpx;
-  color: #223;
+  color: var(--text);
 }
 
 .chips {
@@ -44,23 +47,27 @@
 }
 
 .chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   padding: 12rpx 26rpx;
   border-radius: 28rpx;
-  background: #e8f3f1;
-  color: #176c66;
+  background: var(--soft);
+  color: var(--accent);
   font-size: 24rpx;
   font-weight: 600;
 }
 
 .chip.active {
-  background: #267d78;
-  color: #ffffff;
+  background: var(--primary);
+  color: var(--on-primary);
 }
 
 .notice {
   padding: 20rpx 24rpx;
-  background: #fdf3e7;
-  border-radius: 16rpx;
+  background: var(--warning-soft);
+  border-radius: var(--radius-small);
   margin-bottom: 22rpx;
 }
 
@@ -68,29 +75,34 @@
   display: block;
   font-size: 26rpx;
   font-weight: 700;
-  color: #9a5b13;
+  color: var(--warning);
 }
 
 .notice-desc {
   display: block;
   margin-top: 8rpx;
   font-size: 23rpx;
-  color: #8a6a3f;
+  color: var(--warning);
   line-height: 1.5;
 }
 
 .save-btn {
-  border-radius: 44rpx;
-  background: #267d78;
-  color: #ffffff;
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: var(--on-primary);
   font-size: 30rpx;
 }
 
 .save-btn-pressed {
-  background: #1d5f5b;
+  background: var(--primary);
   transform: scale(0.98);
 }
 
 .save-btn::after {
   border: 0;
 }
+
+.card { border: 1rpx solid var(--border); }
+.chip,.picker-value,.save-btn { min-height: 44px; }
+
+.page { min-height: 0; padding-top: 22rpx; }

@@ -1,0 +1,8 @@
+<view wx:if="{{!hidden}}" class="tabbar theme-{{themeId}}" style="{{appearanceStyle}}">
+  <button class="tab {{selected === 0 ? 'active' : ''}}" data-index="0" bindtap="onSwitch" aria-label="课表{{selected === 0 ? '，当前页面' : ''}}">
+    <image class="icon" src="{{selected === 0 ? appearanceIcons.calendar : appearanceIcons.neutralCalendar}}" aria-hidden="true" /><text>课表</text>
+  </button>
+  <button class="tab {{selected === 1 ? 'active' : ''}}" data-index="1" bindtap="onSwitch" aria-label="待办{{selected === 1 ? '，当前页面' : ''}}">
+    <image class="icon" src="{{selected === 1 ? appearanceIcons.todo : appearanceIcons.neutralTodo}}" aria-hidden="true" /><text>待办</text>
+  </button>
+</view>

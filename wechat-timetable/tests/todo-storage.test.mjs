@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import './helpers/register-typescript.mjs'
+import { sessionTest } from './helpers/isolated-test.mjs'
+const isolatedTest = sessionTest(import.meta.url)
 
 let storage
 let operations
@@ -423,25 +425,35 @@ test('首次目标或随想写失败恢复为 key 缺失，不留下空的 V3 �
   assert.equal(storage.has(KEY), false)
 })
 
-test('回滚本身失败、被忽略或回读失败时不误报恢复成功', () => {
-  const original = current()
-  for (const rollbackMode of ['ignore', 'throw']) {
+for (const rollbackMode of ['ignore', 'throw']) {
+  isolatedTest(`回滚 ${rollbackMode} 时不误报恢复成功`, () => {
+    const original = current()
     seed(original)
     writeModes = ['truncate', rollbackMode]
     assert.throws(() => todoStorage.toggleTodo('todo-1'), /无法确认原数据状态/)
     assert.deepEqual(storage.get(KEY), current([]))
-  }
+  })
+}
+
+isolatedTest('回滚回读失败时不误报恢复成功', () => {
+  const original = current()
   seed(original)
   writeModes = ['truncate', 'ok']
   readModes = ['ok', 'ok', 'throw']
   assert.throws(() => todoStorage.toggleTodo('todo-1'), /无法确认原数据状态/)
   assert.deepEqual(storage.get(KEY), original)
+})
+
+isolatedTest('回滚删除被忽略时不误报恢复成功', () => {
   storage.delete(KEY)
   writeModes = ['ok']
   readModes = ['ok', 'missing', 'ok']
   removeModes = ['ignore']
   assert.throws(() => todoStorage.saveDailyNote('2026-09-16', '首次随想'), /无法确认原数据状态/)
   assert.equal(storage.has(KEY), true)
+})
+
+isolatedTest('回滚删除抛异常时不误报恢复成功', () => {
   storage.delete(KEY)
   writeModes = ['throw']
   removeModes = ['throw']

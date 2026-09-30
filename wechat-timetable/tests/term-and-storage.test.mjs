@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import './helpers/register-typescript.mjs'
+import { sessionTest } from './helpers/isolated-test.mjs'
+const isolatedTest = sessionTest(import.meta.url)
 
 const TIMETABLE_KEY = 'timetable_courses'
 const RECENT_BACKUP_KEY = 'timetable_recent_backup'
@@ -351,7 +353,7 @@ test('临时读取失败时学期、作息和课程增删都中止且原数据�
   timetableReadFailures = 0
 })
 
-test('课程回滚写入未真正落盘时不会误报原数据已恢复', () => {
+isolatedTest('课程回滚写入未真正落盘时不会误报原数据已恢复', () => {
   const original = { schemaVersion: 5, term: clone(TERM), courses: [v2Course()], periodSettings: clone(DEFAULT_PERIOD_SETTINGS) }
   storage = new Map([[TIMETABLE_KEY, clone(original)]])
   timetableWriteFailures = 0

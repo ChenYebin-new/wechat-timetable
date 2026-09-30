@@ -1,3 +1,4 @@
+import { getCourseAppearance, isThemeId, DEFAULT_THEME } from '../../themes/index'
 // components/timetable-grid/index.ts
 import { DAYS, GRID_HOLD_DURATION_MS } from '../../constants/timetable'
 import type { PeriodView } from '../../constants/timetable'
@@ -14,7 +15,7 @@ interface GridCellItem {
 
 interface GridColumnItem {
   day: number
-  slots: TimetableCardItem[]
+  slots: (TimetableCardItem & { backgroundColor: string; textColor: string; borderColor: string; icon: string })[]
   cells: GridCellItem[]
 }
 
@@ -48,15 +49,15 @@ function clearHoldTimer(instance: object): void {
 
 Component({
   properties: {
+    themeId: { type: String, value: DEFAULT_THEME },
+    appearanceStyle: { type: String, value: '' },
     periods: {
       type: Array,
       value: [] as PeriodView[],
-      observer: 'rebuildColumns',
     },
     daySlots: {
       type: Array,
       value: [] as TimetableCardItem[][],
-      observer: 'rebuildColumns',
     },
     selectionMode: {
       type: Boolean,
@@ -65,12 +66,10 @@ Component({
     selectedKeys: {
       type: Array,
       value: [] as string[],
-      observer: 'rebuildColumns',
     },
     disabledKeys: {
       type: Array,
       value: [] as string[],
-      observer: 'rebuildColumns',
     },
     holdEnabled: {
       type: Boolean,
@@ -84,6 +83,12 @@ Component({
     pressingKey: '',
   },
 
+  observers: {
+    'themeId, periods, daySlots, selectedKeys, disabledKeys'() {
+      this.rebuildColumns()
+    },
+  },
+
   lifetimes: {
     attached() {
       this.rebuildColumns()
@@ -94,6 +99,10 @@ Component({
     },
   },
 
+  pageLifetimes: {
+    hide() { this.onCellTouchEnd() },
+  },
+
   methods: {
     rebuildColumns() {
       const selected = new Set(this.properties.selectedKeys as string[])
@@ -101,7 +110,10 @@ Component({
       const daySlots = this.properties.daySlots as TimetableCardItem[][]
       const columns = DAYS.map((_, dayIndex) => ({
         day: dayIndex + 1,
-        slots: daySlots[dayIndex] || [],
+        slots: (daySlots[dayIndex] || []).map(item => {
+          const colors = getCourseAppearance(item.course, isThemeId(this.properties.themeId) ? this.properties.themeId : DEFAULT_THEME)
+          return { ...item, backgroundColor: colors.background, textColor: colors.text, borderColor: colors.border, icon: `/assets/appearance/course-${colors.slot}.svg` }
+        }),
         cells: (this.properties.periods as PeriodView[]).map((period) => {
           const key = cellKey(dayIndex + 1, period.index)
           return {
@@ -122,11 +134,13 @@ Component({
     },
 
     onCellTouchStart(e: WechatMiniprogram.TouchEvent) {
+      const state = getHoldState(this)
+      state.ignoreTapKey = ''
+      state.ignoreTapUntil = 0
       if (!this.properties.holdEnabled || this.properties.selectionMode) return
       if (e.currentTarget.dataset.disabled) return
       const touch = e.touches[0]
       if (!touch) return
-      const state = getHoldState(this)
       clearHoldTimer(this)
       state.key = e.currentTarget.dataset.key as string
       state.startX = touch.clientX
@@ -158,6 +172,8 @@ Component({
     },
 
     onCellTouchEnd() {
+      const state = getHoldState(this)
+      if (state.ignoreTapKey) state.ignoreTapUntil = Date.now() + 600
       clearHoldTimer(this)
       this.setData({ pressingKey: '' })
     },

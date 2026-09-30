@@ -9,32 +9,40 @@
     "pages/slot-select/index",
     "pages/data-manage/index",
     "pages/todo-backup/index",
-    "pages/term-settings/index"
+    "pages/term-settings/index",
+    "pages/appearance/index"
   ],
   "window": {
     "navigationBarTextStyle": "black",
-    "navigationBarTitleText": "我的课表",
-    "navigationBarBackgroundColor": "#ffffff",
-    "backgroundColor": "#f2f5f7"
+    "navigationBarTitleText": "拾课课表",
+    "navigationBarBackgroundColor": "#F7F3EB",
+    "backgroundColor": "#F7F3EB",
+    "navigationStyle": "custom"
   },
   "usingComponents": {
-    "share-home-preview": "/components/share-home-preview/index"
+    "share-home-preview": "/components/share-home-preview/index",
+    "page-header": "/components/page-header/index"
   },
   "tabBar": {
-    "color": "#58706a",
-    "selectedColor": "#267d78",
-    "backgroundColor": "#ffffff",
+    "color": "#6A6257",
+    "selectedColor": "#923F2C",
+    "backgroundColor": "#F7F3EB",
     "borderStyle": "white",
     "list": [
       {
         "pagePath": "pages/timetable/index",
-        "text": "课表"
+        "text": "课表",
+        "iconPath": "assets/appearance/calendar-neutral.png",
+        "selectedIconPath": "assets/appearance/calendar-cream.png"
       },
       {
         "pagePath": "pages/todo/index",
-        "text": "待办"
+        "text": "待办",
+        "iconPath": "assets/appearance/todo-neutral.png",
+        "selectedIconPath": "assets/appearance/todo-cream.png"
       }
-    ]
+    ],
+    "custom": true
   },
   "style": "v2",
   "componentFramework": "glass-easel",

@@ -1,0 +1,27 @@
+<view class="masthead theme-{{themeId}} {{home ? 'home' : 'subpage'}}" style="{{appearanceStyle}}padding-top:{{statusHeight}}px;">
+  <image wx:if="{{art}}" class="scene" src="{{art}}" mode="{{themeId === 'pixel' ? 'aspectFit' : 'aspectFill'}}" aria-hidden="true" />
+  <view wx:if="{{themeId === 'pixel'}}" class="pixel-book-caption" aria-hidden="true">好好学习<text>天天向上</text></view>
+  <view class="status-cover {{scrolled ? 'scrolled' : ''}}" style="height:{{statusHeight}}px;" aria-hidden="true" />
+  <view style="height:{{navigationHeight}}px;" aria-hidden="true" />
+  <view class="navigation {{scrolled ? 'scrolled' : ''}}" style="top:{{statusHeight}}px;height:{{navigationHeight}}px;padding-right:{{capsuleSpace}}px;">
+    <button wx:if="{{!home}}" class="back" bindtap="onBack" aria-label="返回上一页"><view class="back-mark" /></button>
+    <image wx:if="{{home && themeId === 'paper'}}" class="brand-book" src="/assets/appearance/book-paper-accent.svg" aria-hidden="true" />
+    <text wx:if="{{!home || (themeId !== 'campus' && themeId !== 'pixel') || compactTitle}}" class="navigation-title {{themeId === 'campus' || themeId === 'pixel' ? 'compact' : ''}}">{{title}}</text>
+  </view>
+  <view wx:if="{{themeId === 'campus'}}" class="hero-copy">
+    <view wx:if="{{home}}" class="hero-title"><text>{{title}}</text><view class="leaf" /><view class="underline" /></view>
+    <text wx:if="{{subtitle}}" class="subtitle">{{subtitle}}</text>
+  </view>
+  <view wx:if="{{themeId === 'pixel'}}" class="pixel-hero">
+    <text class="pixel-title {{title.length > 6 ? 'long-title' : ''}}">{{title}}</text>
+    <text wx:if="{{subtitle}}" class="pixel-subtitle">{{subtitle}}</text>
+  </view>
+  <view wx:if="{{themeId === 'paper' && !home && (subtitle || title === '编辑课程' || title === '新增课程')}}" class="paper-intro">
+    <image src="/assets/appearance/paper-sprig.png" class="paper-sprig" aria-hidden="true" />
+    <image wx:if="{{!subtitle}}" src="/assets/appearance/book-paper-accent.svg" class="paper-book" aria-hidden="true" />
+    <text wx:if="{{subtitle}}">{{subtitle}}</text>
+    <text wx:elif="{{title === '编辑课程' || title === '新增课程'}}" class="paper-course-quote">在时光里，<text class="paper-quote">好好上每一节课。</text></text>
+    <view class="paper-rule" />
+  </view>
+  <text wx:if="{{themeId === 'swiss' && !home && subtitle}}" class="swiss-subtitle">{{subtitle}}</text>
+</view>

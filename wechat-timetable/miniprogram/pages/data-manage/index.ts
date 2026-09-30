@@ -1,3 +1,4 @@
+import { appearanceData, syncAppearance } from '../../utils/appearance-page'
 // pages/data-manage/index.ts
 import type { ImportPreview, TimetableBackupEnvelope } from '../../models/backup'
 import type { TermSettings } from '../../models/course'
@@ -22,6 +23,10 @@ interface RecentBackupInfo {
   segmentCount: number
 }
 
+const previewTokens = new WeakMap<object, string>()
+const recentTokens = new WeakMap<object, string>()
+const confirmations = new WeakMap<object, object>()
+
 function pad(n: number): string {
   return n < 10 ? '0' + n : '' + n
 }
@@ -31,6 +36,7 @@ for (let w = 1; w <= MAX_TOTAL_WEEKS; w++) weekOptions.push(`${w} 周`)
 
 Page({
   data: {
+    ...appearanceData(),
     inputText: '',
     envelope: null as TimetableBackupEnvelope | null,
     preview: null as ImportPreview | null,
@@ -43,8 +49,15 @@ Page({
     showShareHomePreview: false,
   },
 
+  onPageScroll(event: WechatMiniprogram.Page.IPageScrollOption) {
+    this.selectComponent('.page-masthead')?.updateScroll(event.scrollTop)
+  },
+
+  onReady() { syncAppearance(this) },
+
   onLoad(options: Record<string, string | undefined>) {
     if (initializeHomeSharing(this, '/pages/data-manage/index', options)) return
+    syncAppearance(this)
   },
 
   onShareAppMessage: shareHomeToFriend,
@@ -52,12 +65,23 @@ Page({
   onShareTimeline: shareHomeToTimeline,
 
   onShow() {
+    syncAppearance(this)
     if (this.data.showShareHomePreview) return
     this.setData({ recentBackupInfo: this.buildRecentBackupInfo() })
   },
 
+  onHide() {
+    confirmations.delete(this)
+    previewTokens.delete(this)
+    this.setData({ envelope: null, preview: null, previewErrors: [], needsTerm: false })
+  },
+
+  onUnload() { this.onHide() },
+
   buildRecentBackupInfo(): RecentBackupInfo | null {
     const rb = getRecentBackup()
+    if (rb) recentTokens.set(this, JSON.stringify(rb))
+    else recentTokens.delete(this)
     if (!rb) return null
     return {
       savedAtText: this.formatTime(rb.savedAt),
@@ -100,6 +124,7 @@ Page({
   onInput(e: WechatMiniprogram.Input) {
     const inputText = e.detail.value
     if (inputText === this.data.inputText) return
+    previewTokens.delete(this)
     this.setData({
       inputText,
       envelope: null,
@@ -110,6 +135,7 @@ Page({
   },
 
   onParse() {
+    previewTokens.delete(this)
     const parsed = parseBackup(this.data.inputText)
     if (!parsed.ok) {
       this.setData({
@@ -132,6 +158,7 @@ Page({
     }
     const needsTerm = analyzed.needsTerm === true
     const term = snapshot.data.term
+    previewTokens.set(this, JSON.stringify(snapshot.data))
     this.setData({
       envelope: parsed.envelope as TimetableBackupEnvelope,
       preview: analyzed.preview as ImportPreview,
@@ -169,15 +196,36 @@ Page({
   },
 
   confirm(title: string, message: string, confirmText: string, onOk: () => void) {
+    if (confirmations.has(this)) return
+    const confirmation = {}
+    confirmations.set(this, confirmation)
     wx.showModal({
       title,
       content: message,
       confirmText,
       confirmColor: '#267d78',
       success: (res) => {
+        if (confirmations.get(this) !== confirmation) return
+        confirmations.delete(this)
         if (res.confirm) onOk()
       },
+      complete: () => {
+        if (confirmations.get(this) === confirmation) confirmations.delete(this)
+      },
     })
+  },
+
+  isPreviewCurrent(envelope: TimetableBackupEnvelope): boolean {
+    if (this.data.envelope !== envelope || !previewTokens.has(this)) return false
+    const snapshot = getStorageSnapshot()
+    const reason = snapshot.kind === 'io-error' || snapshot.kind === 'corrupt' || snapshot.kind === 'unsupported'
+      ? snapshot.reason
+      : JSON.stringify(snapshot.data) !== previewTokens.get(this) ? '本机课表已变化，请重新解析并预览后操作' : ''
+    if (!reason) return true
+    previewTokens.delete(this)
+    this.setData({ envelope: null, preview: null, needsTerm: false, previewErrors: [reason] })
+    this.afterMutation(false, reason)
+    return false
   },
 
   onOverwrite() {
@@ -194,6 +242,7 @@ Page({
       `将用备份中的 ${preview ? preview.backupGroupCount : 0} 门课程（${preview ? preview.backupCount : 0} 个时段）替换当前 ${preview ? preview.currentGroupCount : 0} 门课程。继续前会自动保存当前课表，之后可在本页恢复。`,
       '确认覆盖',
       () => {
+        if (!this.isPreviewCurrent(envelope)) return
         const r = overwriteFromBackup(envelope, termArg)
         this.afterMutation(r.ok, r.reason)
       },
@@ -223,6 +272,7 @@ Page({
       `将按整门课程合并备份（预计新增 ${preview ? preview.mergeAddGroupCount : 0} 门、${preview ? preview.mergeAddCount : 0} 个时段）。任一时段重复或冲突时会跳过整门课程。`,
       '确认合并',
       () => {
+        if (!this.isPreviewCurrent(envelope)) return
         const r = mergeFromBackup(envelope, termArg)
         this.afterMutation(
           r.ok,
@@ -238,6 +288,7 @@ Page({
 
   onRestoreRecent() {
     const info = this.data.recentBackupInfo
+    const recentToken = recentTokens.get(this)
     if (!info) {
       wx.showToast({ title: '没有可用备份', icon: 'none' })
       return
@@ -247,6 +298,10 @@ Page({
       `将用最近备份（V${info.schemaVersion}，${info.groupCount} 门课程、${info.segmentCount} 个时段）替换当前课表。继续前会自动保存当前课表，之后仍可在本页恢复。`,
       '确认恢复',
       () => {
+        if (!recentToken || JSON.stringify(getRecentBackup()) !== recentToken) {
+          this.afterMutation(false, '最近备份已变化或无法读取，请重新核对后恢复')
+          return
+        }
         const r = restoreRecentBackup()
         this.afterMutation(r.ok, r.reason)
       },
@@ -275,6 +330,7 @@ Page({
     }
     if (ok) {
       // 数据已变化，清空旧预览并刷新最近备份信息。
+      previewTokens.delete(this)
       this.setData({
         recentBackupInfo: this.buildRecentBackupInfo(),
         envelope: null,

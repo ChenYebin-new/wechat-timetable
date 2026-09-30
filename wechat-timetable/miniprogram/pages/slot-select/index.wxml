@@ -1,13 +1,15 @@
+<page-meta page-style="{{appearanceStyle}}background:var(--page);background-image:var(--page-texture);font-family:var(--font-family);color:var(--text);" />
 <share-home-preview wx:if="{{showShareHomePreview}}" />
 <block wx:else>
-<view class="page">
+<page-header class="page-masthead" title="选择上课时段" subtitle="" home="{{false}}" theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}" art="{{appearanceArt}}" />
+<view class="page theme-{{themeId}}" style="{{appearanceStyle}}">
   <view class="intro">
     <text class="intro-title">重新选择上课时段</text>
     <text class="intro-desc">点击空白格进行多选，同一天连续节次会自动合并。已有课程占用的时段不可选择。</text>
   </view>
 
   <view wx:if="{{ready}}" class="grid-frame">
-    <timetable-grid
+    <timetable-grid class="course-grid" theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}"
       periods="{{periods}}"
       day-slots="{{daySlots}}"
       selection-mode="{{true}}"

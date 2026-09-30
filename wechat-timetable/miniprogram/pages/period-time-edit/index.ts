@@ -1,3 +1,4 @@
+import { appearanceData, syncAppearance } from '../../utils/appearance-page'
 import type { PeriodSettings } from '../../models/course'
 import {
   clonePeriodSettings,
@@ -14,6 +15,7 @@ interface PeriodTimeEditInit {
 
 Page({
   data: {
+    ...appearanceData(),
     ready: false,
     index: 0,
     title: '',
@@ -30,8 +32,17 @@ Page({
     showShareHomePreview: false,
   },
 
+  onShow() { syncAppearance(this) },
+
+  onPageScroll(event: WechatMiniprogram.Page.IPageScrollOption) {
+    this.selectComponent('.page-masthead')?.updateScroll(event.scrollTop)
+  },
+
+  onReady() { syncAppearance(this) },
+
   onLoad(options: Record<string, string | undefined>) {
     if (initializeHomeSharing(this, '/pages/period-time-edit/index', options)) return
+    syncAppearance(this)
     this.getOpenerEventChannel().on('periodTimeEditInit', (init: PeriodTimeEditInit) => {
       const settings = clonePeriodSettings(init.settings)
       const period = settings.periods[init.index]
@@ -83,6 +94,7 @@ Page({
     this.setData({
       start: startText,
       end: endText,
+      durationText: `${this.data.effectiveDuration} 分钟`,
       startChanged: startText !== this.data.originalStart,
     })
   },

@@ -2,8 +2,8 @@
   min-height: 100vh;
   padding: 24rpx 24rpx calc(36rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
-  background: #f2f5f7;
-  color: #20353d;
+  background: var(--page);
+  color: var(--text);
 }
 
 button {
@@ -22,7 +22,7 @@ button::after {
   font-size: 28rpx;
   font-weight: 400;
   line-height: 1.4;
-  border-radius: 12rpx;
+  border-radius: var(--radius-small);
 }
 
 /* Override native mini-button layout while preserving our icon touch targets. */
@@ -35,19 +35,21 @@ button::after {
 }
 
 .plain-button.todo-content {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   padding: 20rpx 0;
 }
 
 .plain-button[disabled] {
-  color: #62737b;
+  color: var(--muted);
   background: transparent;
   opacity: 0.55;
 }
 
 .control-pressed,
 .content-pressed {
-  background: #e8eff1;
+  background: var(--soft);
 }
 
 .date-navigation {
@@ -66,10 +68,10 @@ button::after {
 }
 
 .chevron {
-  width: 20rpx;
-  height: 20rpx;
-  border-top: 3rpx solid #267d78;
-  border-right: 3rpx solid #267d78;
+  width: 14rpx;
+  height: 14rpx;
+  border-top: 2rpx solid var(--text);
+  border-right: 2rpx solid var(--text);
   box-sizing: border-box;
 }
 
@@ -110,7 +112,7 @@ button::after {
 }
 
 .date-label {
-  color: #267d78;
+  color: var(--accent);
   font-size: 38rpx;
   font-weight: 700;
   line-height: 1.3;
@@ -118,11 +120,13 @@ button::after {
 }
 
 .date-dropdown {
-  width: 0;
-  height: 0;
-  border-left: 9rpx solid transparent;
-  border-right: 9rpx solid transparent;
-  border-top: 12rpx solid #267d78;
+  width: 11rpx;
+  height: 11rpx;
+  border-right: 3rpx solid var(--text);
+  border-bottom: 3rpx solid var(--text);
+  transform: rotate(45deg);
+  margin-top: -5rpx;
+  flex-shrink: 0;
 }
 
 .weekday-label {
@@ -131,7 +135,7 @@ button::after {
   flex-shrink: 0;
   white-space: nowrap;
   text-align: center;
-  color: #596b72;
+  color: var(--muted);
   font-size: 25rpx;
   line-height: 1.4;
 }
@@ -151,7 +155,7 @@ button::after {
   min-height: 44px;
   margin: 0;
   padding: 0 12rpx;
-  color: #267d78;
+  color: var(--accent);
   font-size: 25rpx;
 }
 
@@ -162,7 +166,7 @@ button::after {
   min-height: 44px;
   margin: 0 0 0 auto;
   padding: 0 12rpx;
-  color: #267d78;
+  color: var(--accent);
   font-size: 25rpx;
   white-space: nowrap;
 }
@@ -171,7 +175,7 @@ button::after {
   position: relative;
   width: 30rpx;
   height: 30rpx;
-  border: 3rpx solid #267d78;
+  border: 3rpx solid var(--accent);
   border-radius: 5rpx;
   box-sizing: border-box;
 }
@@ -181,7 +185,7 @@ button::after {
   top: -7rpx;
   width: 3rpx;
   height: 8rpx;
-  background: #267d78;
+  background: var(--primary);
 }
 
 .calendar-icon-binding.left { left: 5rpx; }
@@ -191,7 +195,7 @@ button::after {
   position: absolute;
   top: 6rpx;
   width: 100%;
-  border-top: 3rpx solid #267d78;
+  border-top: 3rpx solid var(--accent);
 }
 
 .calendar-icon-dots {
@@ -200,15 +204,15 @@ button::after {
   top: 13rpx;
   width: 4rpx;
   height: 4rpx;
-  background: #267d78;
-  box-shadow: 9rpx 0 #267d78, 0 7rpx #267d78, 9rpx 7rpx #267d78;
+  background: var(--primary);
+  box-shadow: none;
 }
 
 .calendar-toggle-chevron {
   width: 14rpx;
   height: 14rpx;
-  border-right: 3rpx solid #267d78;
-  border-bottom: 3rpx solid #267d78;
+  border-right: 3rpx solid var(--accent);
+  border-bottom: 3rpx solid var(--accent);
   transform: rotate(45deg);
   box-sizing: border-box;
 }
@@ -218,8 +222,8 @@ button::after {
 .calendar-panel {
   margin-bottom: 28rpx;
   padding: 12rpx 12rpx 16rpx;
-  border-radius: 24rpx;
-  background: #ffffff;
+  border-radius: var(--radius);
+  background: var(--surface);
 }
 
 .calendar-heading {
@@ -257,7 +261,7 @@ button::after {
 .calendar-weekday {
   width: 14.285714%;
   padding: 8rpx 0;
-  color: #596b72;
+  color: var(--muted);
   font-size: 24rpx;
   line-height: 1.4;
   text-align: center;
@@ -284,7 +288,7 @@ button::after {
   max-width: 44px;
   height: 44px;
   border: 2rpx solid transparent;
-  border-radius: 16rpx;
+  border-radius: var(--radius-small);
   box-sizing: border-box;
 }
 
@@ -294,10 +298,10 @@ button::after {
   font-variant-numeric: tabular-nums;
 }
 
-.outside-month .calendar-day-number { color: #62737b; }
-.calendar-today .calendar-day-face { border-color: #267d78; }
-.calendar-selected .calendar-day-face { border-color: #267d78; background: #267d78; }
-.calendar-selected .calendar-day-number { color: #ffffff; }
+.outside-month .calendar-day-number { color: var(--muted); }
+.calendar-today .calendar-day-face { border-color: var(--accent); }
+.calendar-selected .calendar-day-face { border-color: var(--accent); background: var(--primary); }
+.calendar-selected .calendar-day-number { color: var(--on-primary); }
 
 .calendar-goal-dot {
   width: 6rpx;
@@ -308,8 +312,8 @@ button::after {
   background: transparent;
 }
 
-.calendar-goal-dot.has-goals { background: #267d78; }
-.calendar-selected .calendar-goal-dot.has-goals { background: #ffffff; }
+.calendar-goal-dot.has-goals { background: var(--primary); }
+.calendar-selected .calendar-goal-dot.has-goals { background: var(--surface); }
 
 .section-heading {
   display: flex;
@@ -327,7 +331,7 @@ button::after {
 }
 
 .completion-count {
-  color: #596b72;
+  color: var(--muted);
   font-size: 24rpx;
   line-height: 1.4;
   font-variant-numeric: tabular-nums;
@@ -337,8 +341,8 @@ button::after {
 .empty-state,
 .goal-editor,
 .reflection-panel {
-  background: #ffffff;
-  border-radius: 24rpx;
+  background: var(--surface);
+  border-radius: var(--radius);
 }
 
 .todo-list {
@@ -349,7 +353,7 @@ button::after {
   display: flex;
   align-items: center;
   min-height: 104rpx;
-  border-top: 1rpx solid #e5ebee;
+  border-top: 1rpx solid var(--border);
 }
 
 .todo-row:first-child {
@@ -369,14 +373,14 @@ button::after {
   position: relative;
   width: 42rpx;
   height: 42rpx;
-  border: 3rpx solid #829094;
+  border: 3rpx solid var(--muted);
   border-radius: 50%;
   box-sizing: border-box;
 }
 
 .check-circle.checked {
-  border-color: #267d78;
-  background: #267d78;
+  border-color: var(--accent);
+  background: var(--primary);
 }
 
 .check-stem,
@@ -386,8 +390,8 @@ button::after {
   top: 6rpx;
   width: 13rpx;
   height: 20rpx;
-  border-right: 3rpx solid #ffffff;
-  border-bottom: 3rpx solid #ffffff;
+  border-right: 3rpx solid var(--on-primary);
+  border-bottom: 3rpx solid var(--on-primary);
   box-sizing: border-box;
   transform: rotate(45deg);
 }
@@ -413,14 +417,14 @@ button::after {
 }
 
 .completed .todo-title {
-  color: #62737b;
+  color: var(--muted);
   text-decoration: line-through;
 }
 
 .expired-label {
   display: block;
   margin-top: 6rpx;
-  color: #805028;
+  color: var(--warning);
   font-size: 22rpx;
   line-height: 1.45;
 }
@@ -429,7 +433,7 @@ button::after {
   display: -webkit-box;
   overflow: hidden;
   margin-top: 6rpx;
-  color: #596b72;
+  color: var(--muted);
   font-size: 23rpx;
   line-height: 1.5;
   word-break: break-all;
@@ -451,7 +455,7 @@ button::after {
   width: 6rpx;
   height: 6rpx;
   border-radius: 50%;
-  background: #7f8d92;
+  background: var(--muted);
 }
 
 .empty-state {
@@ -473,7 +477,7 @@ button::after {
 }
 
 .empty-desc {
-  color: #596b72;
+  color: var(--muted);
   font-size: 23rpx;
   line-height: 1.5;
 }
@@ -487,7 +491,7 @@ button::after {
   display: flex;
   align-items: center;
   gap: 16rpx;
-  color: #267d78;
+  color: var(--accent);
   font-size: 30rpx;
   font-weight: 600;
 }
@@ -496,7 +500,7 @@ button::after {
   width: 100%;
   min-height: 88rpx;
   padding: 20rpx 24rpx;
-  border-radius: 24rpx;
+  border-radius: var(--radius);
   text-align: left;
 }
 
@@ -505,13 +509,13 @@ button::after {
   width: 36rpx;
   height: 36rpx;
   border-radius: 50%;
-  background: #267d78;
+  background: var(--primary);
   flex-shrink: 0;
 }
 
 .plus-line {
   position: absolute;
-  background: #ffffff;
+  background: var(--surface);
   border-radius: 2rpx;
 }
 
@@ -541,10 +545,10 @@ button::after {
 .goal-note-input {
   width: 100%;
   padding: 20rpx 22rpx;
-  border: 1rpx solid #d4dfe3;
-  border-radius: 12rpx;
-  background: #f6f8f9;
-  color: #20353d;
+  border: 1rpx solid var(--border);
+  border-radius: var(--radius-small);
+  background: var(--input);
+  color: var(--text);
   font-size: 27rpx;
   line-height: 1.5;
   box-sizing: border-box;
@@ -555,7 +559,7 @@ button::after {
 }
 
 .placeholder {
-  color: #62737b;
+  color: var(--muted);
   font-size: 27rpx;
 }
 
@@ -572,8 +576,8 @@ button::after {
 .note-chevron {
   width: 15rpx;
   height: 15rpx;
-  border-right: 3rpx solid #20353d;
-  border-bottom: 3rpx solid #20353d;
+  border-right: 3rpx solid var(--text);
+  border-bottom: 3rpx solid var(--text);
   box-sizing: border-box;
   transform: rotate(45deg);
 }
@@ -598,7 +602,7 @@ button::after {
   min-width: 112rpx;
   min-height: 76rpx;
   padding: 18rpx 16rpx;
-  color: #596b72;
+  color: var(--muted);
   font-size: 27rpx;
 }
 
@@ -607,21 +611,21 @@ button::after {
   min-height: 76rpx;
   margin: 0;
   padding: 18rpx 24rpx;
-  color: #ffffff;
-  background: #267d78;
-  border-radius: 12rpx;
+  color: var(--on-primary);
+  background: var(--primary);
+  border-radius: var(--radius-small);
   font-size: 28rpx;
   font-weight: 600;
   line-height: 1.4;
 }
 
 .save-button-pressed {
-  background: #1c6662;
+  background: var(--primary);
 }
 
 .save-button[disabled] {
-  color: #ffffff;
-  background: #82a8a4;
+  color: var(--on-primary);
+  background: var(--disabled);
 }
 
 .reflection-heading {
@@ -632,18 +636,18 @@ button::after {
   display: flex;
   align-items: center;
   gap: 10rpx;
-  color: #596b72;
+  color: var(--muted);
   font-size: 24rpx;
   line-height: 1.4;
 }
 
 .note-status.saved,
 .note-status.saving {
-  color: #267d78;
+  color: var(--accent);
 }
 
 .note-status.error {
-  color: #9a3934;
+  color: var(--danger);
 }
 
 .status-check {
@@ -651,7 +655,7 @@ button::after {
   width: 28rpx;
   height: 28rpx;
   border-radius: 50%;
-  background: #267d78;
+  background: var(--primary);
 }
 
 .status-stem {
@@ -669,7 +673,7 @@ button::after {
 .daily-note-input {
   width: 100%;
   min-height: 168rpx;
-  color: #20353d;
+  color: var(--text);
   font-size: 27rpx;
   line-height: 1.65;
   box-sizing: border-box;
@@ -681,7 +685,7 @@ button::after {
   justify-content: space-between;
   gap: 16rpx;
   margin-top: 12rpx;
-  color: #596b72;
+  color: var(--muted);
   font-size: 22rpx;
   line-height: 1.5;
   font-variant-numeric: tabular-nums;
@@ -690,7 +694,7 @@ button::after {
 .inline-problem {
   display: block;
   margin-top: 16rpx;
-  color: #9a3934;
+  color: var(--danger);
   font-size: 24rpx;
   line-height: 1.5;
   word-break: break-all;
@@ -698,13 +702,13 @@ button::after {
 
 .problem-panel {
   padding: 24rpx;
-  border-radius: 24rpx;
-  background: #fff4ec;
+  border-radius: var(--radius);
+  background: var(--warning-soft);
 }
 
 .problem-title {
   display: block;
-  color: #805028;
+  color: var(--warning);
   font-size: 27rpx;
   font-weight: 600;
   line-height: 1.4;
@@ -713,7 +717,7 @@ button::after {
 .problem-desc {
   display: block;
   margin-top: 10rpx;
-  color: #805028;
+  color: var(--warning);
   font-size: 24rpx;
   line-height: 1.5;
   word-break: break-all;
@@ -722,7 +726,7 @@ button::after {
 .retry-button {
   min-height: 72rpx;
   padding: 18rpx 20rpx;
-  color: #267d78;
+  color: var(--accent);
   font-size: 24rpx;
   font-weight: 600;
 }
@@ -751,7 +755,7 @@ button::after {
   display: block;
   margin-top: 36rpx;
   padding: 0 12rpx;
-  color: #596b72;
+  color: var(--muted);
   font-size: 22rpx;
   line-height: 1.5;
   text-align: center;
@@ -776,3 +780,71 @@ button::after {
 .more-control {
   min-width: 44px;
 }
+
+/* C/E composition: date tools, goal cards, then a complete journal panel. */
+.page { min-height:0; padding:14rpx 22rpx calc(150rpx + env(safe-area-inset-bottom)); }
+.date-controls { display:flex; align-items:center; gap:12rpx; margin:0 0 22rpx; }
+.date-navigation { flex:1; min-width:0; margin:0; }
+.date-picker-content { min-height:108rpx; }
+.date-label { font-size:38rpx; font-weight:700; color:var(--text); }
+.date-arrow { background:var(--soft); border-radius:50%; }
+.plain-button.date-arrow { width:44px !important; min-width:44px; min-height:44px; height:44px; }
+.calendar-toolbar { display:flex; align-items:center; gap:8rpx; margin:0; }
+.plain-button.calendar-toggle,.plain-button.today-button { background:var(--surface); border:1rpx solid var(--border); border-radius:18rpx; min-height:44px; margin:0; padding:0 14rpx; color:var(--text); font-size:24rpx; }
+.calendar-toggle-chevron { display:none; }
+.calendar-icon { border-color:var(--text); }
+.calendar-icon-divider { border-color:var(--text); }
+.calendar-icon-binding,.calendar-icon-dots { background:var(--text); }
+.calendar-open .date-label,.theme-campus .date-label { font-size:27rpx; }
+.calendar-open .weekday-label,.theme-campus .weekday-label { display:none; }
+.calendar-open .date-picker-content,.theme-campus .date-picker-content { min-height:44px; }
+.calendar-open .date-navigation,.theme-campus .date-navigation { background:var(--surface); border-radius:28rpx; }
+.calendar-open .date-arrow,.theme-campus .date-arrow { background:transparent; }
+.calendar-open .date-controls { gap:8rpx; }
+.calendar-open .date-heading { gap:8rpx; }
+.calendar-open .plain-button.calendar-toggle,.calendar-open .plain-button.today-button { padding:0 10rpx; font-size:23rpx; }
+.calendar-panel { padding:6rpx 12rpx 14rpx; margin-bottom:20rpx; border:1rpx solid var(--border); border-radius:20rpx; }
+.calendar-month-label { font-size:30rpx; }
+.calendar-weekdays { background:var(--grid-head); border-top:1rpx solid var(--border); border-bottom:1rpx solid var(--border); }
+.calendar-weekday { color:var(--text); }
+.plain-button.calendar-day { border-right:1rpx solid var(--border); border-bottom:1rpx solid var(--border); }
+.calendar-day-face { border-radius:12rpx; }
+.calendar-selected .calendar-day-face { background:var(--primary); border-color:transparent; }
+.theme-campus .calendar-selected .calendar-day-face { background:var(--selected); }
+.theme-campus .calendar-selected .calendar-day-number { color:var(--text); }
+.theme-campus .calendar-selected .calendar-goal-dot.has-goals { background:#E2B846; }
+.theme-campus .calendar-panel { border-color:transparent; }
+.goals-section,.journal-section { background:var(--surface); border:1rpx solid var(--border); border-radius:20rpx; padding:18rpx; margin-bottom:22rpx; }
+.theme-campus .goals-section,.theme-campus .journal-section { border-color:transparent; border-radius:26rpx; }
+.section-heading { gap:14rpx; margin:2rpx 2rpx 18rpx; }
+.section-title { flex:1; font-size:34rpx; }
+.section-icon { width:50rpx; height:50rpx; flex-shrink:0; }
+.completion-count { font-size:24rpx; }
+.todo-list { padding:0; border:0; background:transparent; }
+.todo-row { border:1rpx solid var(--border); border-radius:18rpx; margin-bottom:10rpx; min-height:106rpx; }
+.todo-row:first-child { border-top:1rpx solid var(--border); }
+.plain-button.todo-content { padding:14rpx 0; }
+.todo-title { font-size:28rpx; font-weight:600; line-height:1.4; }
+.completed .todo-title { font-weight:400; }
+.todo-note { margin-top:4rpx; font-size:24rpx; }
+.plain-button.check-control,.plain-button.more-control { width:44px !important; min-width:44px; min-height:44px; }
+.check-circle.checked { background:var(--primary); border-color:var(--primary); }
+.goal-editor { margin-top:14rpx; background:var(--soft); border-radius:18rpx; }
+.add-goal { justify-content:center; min-height:44px; padding:16rpx; font-weight:500; }
+.add-mark { width:30rpx; height:30rpx; background:transparent; border-radius:0; }
+.plus-line { background:var(--accent); }
+.plus-line.horizontal { width:30rpx; left:0; top:14rpx; }
+.plus-line.vertical { height:30rpx; top:0; left:14rpx; }
+.reflection-heading { margin-top:2rpx; }
+.reflection-panel { padding:22rpx; border:1rpx solid var(--border); border-radius:18rpx; background:var(--surface); }
+.theme-campus .reflection-panel { background:var(--input); }
+.daily-note-input { min-height:250rpx; font-size:28rpx; line-height:1.65; }
+.status-check { background:var(--success); }
+.status-stem { border-color:var(--on-dark); }
+.note-status.saved { color:var(--muted); }
+.reflection-footer { font-size:21rpx; margin:18rpx 0 0; }
+.expiry-hint { margin:12rpx 0 0; padding:0; font-size:21rpx; text-align:left; }
+.save-button,.cancel-button,.note-toggle,.retry-button { min-height:44px; }
+.save-button[disabled] { color:var(--muted); background:var(--disabled); }
+.title-input { height:48px; }
+.calendar-open .daily-note-input { min-height:200rpx; }

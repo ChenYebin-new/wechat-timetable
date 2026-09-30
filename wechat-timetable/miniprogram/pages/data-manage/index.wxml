@@ -1,7 +1,9 @@
+<page-meta page-style="{{appearanceStyle}}background:var(--page);background-image:var(--page-texture);font-family:var(--font-family);color:var(--text);" />
 <!-- pages/data-manage/index.wxml -->
 <share-home-preview wx:if="{{showShareHomePreview}}" />
 <block wx:else>
-<view class="page">
+<page-header class="page-masthead" title="课表数据管理" subtitle="" home="{{false}}" theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}" art="{{appearanceArt}}" />
+<view class="page theme-{{themeId}}" style="{{appearanceStyle}}">
   <view class="card">
     <text class="card-title">导出课表</text>
     <text class="card-desc">把当前课表导出为 JSON 文本，复制后保存到备忘录、发给同学或其他设备。</text>
@@ -42,7 +44,7 @@
         <text class="term-setup-title">这是旧版（V1）备份，导入前请确认学期设置。日期列表仅显示星期一。</text>
         <view class="term-row">
           <text class="k">第一教学周星期一</text>
-          <monday-picker id="term-monday-picker" value="{{termStartDate}}" bindchange="onTermDate">
+          <monday-picker theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}" id="term-monday-picker" value="{{termStartDate}}" bindchange="onTermDate">
             <view class="v picker-date">{{termStartDate}}（周一）</view>
           </monday-picker>
         </view>

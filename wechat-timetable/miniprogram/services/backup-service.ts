@@ -11,7 +11,7 @@ import {
   RECENT_BACKUP_KEY,
 } from '../models/backup'
 import type { ImportPreview, RecentBackup, TimetableBackupEnvelope } from '../models/backup'
-import { getStorage, getStorageProblem, writeStorage } from './course-storage'
+import { getStorage, getStorageProblem, getStorageSnapshot, lockCourseWrites, writeStorage } from './course-storage'
 import type { TimetableStorageView } from './storage-codec'
 import { validateTerm } from '../utils/term'
 import {
@@ -22,22 +22,9 @@ import { isSupportedSchemaVersion } from './storage-codec'
 import { courseGroupCount, planCourseGroupMerge } from '../utils/course-groups'
 import { restoreStorageKey, sameStoredValue } from './storage-safety'
 import { decodeBackupTimetable, expandV1CoursesWithTerm } from './timetable-compat'
+import { utf8ByteLength } from '../utils/utf8'
 
 // ---------- 基础工具 ----------
-
-function utf8ByteLength(s: string): number {
-  let bytes = 0
-  for (let i = 0; i < s.length; i++) {
-    const code = s.charCodeAt(i)
-    if (code < 0x80) bytes += 1
-    else if (code < 0x800) bytes += 2
-    else if (code >= 0xd800 && code <= 0xdbff) {
-      bytes += 4
-      i++ // 代理对，占两个 UTF-16 单元
-    } else bytes += 3
-  }
-  return bytes
-}
 
 function isValidDateString(s: string): boolean {
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})\.(\d{3})Z$/.exec(s)
@@ -69,7 +56,9 @@ function unsupportedStorageReason(schemaVersion: number): string {
 
 /** 导出当前课表为备份 JSON 文本。 */
 export function exportBackup(): string {
-  const storage = getStorage()
+  const snapshot = getStorageSnapshot()
+  if (snapshot.kind === 'io-error' || snapshot.kind === 'corrupt') throw new Error(snapshot.reason)
+  const storage = snapshot.data
   if (!isSupportedSchemaVersion(storage.schemaVersion)) {
     throw new Error(unsupportedStorageReason(storage.schemaVersion))
   }
@@ -94,7 +83,9 @@ export function exportBackup(): string {
       periodSettings: clonePeriodSettings(storage.periodSettings),
     } as unknown as SupportedTimetableStorage,
   }
-  return JSON.stringify(envelope)
+  const text = JSON.stringify(envelope)
+  if (utf8ByteLength(text) > MAX_BACKUP_BYTES) throw new Error('课表备份超过 1 MiB，无法完整复制或导入；内容未被截断')
+  return text
 }
 
 // ---------- 解析与校验 ----------
@@ -267,7 +258,7 @@ function snapshotCurrent(current: TimetableStorage): boolean {
   } catch {
     // 下方恢复写入前的最近备份。
   }
-  if (previousRecentRead) restoreStorageKey(RECENT_BACKUP_KEY, previousRecent)
+  if (previousRecentRead && !restoreStorageKey(RECENT_BACKUP_KEY, previousRecent)) lockCourseWrites()
   return false
 }
 
@@ -277,7 +268,7 @@ function normalizeRecentBackup(raw: unknown): RecentBackup | null {
   if (!Number.isSafeInteger(rb.savedAt) || rb.savedAt < 0) return null
   const parsed = validateEnvelopeObject(rb.export)
   if (!parsed.ok || !parsed.envelope) return null
-  const analyzed = analyzeBackup(parsed.envelope)
+  const analyzed = decodeBackupTimetable(parsed.envelope.data)
   if (!analyzed.ok || !analyzed.courses) return null
   return {
     savedAt: rb.savedAt,
@@ -319,11 +310,15 @@ export interface MutationResult {
 }
 
 function getCurrentForMutation(): { current?: TimetableStorage; reason?: string } {
-  const current = getStorage()
-  const problem = getStorageProblem(current)
-  if (problem) return { reason: problem }
-  if (current.schemaVersion !== TIMETABLE_SCHEMA_VERSION) return { reason: unsupportedStorageReason(current.schemaVersion) }
-  return { current: current as TimetableStorage }
+  try {
+    const current = getStorage()
+    const problem = getStorageProblem(current)
+    if (problem) return { reason: problem }
+    if (current.schemaVersion !== TIMETABLE_SCHEMA_VERSION) return { reason: unsupportedStorageReason(current.schemaVersion) }
+    return { current: current as TimetableStorage }
+  } catch (error) {
+    return { reason: error instanceof Error ? error.message : '读取本地课表失败，请稍后重试' }
+  }
 }
 
 function tryWriteStorage(data: TimetableStorage): boolean {
@@ -339,7 +334,8 @@ function recoverAfterMutationFailure(current: TimetableStorage): MutationResult 
   if (tryWriteStorage(current)) {
     return { ok: false, reason: '写入失败，原课表已恢复，自动备份已保留' }
   }
-  return { ok: false, reason: '写入失败，无法确认原课表状态；请使用最近自动备份恢复' }
+  lockCourseWrites()
+  return { ok: false, reason: '写入失败，无法确认原课表状态；本次会话已暂停写入，请保留备份并重新启动后检查' }
 }
 
 function generateImportId(): string {
@@ -350,7 +346,7 @@ function generateImportId(): string {
 export function overwriteFromBackup(envelope: TimetableBackupEnvelope, term?: TermSettings): MutationResult {
   const currentResult = getCurrentForMutation()
   if (!currentResult.current) return { ok: false, reason: currentResult.reason }
-  const analyzed = analyzeBackup(envelope)
+  const analyzed = analyzeBackup(envelope, currentResult.current)
   if (!analyzed.ok || !analyzed.courses) return { ok: false, reason: analyzed.errors[0] }
 
   let targetTerm: TermSettings | null
@@ -386,7 +382,7 @@ export function overwriteFromBackup(envelope: TimetableBackupEnvelope, term?: Te
 export function mergeFromBackup(envelope: TimetableBackupEnvelope, term?: TermSettings): MutationResult {
   const currentResult = getCurrentForMutation()
   if (!currentResult.current) return { ok: false, reason: currentResult.reason }
-  const analyzed = analyzeBackup(envelope)
+  const analyzed = analyzeBackup(envelope, currentResult.current)
   if (!analyzed.ok || !analyzed.courses) return { ok: false, reason: analyzed.errors[0] }
   const current = currentResult.current
   const incomingPeriodSettings = clonePeriodSettings(analyzed.periodSettings || DEFAULT_PERIOD_SETTINGS)
@@ -543,9 +539,10 @@ export function restoreRecentBackup(): MutationResult {
     if (currentRestored && backupRestored) {
       return { ok: false, reason: '恢复失败，原课表和最近备份均已保留' }
     }
+    lockCourseWrites()
     if (currentRestored) {
-      return { ok: false, reason: '恢复失败，原课表已保留，但最近备份无法还原' }
+      return { ok: false, reason: '恢复失败，原课表已保留，但最近备份无法还原；本次会话已暂停写入，请重新启动后检查' }
     }
-    return { ok: false, reason: '恢复失败，无法确认原课表状态；请暂时不要继续操作' }
+    return { ok: false, reason: '恢复失败，无法确认原课表状态；本次会话已暂停写入，请保留备份并重新启动后检查' }
   }
 }

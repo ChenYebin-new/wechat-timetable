@@ -1,7 +1,10 @@
 import { buildMondayPickerState, changeMondayPickerColumn, resolveMondayPickerDate } from '../../utils/monday-picker'
+import { DEFAULT_THEME } from '../../themes/index'
 
 Component({
   properties: {
+    themeId: { type: String, value: DEFAULT_THEME },
+    appearanceStyle: { type: String, value: '' },
     value: { type: String, value: '', observer: 'resetSelection' },
   },
   data: {

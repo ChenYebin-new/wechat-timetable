@@ -1,3 +1,4 @@
+import { appearanceData, syncAppearance } from '../../utils/appearance-page'
 import type { CourseRange } from '../../models/course'
 import { getStorageSnapshot } from '../../services/course-storage'
 import { weeksOverlap } from '../../utils/course-validator'
@@ -16,6 +17,7 @@ interface SlotSelectorInit {
 
 Page({
   data: {
+    ...appearanceData(),
     ready: false,
     periods: [] as PeriodView[],
     daySlots: [] as TimetableCardItem[][],
@@ -27,8 +29,17 @@ Page({
     showShareHomePreview: false,
   },
 
+  onShow() { syncAppearance(this) },
+
+  onPageScroll(event: WechatMiniprogram.Page.IPageScrollOption) {
+    this.selectComponent('.page-masthead')?.updateScroll(event.scrollTop)
+  },
+
+  onReady() { syncAppearance(this) },
+
   onLoad(options: Record<string, string | undefined>) {
     if (initializeHomeSharing(this, '/pages/slot-select/index', options)) return
+    syncAppearance(this)
     this.getOpenerEventChannel().on('slotSelectorInit', (init: SlotSelectorInit) => {
       const snapshot = getStorageSnapshot()
       if (snapshot.kind === 'io-error' || snapshot.kind === 'corrupt' || snapshot.kind === 'unsupported') {

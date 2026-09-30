@@ -12,19 +12,22 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  background: #f2f5f7;
+  background-color: var(--page);
+  background-image: var(--page-texture);
+  font-family: var(--font-family);
 }
 
 .share-preview-art {
-  width: 300rpx;
-  height: 300rpx;
-  border-radius: 52rpx;
-  box-shadow: 0 18rpx 42rpx rgba(24, 73, 69, 0.2);
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: var(--radius);
+  padding: 44rpx;
+  background: var(--soft);
 }
 
 .share-preview-title {
   margin-top: 42rpx;
-  color: #213b36;
+  color: var(--text);
   font-size: 44rpx;
   font-weight: 700;
   line-height: 1.25;
@@ -32,7 +35,7 @@
 
 .share-preview-desc {
   margin-top: 16rpx;
-  color: #4c625d;
+  color: var(--muted);
   font-size: 26rpx;
   line-height: 1.55;
 }

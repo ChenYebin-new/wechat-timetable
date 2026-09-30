@@ -1,0 +1,185 @@
+/* A/B/F extend the same live pages. Native components own their isolated rules. */
+.page.theme-paper { background-image:var(--page-texture); font-family:var(--font-family); }
+.theme-paper button,.theme-paper input,.theme-paper textarea { font-family:var(--font-family); }
+.theme-paper .intro-title,.theme-paper .section-title,.theme-paper .card-title { font-weight:700; }
+.theme-paper .form,.theme-paper .card,.theme-paper .rule-card,.theme-paper .count-card,.theme-paper .period-card,.theme-paper .calendar-panel { background:rgba(255,255,255,.13); border:1rpx solid var(--border); border-radius:8rpx; box-shadow:none; }
+.theme-paper .input,.theme-paper .picker-value,.theme-paper .range-chip { background:rgba(255,255,255,.25); border-radius:8rpx; }
+.theme-paper button.btn,.theme-paper button.save-btn,.theme-paper button.apply-button { border-radius:8rpx; font-weight:400; }
+.theme-paper .btn-primary { background-image:var(--page-texture); background-blend-mode:multiply; }
+.theme-paper .btn-danger { background:transparent; color:var(--accent); }
+.theme-paper .btn-danger::before,.theme-paper .btn-danger::after { display:none; }
+.theme-paper .menu-card { border:1rpx solid var(--border); border-radius:8rpx; background:rgba(255,255,255,.12); overflow:hidden; }
+.theme-paper .menu-row { gap:24rpx; padding:24rpx; min-height:150rpx; }
+.theme-paper .divider { height:1rpx; background:var(--border); }
+.theme-paper .menu-icon { width:100rpx; height:100rpx; border:1rpx solid var(--border); border-radius:8rpx; background:#DCE0CD; }
+.theme-paper .menu-appearance .menu-icon { background:#E2D8E6; }
+.theme-paper .menu-time .menu-icon { background:#F0DDBA; }
+.theme-paper .menu-backup .menu-icon { background:#D0DCE2; }
+.paper-signoff { display:flex; flex-direction:column; align-items:center; padding:60rpx 0 20rpx; color:#75644D; font-size:28rpx; line-height:1.8; letter-spacing:4rpx; }
+.paper-signoff-art { display:flex; align-items:center; margin-bottom:14rpx; }
+.paper-signoff-art image { width:82rpx; height:82rpx; }.paper-signoff-art .sprig { width:70rpx; height:100rpx; margin-left:-8rpx; }
+.theme-paper .form { padding:0 22rpx; }
+.theme-paper .range-chip { background:var(--selected); border-color:transparent; }
+.theme-paper .backup-icon { display:none; }
+.theme-paper .backup-heading + .card-desc { margin:14rpx 0 20rpx 26rpx; }
+.theme-paper .backup-heading .card-title { border-left:6rpx solid var(--accent); padding-left:22rpx; }
+.theme-paper .backup-empty { background:transparent; border:0; padding-top:16rpx; }
+.theme-paper .goals-section,.theme-paper .journal-section { border:0; border-radius:0; background:transparent; padding:12rpx 0; margin-bottom:28rpx; }
+.theme-paper .section-icon { width:58rpx; height:64rpx; object-fit:contain; }
+.theme-paper .todo-list { border:1rpx solid var(--border); border-radius:8rpx; overflow:hidden; }
+.theme-paper .todo-row { border:0; border-bottom:1rpx solid var(--border); margin:0; border-radius:0; min-height:116rpx; }
+.theme-paper .todo-row:first-child { border-top:0; }.theme-paper .todo-row:last-child { border-bottom:0; }
+.theme-paper .goal-editor { background:rgba(236,226,213,.3); border:1rpx solid var(--border); border-radius:6rpx; }
+.theme-paper .reflection-panel { background:rgba(255,255,255,.12); border-radius:8rpx; }
+.theme-paper .daily-note-input { min-height:320rpx; font-size:30rpx; line-height:1.75; }
+.theme-paper .date-arrow { background:transparent; }
+.theme-paper .date-label { font-size:46rpx; font-weight:600; }
+.theme-paper .weekday-label { display:inline-block; width:auto; align-self:center; padding:0 8rpx 8rpx; border-bottom:2rpx solid var(--accent); color:var(--text); }
+.theme-paper .plain-button.calendar-toggle,.theme-paper .plain-button.today-button { background:transparent; border-radius:6rpx; }
+.theme-paper .calendar-open .date-navigation { background:transparent; }
+.theme-paper.calendar-open .date-navigation { background:transparent; }
+.theme-paper.calendar-open .date-label { font-size:34rpx; }
+.theme-paper .calendar-selected .calendar-day-face { background:var(--selected); border:1rpx solid #B99180; border-radius:6rpx; }
+.theme-paper .calendar-selected .calendar-day-number { color:var(--text); }
+.theme-paper .calendar-selected .calendar-goal-dot.has-goals { background:var(--accent); }
+.theme-paper .status-check,.theme-swiss .status-check { background:transparent; }
+.theme-paper .status-stem { border-color:var(--accent); }.theme-swiss .status-stem { border-color:var(--text); }
+
+/* B: editorial rows, deliberately square controls, and strong numeric hierarchy. */
+.theme-swiss .section-title,.theme-swiss .card-title,.theme-swiss .menu-title,.theme-swiss .label { font-weight:800; }
+.theme-swiss .form,.theme-swiss .card,.theme-swiss .rule-card,.theme-swiss .period-card,.theme-swiss .count-card { border:1rpx solid var(--border); border-radius:0; box-shadow:none; }
+.theme-swiss .input,.theme-swiss .picker-value,.theme-swiss .range-chip,.theme-swiss .week-chip,.theme-swiss .notice,.theme-swiss .error-box { border-radius:0; }
+.theme-swiss button.btn,.theme-swiss button.save-btn,.theme-swiss button.apply-button { border-radius:0; font-weight:700; }
+.theme-swiss .btn-danger { border:1rpx solid var(--primary); background:white; color:var(--accent); }
+.theme-swiss .menu-card { border:1rpx solid var(--border); border-radius:0; }
+.theme-swiss .menu-row { position:relative; padding:0 24rpx 0 0; min-height:158rpx; gap:28rpx; }
+.theme-swiss .divider { height:1rpx; background:var(--border); }
+.theme-swiss .menu-icon { width:130rpx; height:158rpx; padding:40rpx 30rpx; background:transparent; border-radius:0; border-right:1rpx solid var(--border); }
+.theme-swiss .menu-row::before { content:''; position:absolute; left:18rpx; top:52rpx; width:7rpx; height:56rpx; background:var(--primary); }
+.theme-swiss .menu-title { font-size:34rpx; }.theme-swiss .menu-desc { font-size:26rpx; }
+.theme-swiss .form { padding:0; }.theme-swiss .field { gap:0; padding:0; }
+.theme-swiss .label { padding:28rpx 22rpx; width:192rpx; min-height:136rpx; display:flex; align-items:center; box-sizing:border-box; border-right:1rpx solid var(--border); font-size:30rpx; }
+.theme-swiss .input-shell,.theme-swiss .week-control,.theme-swiss .field > picker { padding:14rpx 24rpx; }
+.theme-swiss .field .input,.theme-swiss .picker-value { border:0; padding:16rpx 8rpx; font-size:30rpx; }
+.theme-swiss .field-column { padding:22rpx; gap:16rpx; }.theme-swiss .field-column .label { border:0; min-height:44px; padding:0; width:auto; }
+.theme-swiss .range-chip { border:0; border-left:8rpx solid var(--primary); background:var(--selected); font-weight:700; }
+.theme-swiss .backup-icon { display:none; }
+.theme-swiss .backup-heading .card-title { border-left:9rpx solid var(--primary); padding-left:24rpx; }
+.theme-swiss .backup-heading + .card-desc { margin:16rpx 0 22rpx 32rpx; }
+.theme-swiss .backup-empty { border:0; border-radius:0; background:#F2F2F2; padding:34rpx 18rpx; }
+.theme-swiss .backup-empty image { display:none; }
+.theme-swiss .goals-section,.theme-swiss .journal-section { border:0; border-radius:0; background:transparent; padding:0; margin:0 0 32rpx; }
+.theme-swiss .section-heading { padding-top:22rpx; border-top:2rpx solid #222; margin-bottom:18rpx; }
+.theme-swiss .section-title { font-size:36rpx; }
+.theme-swiss .todo-list { border:1rpx solid var(--border); }
+.theme-swiss .todo-row,.theme-swiss .todo-row:first-child { border:0; border-bottom:1rpx solid var(--border); border-radius:0; margin:0; min-height:112rpx; }
+.theme-swiss .todo-row:last-child { border-bottom:0; }
+.theme-swiss .more-control { border-left:1rpx solid #DDDDDD; align-self:stretch; }
+.theme-swiss .goal-editor { border:1rpx solid #333; border-radius:0; background:white; }
+.theme-swiss .add-goal { color:var(--text); }.theme-swiss .plus-line { background:var(--text); }
+.theme-swiss .reflection-panel { border-radius:0; border-color:#555; }.theme-swiss .daily-note-input { min-height:280rpx; }
+.theme-swiss .date-arrow { background:transparent; }
+.theme-swiss .date-label { font-size:58rpx; font-weight:800; letter-spacing:-1rpx; }
+.theme-swiss .weekday-label { font-size:28rpx; font-weight:600; color:var(--text); }
+.theme-swiss .date-controls { margin:12rpx 0 26rpx; }
+.theme-swiss .plain-button.calendar-toggle,.theme-swiss .plain-button.today-button { border:1rpx solid #333; border-radius:0; background:white; }
+.theme-swiss .calendar-icon { display:none; }
+.theme-swiss.calendar-open .date-label { font-size:40rpx; }.theme-swiss.calendar-open .weekday-label { display:block; font-size:24rpx; }
+.theme-swiss.calendar-open .date-navigation { border-radius:0; }.theme-swiss .calendar-panel { border:0; padding:0; border-radius:0; }
+.theme-swiss .calendar-heading { border-top:1rpx solid var(--border); }.theme-swiss .calendar-day-face { border-radius:0; }
+.theme-swiss .calendar-month-label { font-weight:800; }.theme-swiss .calendar-selected .calendar-day-number { color:white; }
+.theme-swiss .calendar-goal-dot.has-goals { background:var(--primary); }
+
+/* F: the blue stepped frame is a nine-slice vector, not a rounded C component. */
+.theme-pixel .form,.theme-pixel .card,.theme-pixel .menu-card,.theme-pixel .goals-section,.theme-pixel .journal-section,.theme-pixel .calendar-panel,.theme-pixel .rule-card,.theme-pixel .count-card,.theme-pixel .period-card { border:6rpx solid transparent; border-image:var(--pixel-frame) 6 / 12rpx stretch; border-radius:0; box-shadow:none; background:var(--surface); }
+.theme-pixel .section-title,.theme-pixel .card-title,.theme-pixel .menu-title,.theme-pixel .label { color:var(--accent); font-weight:700; }
+.theme-pixel .input,.theme-pixel .picker-value,.theme-pixel .range-chip,.theme-pixel .week-chip,.theme-pixel .notice { border:2rpx solid var(--border); border-radius:3rpx; }
+.theme-pixel .range-chip { background:#D5E9FF; font-weight:600; }
+.theme-pixel button.btn,.theme-pixel button.save-btn,.theme-pixel button.apply-button { border:6rpx solid transparent; border-image:var(--pixel-frame) 6 / 12rpx stretch; border-radius:0; background-clip:padding-box; font-weight:600; }
+.theme-pixel .btn-primary { background-image:linear-gradient(135deg,#1867F4,#0952ED); }
+.theme-pixel .btn-danger { color:#B52120; background:#FFF0E9; border:2rpx solid #E9776E; }
+.theme-pixel .menu-card { padding:28rpx 20rpx; }
+.theme-pixel .menu-row { padding:18rpx 14rpx; gap:22rpx; min-height:144rpx; margin-bottom:16rpx; border:1rpx solid #D9E3E9; }
+.theme-pixel .menu-row:last-child { margin-bottom:0; }.theme-pixel .divider { display:none; }
+.theme-pixel .menu-icon { width:90rpx; height:90rpx; padding:8rpx; background:transparent; border-radius:0; }
+.theme-pixel .chevron { color:var(--accent); font-weight:700; }
+.theme-pixel .menu-title { font-size:32rpx; }.theme-pixel .menu-desc { font-size:24rpx; }
+.pixel-signoff { text-align:center; margin:60rpx 0 30rpx; color:#6383B3; font-size:24rpx; letter-spacing:6rpx; }
+.pixel-spark { width:12rpx; height:12rpx; margin:0 auto 34rpx; background:#8CACDE; box-shadow:-24rpx -18rpx #8CACDE,24rpx -18rpx #8CACDE,-12rpx 12rpx #8CACDE,12rpx 12rpx #8CACDE; }
+.theme-pixel .actions { margin-top:28rpx; }
+.theme-pixel .backup-icon { width:66rpx; height:66rpx; padding:4rpx; border-radius:0; background:transparent; }
+.theme-pixel .backup-heading { gap:20rpx; }.theme-pixel .backup-heading + .card-desc { margin:0 0 22rpx 86rpx; }
+.theme-pixel .backup-empty { border-radius:0; background:transparent; }.theme-pixel .backup-empty image { display:none; }
+.theme-pixel .date-navigation { background:white; border:6rpx solid transparent; border-image:var(--pixel-frame) 6 / 12rpx stretch; border-radius:0; }
+.theme-pixel .date-label { font-size:34rpx; color:var(--accent); }.theme-pixel .date-picker-content { min-height:44px; }
+.theme-pixel .weekday-label { display:none; }.theme-pixel .date-arrow { background:transparent; }
+.theme-pixel .plain-button.calendar-toggle,.theme-pixel .plain-button.today-button { border:2rpx solid var(--accent); border-radius:0; color:var(--accent); background:white; padding:0 12rpx; }
+.theme-pixel.calendar-open .date-label { font-size:28rpx; }.theme-pixel .calendar-icon,.theme-pixel .calendar-icon-divider { border-color:var(--accent); }
+.theme-pixel .calendar-icon-binding,.theme-pixel .calendar-icon-dots { background:var(--accent); }
+.theme-pixel .todo-row { border-color:#C8DFFD; border-radius:6rpx; }.theme-pixel .goal-editor { border:2rpx solid var(--accent); border-radius:0; background:var(--soft); }
+.theme-pixel .reflection-panel { background:white; border:1rpx solid #C8DFFD; border-radius:6rpx; }
+.theme-pixel .calendar-day-face { border-radius:0; }.theme-pixel .calendar-selected .calendar-day-face { background:var(--selected); border:2rpx solid var(--accent); }
+.theme-pixel .calendar-selected .calendar-day-number { color:var(--text); }.theme-pixel .calendar-goal-dot.has-goals { background:#EAA512; }
+.theme-pixel .calendar-month-label { color:var(--accent); font-weight:700; }.theme-pixel .section-icon { width:46rpx; height:46rpx; }
+
+/* Secondary pages retain their real controls and inherit the same material grammar. */
+.theme-paper .save-bar,.theme-swiss .save-bar,.theme-pixel .save-bar { background:var(--page); border-top:1rpx solid var(--border); }
+.theme-swiss .chip,.theme-swiss .mode-option,.theme-swiss .custom-badge,.theme-swiss .selection-bar { border-radius:0; }
+.theme-paper .chip,.theme-paper .mode-option,.theme-paper .custom-badge,.theme-paper .selection-bar { border-radius:6rpx; }
+.theme-pixel .chip,.theme-pixel .mode-option,.theme-pixel .custom-badge,.theme-pixel .selection-bar { border-radius:2rpx; }
+.theme-swiss .theme-choice,.theme-pixel .theme-choice { border-radius:0; }.theme-paper .theme-choice { border-radius:8rpx; }
+.theme-pixel .error-box { border-radius:0; }.theme-swiss .term-banner { border-radius:0; }
+@media (max-width:380px) {
+  .theme-swiss .date-label { font-size:48rpx; }.theme-swiss.calendar-open .date-label { font-size:31rpx; }
+  .theme-paper .date-label { font-size:40rpx; }.theme-paper.calendar-open .date-label { font-size:28rpx; }
+  .theme-pixel .date-label { font-size:29rpx; }.theme-pixel.calendar-open .date-label { font-size:24rpx; }
+}
+
+/* Extra specificity keeps native and page button defaults from restoring C shapes. */
+.page.theme-paper button.save-btn,.page.theme-paper button.apply-button { border-radius:8rpx; }
+.page.theme-swiss button.save-btn,.page.theme-swiss button.apply-button,.page.theme-pixel button.save-btn,.page.theme-pixel button.apply-button { border-radius:0; }
+.theme-paper .field .input { border-radius:8rpx; }
+.theme-pixel .field .input { border-radius:3rpx; }
+.theme-swiss .menu-row .menu-icon,.theme-pixel .menu-row .menu-icon { background:transparent; }
+.theme-paper .menu-term .menu-icon { background:#DCE0CD; }
+.theme-paper .menu-data .menu-icon { background:#E0D7CA; }
+.theme-paper .time-card { border:1rpx solid var(--border); border-radius:8rpx; background:transparent; }
+.theme-swiss .time-card { border:1rpx solid var(--border); border-radius:0; }
+.theme-pixel .time-card { border:6rpx solid transparent; border-image:var(--pixel-frame) 6 / 12rpx stretch; border-radius:0; }
+.theme-paper .selection-cancel,.theme-paper .selection-done { border-radius:6rpx; }
+.theme-swiss .selection-cancel,.theme-swiss .selection-done,.theme-pixel .selection-cancel,.theme-pixel .selection-done { border-radius:0; }
+
+.theme-pixel .pixel-weekday { display:block; margin:-8rpx 6rpx 22rpx; font-size:24rpx; color:var(--accent); font-weight:600; }
+.theme-pixel .calendar-selected .calendar-goal-dot.has-goals { background:#F2AE16; }
+
+/* Shared type roles: section headings, readable control values, and quiet metadata. */
+.theme-paper .section-title,.theme-paper .card-title,.theme-paper .intro-title { font-size:36rpx; line-height:1.4; letter-spacing:1rpx; }
+.theme-paper .menu-title { font-size:34rpx; font-weight:700; line-height:1.4; }
+.theme-paper .label { font-size:30rpx; font-weight:700; }
+.theme-paper .field .input,.theme-paper .picker-value { font-size:30rpx; line-height:1.5; }
+.theme-paper .todo-title { font-size:30rpx; line-height:1.5; font-weight:700; }
+.theme-paper .completed .todo-title { font-weight:400; }
+.theme-paper .menu-desc,.theme-paper .card-desc,.theme-paper .intro-desc { font-size:25rpx; line-height:1.65; }
+.theme-paper .todo-note { font-size:24rpx; line-height:1.5; margin-top:6rpx; }
+.theme-paper .date-label { font-weight:700; letter-spacing:1rpx; }
+.theme-paper button.btn,.page.theme-paper button.save-btn { font-size:32rpx; }
+.theme-paper .btn-danger { display:flex; align-items:center; justify-content:center; gap:32rpx; }
+.theme-paper .delete-rule { height:1rpx; background:#B99A87; flex:1; max-width:26%; }
+.theme-paper .menu-row .chevron,.theme-swiss .menu-row .chevron { font-size:0; width:14rpx; height:14rpx; border-top:2rpx solid var(--text); border-right:2rpx solid var(--text); transform:rotate(45deg); margin-right:6rpx; flex-shrink:0; }
+.theme-swiss .menu-row .chevron { border-width:3rpx; }
+.theme-swiss .section-title,.theme-swiss .card-title { font-size:36rpx; line-height:1.3; font-weight:800; }
+.theme-swiss .label { font-size:32rpx; font-weight:700; }
+.theme-swiss .field .input,.theme-swiss .picker-value { font-size:32rpx; line-height:1.4; }
+.theme-swiss .todo-title { font-size:30rpx; font-weight:700; line-height:1.45; }
+.theme-swiss .completed .todo-title { font-weight:400; }
+.theme-swiss .menu-title { line-height:1.3; }
+.theme-swiss .menu-desc,.theme-swiss .card-desc { line-height:1.55; }
+.theme-swiss button.btn,.page.theme-swiss button.save-btn { font-size:32rpx; }
+.theme-swiss .date-label,.theme-swiss .calendar-day-number { font-variant-numeric:tabular-nums; }
+.theme-pixel .section-title,.theme-pixel .card-title { font-size:34rpx; font-weight:700; line-height:1.35; }
+.theme-pixel .label { font-size:30rpx; font-weight:700; }
+.theme-pixel .field .input,.theme-pixel .picker-value { font-size:30rpx; line-height:1.5; }
+.theme-pixel .todo-title { font-size:29rpx; line-height:1.45; }
+.theme-pixel .todo-note,.theme-pixel .menu-desc,.theme-pixel .card-desc { line-height:1.6; }
+.theme-pixel .menu-row .chevron { width:6rpx; height:6rpx; font-size:0; background:var(--accent); transform:none; box-shadow:-6rpx -6rpx var(--accent),-12rpx -12rpx var(--accent),-6rpx 6rpx var(--accent),-12rpx 12rpx var(--accent); margin:0 8rpx 0 14rpx; flex-shrink:0; }
+.theme-pixel .date-label,.theme-pixel .calendar-day-number { font-variant-numeric:tabular-nums; }

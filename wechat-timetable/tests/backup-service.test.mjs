@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import './helpers/register-typescript.mjs'
+import { sessionTest } from './helpers/isolated-test.mjs'
+const isolatedTest = sessionTest(import.meta.url)
 
 const TIMETABLE_KEY = 'timetable_courses'
 const RECENT_BACKUP_KEY = 'timetable_recent_backup'
@@ -516,7 +518,7 @@ test('未知高版本数据不能被编辑、删除、导出或覆盖', () => {
   assert.deepEqual(storage.get(TIMETABLE_KEY), futureStorage)
 })
 
-test('覆盖写入持续失败时不抛异常，并保留操作前自动备份', () => {
+isolatedTest('覆盖写入持续失败时不抛异常，并保留操作前自动备份', () => {
   const original = [course()]
   reset(original)
   timetableWriteFailures = 2
@@ -533,7 +535,7 @@ test('覆盖写入持续失败时不抛异常，并保留操作前自动备份',
   )
 })
 
-test('恢复失败时保留恢复前课表和原来的最近备份', () => {
+isolatedTest('恢复失败时保留恢复前课表和原来的最近备份', () => {
   const original = [course()]
   const replacement = [course({ id: 'course-2', name: '英语', day: 2 })]
   reset(original)

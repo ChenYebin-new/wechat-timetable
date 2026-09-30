@@ -1,18 +1,20 @@
+<page-meta page-style="{{appearanceStyle}}background:var(--page);background-image:var(--page-texture);font-family:var(--font-family);color:var(--text);" />
 <!-- pages/course-edit/index.wxml -->
 <share-home-preview wx:if="{{showShareHomePreview}}" />
 <block wx:else>
-<view class="page">
+<page-header class="page-masthead" title="{{isEdit ? '编辑课程' : '新增课程'}}" subtitle="" home="{{false}}" theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}" art="{{appearanceArt}}" />
+<view class="page theme-{{themeId}}" style="{{appearanceStyle}}">
   <view class="form">
     <view class="field">
       <text class="label">课程名称</text>
-      <input class="input" value="{{name}}" placeholder="必填" placeholder-class="ph" bindinput="onName" aria-label="课程名称" />
+      <view class="input-shell"><input class="input" value="{{name}}" placeholder="必填" placeholder-class="ph" bindinput="onName" aria-label="课程名称" /><button wx:if="{{themeId === 'campus' && name}}" class="clear-input" data-field="name" bindtap="onClearField" aria-label="清除课程名称"><view class="clear-mark" /></button></view>
     </view>
 
     <block wx:if="{{isGroupMode}}">
       <view class="field field-column range-field">
         <view class="range-heading">
           <text class="label">上课时段</text>
-          <view class="range-edit" bindtap="onReselect" aria-role="button" aria-label="重新选择上课时段">重新选择</view>
+          <view class="range-edit" bindtap="onReselect" aria-role="button" aria-label="重新选择上课时段">重新选择<view class="link-chevron" /></view>
         </view>
         <view wx:if="{{rangeItems.length}}" class="range-list">
           <text class="range-chip" wx:for="{{rangeItems}}" wx:key="*this">{{item}}</text>
@@ -45,39 +47,23 @@
 
     <view class="field">
       <text class="label">教师</text>
-      <input class="input" value="{{teacher}}" placeholder="可选" placeholder-class="ph" bindinput="onTeacher" aria-label="教师" />
+      <view class="input-shell"><input class="input" value="{{teacher}}" placeholder="可选" placeholder-class="ph" bindinput="onTeacher" aria-label="教师" /><button wx:if="{{themeId === 'campus' && teacher}}" class="clear-input" data-field="teacher" bindtap="onClearField" aria-label="清除教师"><view class="clear-mark" /></button></view>
     </view>
 
     <view class="field">
       <text class="label">教室</text>
-      <input class="input" value="{{location}}" placeholder="可选" placeholder-class="ph" bindinput="onLocation" aria-label="教室" />
-    </view>
-
-    <view class="field">
-      <text class="label">颜色</text>
-      <view class="colors" aria-role="radiogroup" aria-label="课程颜色">
-        <view
-          wx:for="{{colors}}"
-          wx:key="*this"
-          class="swatch {{color === item ? 'active' : ''}}"
-          style="background: {{item}};"
-          data-color="{{item}}"
-          bindtap="onColor"
-          aria-role="radio"
-          aria-label="选择颜色 {{item}}{{color === item ? '，已选中' : ''}}"
-          aria-checked="{{color === item}}"
-        >
-          <text wx:if="{{color === item}}" class="swatch-check">✓</text>
-        </view>
-      </view>
+      <view class="input-shell"><input class="input" value="{{location}}" placeholder="可选" placeholder-class="ph" bindinput="onLocation" aria-label="教室" /><button wx:if="{{themeId === 'campus' && location}}" class="clear-input" data-field="location" bindtap="onClearField" aria-label="清除教室"><view class="clear-mark" /></button></view>
     </view>
 
     <view class="field">
       <text class="label">周次</text>
       <block wx:if="{{totalWeeks > 0}}">
+        <view class="week-control">
         <picker mode="selector" range="{{weekModeLabels}}" value="{{weekModeIndex}}" bindchange="onWeekMode" aria-label="选择课程周次模式">
           <view class="picker-value">{{weekModeLabels[weekModeIndex]}}</view>
         </picker>
+        <text wx:if="{{weekMode === 'all'}}" class="field-hint week-range">第1—{{totalWeeks}}周</text>
+        </view>
       </block>
       <text wx:else class="field-hint">设置学期后可配置周次</text>
     </view>
@@ -98,10 +84,10 @@
       </view>
     </view>
 
+  </view>
     <view class="actions">
       <button class="btn btn-primary" bindtap="onSave" loading="{{saving}}" disabled="{{saving}}">保存</button>
-      <button wx:if="{{isEdit}}" class="btn btn-danger" bindtap="onDelete">删除</button>
+      <button wx:if="{{isEdit}}" class="btn btn-danger" bindtap="onDelete"><view wx:if="{{themeId === 'paper'}}" class="delete-rule" aria-hidden="true" /><text>删除课程</text><view wx:if="{{themeId === 'paper'}}" class="delete-rule" aria-hidden="true" /></button>
     </view>
-  </view>
 </view>
 </block>

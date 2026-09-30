@@ -4,14 +4,12 @@
 
 import type { Course } from '../models/course'
 import { CELL_HEIGHT, DAYS } from '../constants/timetable'
-import { getContrastText } from './color'
 import { rangesToKeys } from './grid-selection'
 
 export interface TimetableCardItem {
   id: string
   course: Course
   style: string
-  textColor: string
 }
 
 export interface WeekPanel {
@@ -41,7 +39,6 @@ export function buildDaySlots(courses: Course[]): TimetableCardItem[][] {
       id: course.id,
       course,
       style: computeCardStyle(course),
-      textColor: getContrastText(course.color),
     })
   }
   return slots

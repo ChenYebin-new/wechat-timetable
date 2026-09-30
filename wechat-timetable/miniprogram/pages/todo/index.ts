@@ -1,3 +1,4 @@
+import { appearanceData, syncAppearance } from '../../utils/appearance-page'
 import type { TodoItem } from '../../models/todo'
 import { getTodoById, getTodoSnapshot, migrateTodosToV3, removeTodo, saveDailyNote, saveTodo, toggleTodo } from '../../services/todo-storage'
 import { initializeHomeSharing, shareHomeToFriend, shareHomeToTimeline } from '../../utils/share'
@@ -48,8 +49,10 @@ function offsetDate(date: string, days: number): string {
 
 Page({
   data: {
+    ...appearanceData(),
     selectedDate: '',
     dateLabel: '',
+    shortDateLabel: '',
     weekdayLabel: '',
     isToday: true,
     calendarExpanded: false,
@@ -78,14 +81,22 @@ Page({
     showShareHomePreview: false,
   },
 
+  onPageScroll(event: WechatMiniprogram.Page.IPageScrollOption) {
+    this.selectComponent('.page-masthead')?.updateScroll(event.scrollTop)
+  },
+
+  onReady() { syncAppearance(this) },
+
   onLoad(options: Record<string, string | undefined>) {
     if (initializeHomeSharing(this, '/pages/todo/index', options)) return
+    syncAppearance(this)
   },
 
   onShareAppMessage: shareHomeToFriend,
   onShareTimeline: shareHomeToTimeline,
 
   onShow() {
+    syncAppearance(this)
     if (this.data.showShareHomePreview) return
     const state = stateFor(this)
     if (state.revision !== todoRevision()) {
@@ -135,6 +146,7 @@ Page({
     this.setData({
       selectedDate,
       dateLabel: `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`,
+      shortDateLabel: `${date.getMonth() + 1}月${date.getDate()}日`,
       weekdayLabel: WEEKDAYS[date.getDay()],
       isToday: selectedDate === today,
       sectionTitle: selectedDate === today ? '今日目标' : '当日目标',

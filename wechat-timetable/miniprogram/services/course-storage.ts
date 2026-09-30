@@ -28,6 +28,12 @@ interface LoadedStorage extends TimetableStorageView {
   readKind?: Exclude<StorageReadKind, 'io-error'>
 }
 
+// 回滚结果不明时，即使剩余数据仍通过结构校验，也不能继续覆盖原数据或恢复点。
+let writeProblem = ''
+export function lockCourseWrites(): void {
+  writeProblem = '无法确认课表回滚结果，本次会话已暂停写入。请保留备份，重新启动小程序后检查数据。'
+}
+
 function toWeekMode(v: unknown): WeekMode {
   return v === 'odd' || v === 'even' || v === 'custom' ? v : 'all'
 }
@@ -64,7 +70,8 @@ function commitMutation(previous: TimetableStorage, next: TimetableStorage): voi
     writeStorage(next)
   } catch (error) {
     if (!restoreCurrentStorage(previous)) {
-      throw new Error('课表写入失败且无法确认原数据状态，请暂时不要继续操作')
+      lockCourseWrites()
+      throw new Error('课表写入失败且无法确认原数据状态，本次会话已暂停写入，请重新启动后检查')
     }
     throw error
   }
@@ -77,6 +84,7 @@ function markLoaded(storage: LoadedStorage, kind: Exclude<StorageReadKind, 'io-e
 }
 
 function load(): TimetableStorageView {
+  if (writeProblem) throw new Error(writeProblem)
   const readResult = readTimetableRaw()
   if (!readResult.ok) throw new Error(readResult.reason)
   const raw = readResult.value
@@ -100,16 +108,18 @@ function load(): TimetableStorageView {
     // 下方统一恢复旧版原数据。
   }
   const restored = writeRawAndVerify(raw)
+  if (!restored) lockCourseWrites()
   return markLoaded(
     storage,
     restored ? 'legacy' : 'corrupt',
     restored
       ? '旧版课表自动升级未完成，为保护原数据已停止写入'
-      : '旧版课表自动升级失败且无法确认原数据状态，请暂时不要继续操作',
+      : '旧版课表自动升级失败且无法确认原数据状态，本次会话已暂停写入，请重新启动后检查',
   )
 }
 
 function assertWritableStorage(data: TimetableStorageView): asserts data is TimetableStorage {
+  if (writeProblem) throw new Error(writeProblem)
   if (data.schemaVersion !== TIMETABLE_SCHEMA_VERSION) {
     throw new Error(
       `当前课表数据版本为 V${data.schemaVersion}，此版本小程序仅支持修改 V${TIMETABLE_SCHEMA_VERSION}。请先完成数据升级或使用更新版本。`,
@@ -150,7 +160,7 @@ function snapshotCurrentRaw(): boolean {
   } catch {
     // 下方恢复写入前的最近备份。
   }
-  if (previousRecentRead) restoreStorageKey(RECENT_BACKUP_KEY, previousRecent)
+  if (previousRecentRead && !restoreStorageKey(RECENT_BACKUP_KEY, previousRecent)) lockCourseWrites()
   return false
 }
 
@@ -183,14 +193,20 @@ function prepareRecoveryPoint(data: TimetableStorageView): boolean {
 }
 
 function restoreOriginal(data: TimetableStorageView): boolean {
-  if ((data as LoadedStorage).readKind !== 'missing') return restoreFromRecentRaw()
+  if ((data as LoadedStorage).readKind !== 'missing') {
+    const restored = restoreFromRecentRaw()
+    if (!restored) lockCourseWrites()
+    return restored
+  }
   try {
     clearTimetableRaw()
     const reread = readTimetableRaw()
-    return reread.ok && classifyStorageValue(reread.value).kind === 'missing'
+    if (reread.ok && classifyStorageValue(reread.value).kind === 'missing') return true
   } catch {
-    return false
+    // 下方锁住整个课表会话，保留无法确认的现场。
   }
+  lockCourseWrites()
+  return false
 }
 
 /** 返回显式读取状态，供页面在一次刷新中使用同一个快照。 */
@@ -280,6 +296,7 @@ export function getMaxUsedPeriod(): number {
  * 保存全局课程作息。写入前创建最近自动备份，写入后重读校验；失败则恢复原数据。
  */
 export function savePeriodSettings(settings: PeriodSettings): { ok: boolean; reason?: string } {
+  if (writeProblem) return { ok: false, reason: writeProblem }
   const check = validatePeriodSettings(settings)
   if (!check.ok) return { ok: false, reason: check.reason }
   const current = load()
@@ -304,12 +321,12 @@ export function savePeriodSettings(settings: PeriodSettings): { ok: boolean; rea
     const expected = JSON.stringify(next.periodSettings)
     if (!rereadCheck.ok || JSON.stringify(reread.periodSettings) !== expected) {
       const restored = restoreOriginal(current)
-      return { ok: false, reason: restored ? '写入后校验失败，原数据已恢复' : '写入后校验失败，无法确认原数据状态' }
+      return { ok: false, reason: restored ? '写入后校验失败，原数据已恢复' : '写入后校验失败，无法确认原数据状态，本次会话已暂停写入，请重新启动后检查' }
     }
     return { ok: true }
   } catch {
     const restored = restoreOriginal(current)
-    return { ok: false, reason: restored ? '写入失败，原数据已恢复' : '写入失败，无法确认原数据状态' }
+    return { ok: false, reason: restored ? '写入失败，原数据已恢复' : '写入失败，无法确认原数据状态，本次会话已暂停写入，请重新启动后检查' }
   }
 }
 
@@ -515,6 +532,7 @@ export function removeCourseGroup(groupId: string): void {
  * 操作前先生成最近自动备份；任一校验失败或写入失败时不修改原数据。
  */
 export function applyTerm(term: TermSettings): { ok: boolean; reason?: string; migrated?: boolean } {
+  if (writeProblem) return { ok: false, reason: writeProblem }
   const vt = validateTerm(term)
   if (!vt.ok) return { ok: false, reason: vt.reason }
 
@@ -578,7 +596,7 @@ export function applyTerm(term: TermSettings): { ok: boolean; reason?: string; m
       ok: false,
       reason: restored
         ? '写入失败，原数据已恢复'
-        : '写入失败，无法确认原数据状态；请使用最近自动备份恢复',
+        : '写入失败，无法确认原数据状态；本次会话已暂停写入，请保留备份并重新启动后检查',
     }
   }
 }

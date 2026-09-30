@@ -1,0 +1,7 @@
+{
+  "source": "generated_images/01a0e362-2d7a-7203-9823-1dd5856bc89d/exec-9c700cbb-90b5-4736-8562-d3a354df6fb7.png",
+  "archive": "assets\\appearance\\campus-book-original.png",
+  "runtime": "wechat-timetable\\miniprogram\\assets\\appearance\\campus-book.png",
+  "purpose": "E 设置页底部书本与幼芽插画，参照已选 E 管理效果图，透明底、无文字。",
+  "processing": "Resize to maximum 420x320, preserve alpha, optimize PNG."
+}
