@@ -31,6 +31,7 @@
 .picker-value {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   box-sizing: border-box;
   margin-top: 18rpx;
   padding: 20rpx 24rpx;
@@ -48,6 +49,7 @@
 
 .chip {
   display: flex;
+  flex: 1;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
@@ -106,3 +108,4 @@
 .chip,.picker-value,.save-btn { min-height: 44px; }
 
 .page { min-height: 0; padding-top: 22rpx; }
+.picker-value::after { content:''; width:12rpx; height:12rpx; margin:-6rpx 4rpx 0 16rpx; flex-shrink:0; border-right:2rpx solid var(--muted); border-bottom:2rpx solid var(--muted); transform:rotate(45deg); }

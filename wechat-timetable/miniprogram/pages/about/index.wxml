@@ -1,0 +1,35 @@
+<page-meta page-style="{{appearanceStyle}}background:var(--page);background-image:var(--page-texture);font-family:var(--font-family);color:var(--text);" />
+<share-home-preview wx:if="{{showShareHomePreview}}" />
+<block wx:else>
+<page-header class="page-masthead" title="关于我们" subtitle="" home="{{false}}" theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}" art="{{appearanceArt}}" />
+<view class="page theme-{{themeId}}" style="{{appearanceStyle}}">
+  <view class="about-intro">
+    <view class="brand-heading">
+      <image class="brand-icon" src="{{appearanceIcons.brand}}" mode="aspectFit" aria-hidden="true" />
+      <text class="brand-title">拾课课表</text>
+    </view>
+    <text class="intro-desc">遇到问题或有建议，欢迎联系开发者。</text>
+  </view>
+
+  <view class="card email-card">
+    <text class="card-title">反馈邮箱</text>
+    <text class="email-address" user-select="{{true}}">{{email}}</text>
+    <button class="btn btn-primary" bindtap="onCopyEmail" hover-class="button-pressed" aria-label="复制反馈邮箱">复制邮箱</button>
+  </view>
+
+  <view class="card wechat-card">
+    <text class="card-title">微信联系</text>
+    <text wx:if="{{!wechatQrImage}}" class="card-desc">微信联系方式稍后开放</text>
+    <text wx:elif="{{qrImageFailed}}" class="card-desc qr-error" aria-role="alert">二维码加载失败，请通过邮箱联系。</text>
+    <button wx:else class="qr-preview" bindtap="onPreviewQr" hover-class="button-pressed" aria-label="查看开发者微信二维码大图">
+      <image class="qr-image" src="{{wechatQrImage}}" mode="widthFix" binderror="onQrImageError" aria-hidden="true" />
+      <text class="qr-caption">点击放大二维码</text>
+    </button>
+  </view>
+
+  <view class="feedback-note">
+    <text class="note-title">反馈建议</text>
+    <text class="card-desc">请附上操作步骤、设备型号和截图，方便定位问题。</text>
+  </view>
+</view>
+</block>

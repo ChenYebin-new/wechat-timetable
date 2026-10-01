@@ -14,7 +14,8 @@
 .thumbnail-blocks view:nth-child(even) { height: 40rpx; }
 .choice-copy { padding: 18rpx 20rpx; }
 .choice-name { display: block; font-size: 30rpx; font-weight: 700; }
-.choice-status { display: block; font-size: 24rpx; color: var(--accent); margin-top: 6rpx; }
+.choice-status { display: block; font-size: 24rpx; color: var(--muted); margin-top: 6rpx; }
+.chosen .choice-status { color: var(--accent); }
 .preview-heading { display: flex; align-items: center; justify-content: space-between; margin: 36rpx 4rpx 18rpx; }
 .section-title { font-size: 30rpx; font-weight: 700; }
 .sample-label, .appearance-note, .local-note { font-size: 24rpx; color: var(--muted); line-height: 1.6; }

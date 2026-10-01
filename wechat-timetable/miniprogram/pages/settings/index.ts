@@ -43,4 +43,8 @@ Page({
   onTodoBackup() {
     wx.navigateTo({ url: '/pages/todo-backup/index' })
   },
+
+  onAbout() {
+    wx.navigateTo({ url: '/pages/about/index' })
+  },
 })

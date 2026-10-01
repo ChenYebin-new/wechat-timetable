@@ -6,8 +6,8 @@
 <view class="page theme-{{themeId}}" style="{{appearanceStyle}}">
   <view class="card">
     <text class="card-title">导出课表</text>
-    <text class="card-desc">把当前课表导出为 JSON 文本，复制后保存到备忘录、发给同学或其他设备。</text>
-    <button class="btn btn-primary" bindtap="onExport">复制课表 JSON</button>
+    <text class="card-desc">复制备份文本，可保存到备忘录或转移到其他设备。</text>
+    <button class="btn btn-primary" bindtap="onExport">复制课表备份</button>
   </view>
 
   <view class="card">
@@ -15,8 +15,8 @@
     <textarea
       class="input"
       value="{{inputText}}"
-      placeholder="在此粘贴课表备份 JSON"
-      aria-label="课表备份 JSON"
+      placeholder="粘贴完整的课表备份文本"
+      aria-label="课表备份文本"
       bindinput="onInput"
       maxlength="-1"
     />
@@ -31,9 +31,9 @@
       <view class="row"><text class="k">课表数据版本</text><text class="v">V{{preview.schemaVersion}}</text></view>
       <view class="row"><text class="k">备份课程</text><text class="v">{{preview.backupGroupCount}} 门 / {{preview.backupCount}} 个时段</text></view>
       <view class="row"><text class="k">当前课程</text><text class="v">{{preview.currentGroupCount}} 门 / {{preview.currentCount}} 个时段</text></view>
-      <view class="row"><text class="k">合并-新增</text><text class="v">{{preview.mergeAddGroupCount}} 门 / {{preview.mergeAddCount}} 个时段</text></view>
-      <view class="row"><text class="k">整门跳过-重复</text><text class="v">{{preview.mergeSkipDuplicateGroupCount}} 门</text></view>
-      <view class="row"><text class="k">整门跳过-冲突</text><text class="v">{{preview.mergeSkipConflictGroupCount}} 门</text></view>
+      <view class="row"><text class="k">将新增</text><text class="v">{{preview.mergeAddGroupCount}} 门 / {{preview.mergeAddCount}} 个时段</text></view>
+      <view class="row"><text class="k">重复课程（跳过）</text><text class="v">{{preview.mergeSkipDuplicateGroupCount}} 门</text></view>
+      <view class="row"><text class="k">冲突课程（跳过）</text><text class="v">{{preview.mergeSkipConflictGroupCount}} 门</text></view>
       <view class="row"><text class="k">合并后课程</text><text class="v">{{preview.mergeFinalGroupCount}} 门 / {{preview.mergeFinalCount}} 个时段</text></view>
       <view wx:if="{{preview.skippedGroupReasons.length}}" class="merge-warning">
         <text wx:for="{{preview.skippedGroupReasons}}" wx:key="index">{{item}}</text>
@@ -71,7 +71,7 @@
       <view class="row"><text class="k">课程数量</text><text class="v">{{recentBackupInfo.groupCount}} 门 / {{recentBackupInfo.segmentCount}} 个时段</text></view>
       <button class="btn btn-danger" bindtap="onRestoreRecent">恢复最近备份</button>
     </block>
-    <text wx:else class="card-desc">暂无最近自动备份。覆盖、合并或恢复前会自动保留一份当前课表。</text>
+    <text wx:else class="card-desc">暂无自动备份。自动备份只保留最近一份。</text>
   </view>
 </view>
 </block>

@@ -3,14 +3,14 @@
 <block wx:else>
 <page-header class="page-masthead" title="外观" subtitle="" home="{{false}}" theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}" art="{{appearanceArt}}" />
 <view class="page theme-{{themeId}}" style="{{appearanceStyle}}">
-  <view class="intro"><text class="intro-title">换一种心情，安排每一天</text><text class="intro-desc">选择喜欢的外观，课表与待办一起焕新。</text></view>
+  <view class="intro"><text class="intro-title">选择喜欢的外观</text><text class="intro-desc">先看预览，再点“使用此外观”。</text></view>
   <view class="theme-choices" aria-role="radiogroup" aria-label="选择外观">
     <button wx:for="{{choices}}" wx:key="id" class="theme-choice {{selectedTheme === item.id ? 'chosen' : ''}}" data-id="{{item.id}}" bindtap="onChoose" disabled="{{saving}}" aria-role="radio" aria-checked="{{selectedTheme === item.id}}" aria-label="{{item.name}}{{currentTheme === item.id ? '，当前使用' : ''}}" hover-class="choice-pressed">
       <view class="theme-thumbnail thumbnail-{{item.id}}" style="{{item.style}}">
         <image wx:if="{{item.art}}" class="thumbnail-art" src="{{item.art}}" mode="aspectFill" aria-hidden="true" />
         <view class="thumbnail-blocks" aria-hidden="true"><view wx:for="{{item.colors}}" wx:for-item="color" wx:key="*this" style="background:{{color}}"></view></view>
       </view>
-      <view class="choice-copy"><text class="choice-name">{{item.name}}</text><text class="choice-status">{{currentTheme === item.id ? '当前使用' : selectedTheme === item.id ? '已选，待应用' : '点击预览'}}</text></view>
+      <view class="choice-copy"><text class="choice-name">{{item.name}}</text><text class="choice-status">{{currentTheme === item.id ? '当前使用' : selectedTheme === item.id ? '待应用' : '预览'}}</text></view>
     </button>
   </view>
   <view class="preview-heading"><text class="section-title">{{selectedName}}</text><text class="sample-label">示例预览</text></view>
@@ -28,9 +28,9 @@
       <view class="mini-tabs"><text>课表</text><text class="mini-selected">待办</text></view>
     </view>
   </view>
-  <text class="appearance-note">课程颜色随外观自动调整。同一门课保持同一色位，无需手动选色。</text>
+  <text class="appearance-note">课程自动配色；切换外观不会改变课程安排。</text>
   <text wx:if="{{problem}}" class="error-message" aria-role="alert">{{problem}}</text>
   <button class="apply-button" bindtap="onApply" disabled="{{saving || selectedTheme === currentTheme}}" loading="{{saving}}" aria-label="{{selectedTheme === currentTheme ? '当前已使用此外观' : '使用' + selectedName + '外观'}}">{{selectedTheme === currentTheme ? '正在使用此外观' : '使用此外观'}}</button>
-  <text class="local-note">外观仅保存在本机，不影响课程、目标与随想。</text>
+  <text class="local-note">仅保存在本机，课表与待办数据不变。</text>
 </view>
 </block>

@@ -90,8 +90,8 @@
 .helper {
   margin: 14rpx 6rpx 0;
   color: var(--muted);
-  font-size: 21rpx;
-  line-height: 1.5;
+  font-size: 24rpx;
+  line-height: 1.6;
 }
 
 .stepper {

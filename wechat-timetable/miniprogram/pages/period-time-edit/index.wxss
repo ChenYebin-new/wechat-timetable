@@ -14,22 +14,16 @@
   border-radius: var(--radius);
 }
 
-.intro-title {
-  color: var(--text);
-  font-size: 30rpx;
-  font-weight: 700;
-}
-
 .intro-desc {
   color: var(--muted);
-  font-size: 23rpx;
-  line-height: 1.5;
+  font-size: 26rpx;
+  line-height: 1.65;
 }
 
 .custom-state {
   margin-top: 4rpx;
   color: var(--accent);
-  font-size: 21rpx;
+  font-size: 24rpx;
   font-weight: 600;
 }
 
@@ -90,7 +84,7 @@
 .impact {
   margin: 18rpx 6rpx 28rpx;
   color: var(--muted);
-  font-size: 22rpx;
+  font-size: 24rpx;
   line-height: 1.55;
 }
 
@@ -115,3 +109,6 @@
 .save-btn { min-height: 48px; }
 
 .page { min-height: 0; padding-top: 22rpx; }
+.save-hint { display:block; margin:16rpx 4rpx 0; color:var(--muted); font-size:24rpx; line-height:1.6; text-align:center; }
+.theme-paper .intro { border-radius:8rpx; }
+.theme-swiss .intro,.theme-pixel .intro { border-radius:0; }

@@ -287,7 +287,7 @@ test('settings return preserves viewed week, clamps shortened term and repositio
 
 test('all routes initialize/resume theme, isolated grids get explicit theme, and no old color selection remains', () => {
   const config=JSON.parse(readFileSync(new URL('../miniprogram/app.json',import.meta.url),'utf8'))
-  assert.equal(config.pages.length,11)
+  assert.equal(config.pages.length,12)
   for(const route of config.pages) {
     const source=readFileSync(new URL(`../miniprogram/${route}.ts`,import.meta.url),'utf8')
     const markup=readFileSync(new URL(`../miniprogram/${route}.wxml`,import.meta.url),'utf8')
