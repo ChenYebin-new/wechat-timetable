@@ -21,6 +21,7 @@ const themes = await import('../miniprogram/themes/index.ts')
 const appearance = await import('../miniprogram/services/appearance.ts')
 const bridge = await import('../miniprogram/utils/appearance-page.ts')
 const layout = await import('../miniprogram/utils/timetable-layout.ts')
+const { getReadableText } = await import('../miniprogram/utils/color.ts')
 await import('../miniprogram/pages/appearance/index.ts')
 await import('../miniprogram/pages/course-edit/index.ts')
 await import('../miniprogram/pages/timetable/index.ts')
@@ -150,6 +151,8 @@ test('all five palettes have seven accessible colors and tokenized readable cont
     const theme = themes.THEMES[id]
     assert.equal(theme.courseColors.length,7)
     assert.equal(theme.courseBorders.length,7)
+    assert.equal(theme.courseTextColors.length,7)
+    for (let slot=0;slot<7;slot++) assert.ok(contrast(theme.courseTextColors[slot],theme.courseColors[slot])>=4.5, `${id}: course ink ${slot}`)
     for (const [front,back] of [['text','page'],['muted','surface'],['accent','soft'],['on-primary','primary'],['danger','danger-soft']]) {
       assert.ok(contrast(theme.tokens[front], theme.tokens[back]) >= 4.5, `${id}: ${front}/${back}`)
     }
@@ -157,6 +160,29 @@ test('all five palettes have seven accessible colors and tokenized readable cont
     assert.match(themes.themeStyle(id),/--page:/)
     for(const icon of Object.values(theme.icons)) assert.ok(existsSync(new URL(`../miniprogram${icon}`,import.meta.url)))
   }
+})
+
+test('course ink honors theme color only at readable contrast, otherwise falls back safely', () => {
+  assert.equal(getReadableText('#EFF8ED','#235438'),'#235438')
+  assert.equal(getReadableText('#FFFFFF','#EEEEEE'),'#000000')
+  assert.equal(getReadableText('#000000','#222222'),'#ffffff')
+})
+
+test('every theme preview uses the same course fill, ink and rail mapping as the real grid', () => {
+  reset()
+  const context=page(appearancePage,'pages/appearance/index')
+  context.onLoad({})
+  for(const id of themes.THEME_IDS) {
+    context.onChoose({currentTarget:{dataset:{id}}})
+    for(const item of context.data.previewCourses) {
+      const colors=themes.getCourseAppearance({id:item.id,groupId:item.id},id)
+      assert.ok(item.style.includes(`background:${colors.background};`))
+      assert.ok(item.style.includes(`color:${colors.text};`))
+      assert.ok(item.style.includes(`--course-accent:${colors.border};`))
+    }
+  }
+  assert.deepEqual(writes,[])
+  assert.equal(appearance.getCurrentThemeId(),'paper')
 })
 
 test('A B F can be previewed, applied and restored without changing business or backup storage', () => {

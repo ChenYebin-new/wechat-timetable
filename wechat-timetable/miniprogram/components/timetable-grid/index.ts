@@ -15,7 +15,7 @@ interface GridCellItem {
 
 interface GridColumnItem {
   day: number
-  slots: (TimetableCardItem & { backgroundColor: string; textColor: string; borderColor: string; icon: string })[]
+  slots: (TimetableCardItem & { backgroundColor: string; textColor: string; borderColor: string })[]
   cells: GridCellItem[]
 }
 
@@ -112,7 +112,7 @@ Component({
         day: dayIndex + 1,
         slots: (daySlots[dayIndex] || []).map(item => {
           const colors = getCourseAppearance(item.course, isThemeId(this.properties.themeId) ? this.properties.themeId : DEFAULT_THEME)
-          return { ...item, backgroundColor: colors.background, textColor: colors.text, borderColor: colors.border, icon: `/assets/appearance/course-${colors.slot}.svg` }
+          return { ...item, backgroundColor: colors.background, textColor: colors.text, borderColor: colors.border }
         }),
         cells: (this.properties.periods as PeriodView[]).map((period) => {
           const key = cellKey(dayIndex + 1, period.index)

@@ -1,7 +1,7 @@
 import type { Course } from '../models/course'
-import { getContrastText } from '../utils/color'
+import { getReadableText } from '../utils/color'
 import { PAPER_TEXTURE } from './paper-texture'
-import { PIXEL_FRAME, PIXEL_COURSE_FRAME } from './pixel-frame'
+import { PIXEL_FRAME } from './pixel-frame'
 
 export type ThemeId = 'cream' | 'campus' | 'paper' | 'swiss' | 'pixel'
 export const THEME_IDS: readonly ThemeId[] = ['cream', 'campus', 'paper', 'swiss', 'pixel']
@@ -14,6 +14,7 @@ export interface ThemeDefinition {
   tokens: Record<string, string>
   courseColors: readonly string[]
   courseBorders: readonly string[]
+  courseTextColors: readonly string[]
   illustration: string
   icons: {
     calendar: string; todo: string; neutralCalendar: string; neutralTodo: string
@@ -73,8 +74,9 @@ export const THEMES: Record<ThemeId, ThemeDefinition> = {
       'grid-line': '#F0E9DF', 'grid-time': '#596273',
       'icon-export-bg': '#FFD1B0', 'icon-import-bg': '#C9E4FF', 'icon-recent-bg': '#E3D5FD',
     },
-    courseColors: ['#FFC796', '#D9C9F5', '#BBDCF7', '#FFE08A', '#CBE7D5', '#F4C8D3', '#E8D9C3'],
-    courseBorders: ['#D8A374', '#B09CCF', '#91B6D4', '#C9AC58', '#9DBEAA', '#CB9BA8', '#BFAF94'],
+    courseColors: ['#FFE9D8', '#EEE4FC', '#E0F0FC', '#FFF3C6', '#E8F4E8', '#FCE8ED', '#F3EADD'],
+    courseBorders: ['#F58636', '#A273E8', '#54A6EB', '#E4B22C', '#65A879', '#D97F99', '#AE8D60'],
+    courseTextColors: ['#773B16', '#432660', '#173653', '#714B13', '#285036', '#703849', '#53422D'],
     illustration: '', icons: icons('cream'),
   },
   campus: {
@@ -86,10 +88,12 @@ export const THEMES: Record<ThemeId, ThemeDefinition> = {
       'border': '#DCECF5', 'disabled': '#DFE7EE', 'selection-bar': '#214D37',
       'selection-muted': '#DDF5E5', 'input': '#F2F9FE', 'grid-head': '#EDF9FF',
       'grid-line': '#E2F0F7', 'grid-time': '#536785',
+      'card-radius': '12rpx',
       'icon-export-bg': '#DAF6D9', 'icon-import-bg': '#FFF0B4', 'icon-recent-bg': '#D5E9FD',
     },
-    courseColors: ['#C1EDB6', '#BEE4FB', '#FFE790', '#FFD5C4', '#C7E6DC', '#DED5F7', '#F6D7E7'],
-    courseBorders: ['#92C887', '#8DBDDA', '#C9AC56', '#D8A38D', '#95BDAF', '#B3A6CE', '#CBA4BA'],
+    courseColors: ['#EFF8ED', '#EDF7FF', '#FFF9E7', '#FFF1EA', '#EAF5F0', '#F2EDFA', '#FBEFF5'],
+    courseBorders: ['#42A35B', '#469BD3', '#D8A52E', '#DF916E', '#5DA88C', '#A185CF', '#D486AE'],
+    courseTextColors: ['#235438', '#23516F', '#71501B', '#784834', '#285443', '#51366E', '#723B59'],
     illustration: '/assets/appearance/campus-header.jpg', icons: icons('campus'),
   },
   paper: {
@@ -99,8 +103,9 @@ export const THEMES: Record<ThemeId, ThemeDefinition> = {
       'primary':'#994A36','on-primary':'#FFFFFF','selected':'#E7C9BA','border':'#D6CBB9','disabled':'#E1DED7',
       'selection-bar':'#674334','selection-muted':'#F9E8D8','input':'#FAF7F1','grid-head':'#F0EADF','grid-line':'#D8CDBB','grid-time':'#62594B',
       'radius':'8rpx','radius-small':'6rpx','card-radius':'6rpx','icon-export-bg':'#EEE7DB','icon-import-bg':'#EEE7DB','icon-recent-bg':'#EEE7DB' },
-    courseColors:['#E9CFC4','#F1DEB7','#D7DDCA','#D0DCE0','#E1D4E2','#E2DCCF','#D2DFD6'],
-    courseBorders:['#CEAEA1','#D4BA86','#B2BBA4','#ADC0C9','#C0B0C2','#BFB4A6','#ACC1B2'],
+    courseColors: ['#EFDDD2', '#F5E7C9', '#E5EBD9', '#E0E8EB', '#EEE3EC', '#EDE5D8', '#E2EBE2'],
+    courseBorders: ['#AB5137', '#C99C35', '#7F9463', '#678B9E', '#9C7D98', '#9E8769', '#74937A'],
+    courseTextColors: ['#2E2923', '#2E2923', '#2E2923', '#2E2923', '#2E2923', '#2E2923', '#2E2923'],
     illustration:'', icons:icons('paper'),
   },
   swiss: {
@@ -109,8 +114,9 @@ export const THEMES: Record<ThemeId, ThemeDefinition> = {
       'primary':'#E32A17','on-primary':'#FFFFFF','selected':'#FFDCD6','border':'#797979','disabled':'#E2E2E2',
       'selection-bar':'#202020','selection-muted':'#EEEEEE','input':'#FFFFFF','grid-head':'#FFFFFF','grid-line':'#707070','grid-time':'#222222',
       'radius':'0rpx','radius-small':'0rpx','card-radius':'0rpx','icon-export-bg':'#FFFFFF','icon-import-bg':'#FFFFFF','icon-recent-bg':'#FFFFFF' },
-    courseColors:['#FADAD5','#FFF1D1','#E7E7E7','#E7E7E7','#D5E5DC','#DCE8F2','#EBE0F1'],
-    courseBorders:['#E32A17','#E7AD10','#6A6A6A','#6A6A6A','#448A61','#467AAB','#986CA2'],
+    courseColors: ['#FCE5E1', '#FFF5DE', '#EEEEEE', '#EEEEEE', '#E6F0E9', '#E7F0F6', '#F1EAF4'],
+    courseBorders: ['#E32A17', '#E7AD10', '#6A6A6A', '#6A6A6A', '#448A61', '#467AAB', '#986CA2'],
+    courseTextColors: ['#111111', '#111111', '#111111', '#111111', '#111111', '#111111', '#111111'],
     illustration:'',icons:icons('swiss'),
   },
   pixel: {
@@ -118,9 +124,10 @@ export const THEMES: Record<ThemeId, ThemeDefinition> = {
     tokens:{ ...shared,'page':'#FFFAEF','surface':'#FFFDF7','soft':'#EAF3FF','text':'#092572','muted':'#506395','accent':'#073CCD',
       'primary':'#0952ED','on-primary':'#FFFFFF','selected':'#B9DFFF','border':'#8BB9F1','disabled':'#D5DAE5',
       'selection-bar':'#073CCD','selection-muted':'#E5EFFF','input':'#FFFFFF','grid-head':'#EDF5FF','grid-line':'#A4D0F5','grid-time':'#173B83',
-      'pixel-frame':PIXEL_FRAME,'pixel-course-frame':PIXEL_COURSE_FRAME,'radius':'0rpx','radius-small':'2rpx','card-radius':'0rpx','icon-export-bg':'#FFFDF7','icon-import-bg':'#FFFDF7','icon-recent-bg':'#FFFDF7' },
-    courseColors:['#B8E0F5','#D9F3B8','#F8CDD6','#FFE5A4','#DECEF8','#CFDFF6','#FFD2AB'],
-    courseBorders:['#1243D8','#1243D8','#1243D8','#1243D8','#1243D8','#1243D8','#1243D8'],
+      'pixel-frame':PIXEL_FRAME,'radius':'0rpx','radius-small':'2rpx','card-radius':'0rpx','icon-export-bg':'#FFFDF7','icon-import-bg':'#FFFDF7','icon-recent-bg':'#FFFDF7' },
+    courseColors: ['#E0F0FD', '#E8F7D6', '#FCE4EB', '#FFF1C1', '#EEE5FA', '#E6EFFB', '#FFEADB'],
+    courseBorders: ['#2A8DEE', '#46AD4F', '#F66B93', '#DFAF1C', '#A475DE', '#638CDC', '#E89D54'],
+    courseTextColors: ['#092572', '#092572', '#092572', '#092572', '#092572', '#092572', '#092572'],
     illustration:'/assets/appearance/pixel-campus.png',icons:icons('pixel'),
   },
 }
@@ -147,5 +154,5 @@ export function getCourseAppearance(course: Pick<Course, 'id'> & { groupId?: str
   const slot = courseColorSlot(course)
   const theme = THEMES[themeId]
   const background = theme.courseColors[slot]
-  return { slot, background, text: getContrastText(background), border: theme.courseBorders[slot] }
+  return { slot, background, text: getReadableText(background, theme.courseTextColors[slot]), border: theme.courseBorders[slot] }
 }

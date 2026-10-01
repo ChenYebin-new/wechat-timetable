@@ -46,17 +46,19 @@
           <text wx:if="{{cell.selected}}" class="selected-label">已选</text>
         </view>
         <view
-          class="card {{item.course.startPeriod === item.course.endPeriod ? 'single' : ''}} {{selectionMode ? 'selection-locked' : ''}}"
+          class="card course-block course-{{themeId}} {{item.course.startPeriod === item.course.endPeriod ? 'single' : ''}} {{selectionMode ? 'selection-locked' : ''}}"
           wx:for="{{column.slots}}"
           wx:key="id"
-          style="{{item.style}} background-color: {{item.backgroundColor}}; color: {{item.textColor}}; border-color: {{item.borderColor}};"
+          style="{{item.style}} background-color: {{item.backgroundColor}}; color: {{item.textColor}}; --course-accent: {{item.borderColor}};"
           data-id="{{item.course.id}}"
           bindtap="onCardTap"
           aria-role="button"
           aria-label="{{days[column.day - 1]}}，{{item.course.name}}，第{{item.course.startPeriod}}到{{item.course.endPeriod}}节{{selectionMode ? '，已有课程不可选择' : ''}}"
           aria-disabled="{{selectionMode}}"
         >
-          <image wx:if="{{themeId === 'campus' && item.course.startPeriod !== item.course.endPeriod}}" class="course-mark" src="{{item.icon}}" aria-hidden="true" />
+          <view class="course-rail" aria-hidden="true" />
+          <view wx:if="{{themeId === 'pixel'}}" class="course-pixel-cap cap-top" aria-hidden="true" />
+          <view wx:if="{{themeId === 'pixel'}}" class="course-pixel-cap cap-bottom" aria-hidden="true" />
           <text class="card-name">{{item.course.name}}</text>
           <text class="card-loc" wx:if="{{item.course.location}}">{{item.course.location}}</text>
         </view>

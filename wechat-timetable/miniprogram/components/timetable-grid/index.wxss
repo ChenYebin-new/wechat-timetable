@@ -1,3 +1,4 @@
+@import "../../styles/course-block.wxss";
 /* 124rpx rows + 80rpx header + 16rpx padding match timetable-layout.ts. */
 .timetable { position:relative; padding:8rpx; background:var(--surface); border-radius:20rpx; overflow:hidden; }
 .theme-cream { border-radius:16rpx; background:var(--page); }
@@ -18,36 +19,26 @@
 .pcell { position:relative; height:124rpx; border-right:1rpx solid var(--grid-line); border-bottom:1rpx solid var(--grid-line); box-sizing:border-box; overflow:hidden; }
 .pcell.pressing { animation:hold-fill 1.2s linear forwards; }
 .pcell.selected { background:var(--selected); box-shadow:inset 0 0 0 2rpx var(--accent); }
-.pcell.disabled { background:var(--disabled); }
+.pcell.disabled { background:transparent; }
 .selected-label { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--accent); font-size:18rpx; font-weight:600; }
-.card { position:absolute; left:3rpx; right:3rpx; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:8rpx 3rpx; border-radius:var(--card-radius); box-sizing:border-box; overflow:hidden; box-shadow:inset 0 0 0 1rpx rgba(255,255,255,.8); }
-/* Occupied cells still block selection, without a gray backing behind round cards. */
-.theme-cream .pcell.disabled { background:transparent; }
-.theme-cream .card { box-shadow:none; background-image:none; }
+.card { position:absolute; left:3rpx; right:3rpx; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; padding:8rpx 4rpx 8rpx 18rpx; }
 .card.selection-locked { pointer-events:none; }
-.card-name { flex-shrink:0; max-width:2.7em; font-size:27rpx; font-weight:600; text-align:center; line-height:1.3; word-break:break-all; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; }
+.card-name { flex-shrink:0; max-width:2.4em; font-size:27rpx; font-weight:600; text-align:left; line-height:1.3; word-break:break-all; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; }
 .card.single .card-name { font-size:25rpx; -webkit-line-clamp:2; }
-.card-loc { flex-shrink:0; font-size:22rpx; font-weight:400; margin-top:9rpx; line-height:1.25; text-align:center; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.card.single .card-loc { margin-top:5rpx; font-size:21rpx; }
-.course-mark { position:absolute; top:14rpx; left:10rpx; width:28rpx; height:28rpx; }
-.theme-campus .card:not(.single) { padding-top:38rpx; }
+.card-loc { flex-shrink:0; font-family:var(--font-numeric); font-size:22rpx; font-weight:400; margin-top:10rpx; line-height:1.25; text-align:left; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-variant-numeric:lining-nums tabular-nums; }
+.card.single { padding-top:6rpx; padding-bottom:6rpx; }
+.card.single .card-loc { margin-top:4rpx; font-size:21rpx; }
 @keyframes hold-fill { from { background:var(--surface); } to { background:var(--selected); box-shadow:inset 0 0 0 2rpx var(--accent); } }
 
-
-/* A: restrained ink typography and translucent paper notes. */
+/* A: paper, serif typography and a fine ink rail. */
 .theme-paper { font-family:var(--font-family); background:transparent; border-radius:8rpx; }
 .theme-paper::after { content:''; position:absolute; inset:8rpx; border:1rpx solid var(--grid-line); border-radius:6rpx; pointer-events:none; }
-.theme-paper .period-index,.theme-paper .time-range,.theme-paper .card-loc { font-variant-numeric:lining-nums tabular-nums; }
+.theme-paper .period-index,.theme-paper .time-range { font-variant-numeric:lining-nums tabular-nums; }
 .theme-paper .head-day { font-size:24rpx; font-weight:700; }
-.theme-paper .card { border:1rpx solid; box-shadow:inset 0 0 0 1rpx rgba(255,255,255,.72); background-image:linear-gradient(135deg,rgba(255,255,255,.24),rgba(255,255,255,.03)),var(--page-texture); background-blend-mode:normal,multiply; padding:10rpx 4rpx; }
-.theme-paper .card-name { font-family:var(--font-family); font-size:28rpx; font-weight:700; line-height:1.3; max-width:2.4em; }
-.theme-paper .card-loc { font-family:var(--font-numeric); font-size:22rpx; line-height:1.3; }
+
 .theme-paper .period-index { font-family:var(--font-numeric); font-weight:400; font-size:35rpx; }
 .theme-paper .time-range { font-family:var(--font-numeric); font-size:21rpx; line-height:1.3; }
-.theme-paper .card:not(.single) .card-loc { padding-top:10rpx; margin-top:12rpx; position:relative; }
-.theme-paper .card:not(.single) .card-loc::before { content:''; position:absolute; top:0; left:16%; right:16%; height:1rpx; background:currentColor; opacity:.23; }
-.theme-paper .card.single { padding-top:6rpx; padding-bottom:6rpx; }
-.theme-paper .card.single .card-name { font-size:25rpx; }.theme-paper .card.single .card-loc { font-size:21rpx; }
+
 /* B: align names and rooms to one inset; the colored rule remains separate. */
 .theme-swiss { background:white; border-radius:0; }
 .theme-swiss .head,.theme-swiss .body { border-radius:0; }
@@ -55,22 +46,20 @@
 .theme-swiss .head::before { content:''; position:absolute; top:0; left:0; right:0; height:1rpx; background:var(--grid-line); z-index:1; pointer-events:none; }
 .theme-swiss .body { border-left:1rpx solid var(--grid-line); }
 .theme-swiss .head-day,.theme-swiss .head-corner { font-weight:700; }
-.theme-swiss .card { border-left:7rpx solid; box-shadow:none; left:1rpx; right:1rpx; padding:8rpx 3rpx 8rpx 8rpx; align-items:flex-start; background-image:linear-gradient(100deg,rgba(255,255,255,.12),transparent); }
-.theme-swiss .card-name { font-weight:700; font-size:27rpx; line-height:1.28; text-align:left; max-width:2.4em; }
-.theme-swiss .card-loc { font-family:var(--font-numeric); font-size:22rpx; margin-top:10rpx; text-align:left; font-variant-numeric:tabular-nums; }
-.theme-swiss .card.single { padding-left:6rpx; padding-top:6rpx; padding-bottom:6rpx; }
-.theme-swiss .card.single .card-name { font-size:25rpx; }.theme-swiss .card.single .card-loc { margin-top:5rpx; font-size:21rpx; }
+
 .theme-swiss .period-index { font-family:var(--font-numeric); font-weight:700; font-size:34rpx; }
 .theme-swiss .time-range { font-family:var(--font-numeric); font-size:21rpx; }
-/* F: solid pixel steps, subtle light on the fill, and readable blue type. */
+/* F: pixel rail/corners share the common course treatment. */
 .theme-pixel { background:var(--page); border:4rpx solid transparent; border-image:var(--pixel-frame) 6 / 12rpx stretch; border-radius:0; padding:4rpx; }
 .theme-pixel .head,.theme-pixel .body { border-radius:0; }
 .theme-pixel .head-day,.theme-pixel .period-index { color:var(--accent); font-weight:700; }
 .theme-pixel .head-corner { background-image:linear-gradient(45deg,transparent 48%,#8CBCEF 49%,#8CBCEF 51%,transparent 52%); }
-.theme-pixel .card { border:3rpx solid transparent; border-image:var(--pixel-course-frame) 4 / 6rpx stretch; border-radius:0; box-shadow:none; background-clip:padding-box; background-image:linear-gradient(135deg,rgba(255,255,255,.2),rgba(255,255,255,0)); padding:10rpx 4rpx; }
-.theme-pixel .card-name { color:#092572; font-size:28rpx; line-height:1.28; font-weight:700; max-width:2.4em; }
-.theme-pixel .card-loc { color:#092572; font-family:var(--font-numeric); font-size:22rpx; font-weight:500; margin-top:10rpx; font-variant-numeric:tabular-nums; }
+
 .theme-pixel .period-index { font-family:var(--font-numeric); font-size:33rpx; }
 .theme-pixel .time-range { font-family:var(--font-numeric); font-size:21rpx; font-weight:500; }
-.theme-pixel .card.single { padding-top:6rpx; padding-bottom:6rpx; }
-.theme-pixel .card.single .card-name { font-size:25rpx; }.theme-pixel .card.single .card-loc { font-size:21rpx; margin-top:4rpx; }
+
+.theme-paper .card-name { font-family:var(--font-family); font-size:28rpx; font-weight:700; }
+.theme-swiss .card { left:1rpx; right:1rpx; }
+.theme-swiss .card-name,.theme-pixel .card-name { font-weight:700; }
+.theme-pixel .card-name { font-size:28rpx; }
+.theme-paper .card.single .card-name,.theme-pixel .card.single .card-name { font-size:25rpx; }

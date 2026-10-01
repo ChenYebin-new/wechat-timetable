@@ -8,7 +8,7 @@
     <button wx:for="{{choices}}" wx:key="id" class="theme-choice {{selectedTheme === item.id ? 'chosen' : ''}}" data-id="{{item.id}}" bindtap="onChoose" disabled="{{saving}}" aria-role="radio" aria-checked="{{selectedTheme === item.id}}" aria-label="{{item.name}}{{currentTheme === item.id ? '，当前使用' : ''}}" hover-class="choice-pressed">
       <view class="theme-thumbnail thumbnail-{{item.id}}" style="{{item.style}}">
         <image wx:if="{{item.art}}" class="thumbnail-art" src="{{item.art}}" mode="aspectFill" aria-hidden="true" />
-        <view class="thumbnail-blocks" aria-hidden="true"><view wx:for="{{item.colors}}" wx:for-item="color" wx:key="*this" style="background:{{color}}"></view></view>
+        <view class="thumbnail-blocks" aria-hidden="true"><view wx:for="{{item.colors}}" wx:for-item="color" wx:key="slot" class="course-block course-{{item.id}}" style="background-color:{{color.background}};--course-accent:{{color.accent}}"><view class="course-rail" /></view></view>
       </view>
       <view class="choice-copy"><text class="choice-name">{{item.name}}</text><text class="choice-status">{{currentTheme === item.id ? '当前使用' : selectedTheme === item.id ? '待应用' : '预览'}}</text></view>
     </button>
@@ -18,7 +18,7 @@
     <view class="mini-screen mini-theme-{{selectedTheme}}" aria-hidden="true">
       <view class="mini-masthead"><image wx:if="{{previewArt}}" class="mini-art" src="{{previewArt}}" mode="aspectFill" /><text class="mini-title">拾课课表</text></view><text class="mini-week"><text wx:if="{{selectedTheme === 'swiss'}}" class="mini-week-number">04 </text>‹　 第 4 周　 ›</text>
       <view class="mini-weekdays"><text wx:for="{{previewDays}}" wx:key="*this">{{item}}</text></view>
-      <view class="mini-grid"><view class="mini-row" wx:for="{{previewRows}}" wx:key="*this"></view><view class="mini-course" wx:for="{{previewCourses}}" wx:key="id" style="{{item.style}}"><text>{{item.name}}</text><text class="mini-room">{{item.room}}</text></view></view>
+      <view class="mini-grid"><view class="mini-row" wx:for="{{previewRows}}" wx:key="*this"></view><view class="mini-course course-block course-{{selectedTheme}}" wx:for="{{previewCourses}}" wx:key="id" style="{{item.style}}"><view class="course-rail" /><view wx:if="{{selectedTheme === 'pixel'}}" class="course-pixel-cap cap-top" /><view wx:if="{{selectedTheme === 'pixel'}}" class="course-pixel-cap cap-bottom" /><text>{{item.name}}</text><text class="mini-room">{{item.room}}</text></view></view>
       <view class="mini-tabs"><text class="mini-selected">课表</text><text>待办</text></view>
     </view>
     <view class="mini-screen mini-theme-{{selectedTheme}}" aria-hidden="true">
