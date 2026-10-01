@@ -4,8 +4,7 @@
 <page-header class="page-masthead" title="{{ready ? '编辑第 ' + (index + 1) + ' 节' : '编辑课程时间'}}" subtitle="" home="{{false}}" theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}" art="{{appearanceArt}}" />
 <view class="page theme-{{themeId}}" style="{{appearanceStyle}}" wx:if="{{ready}}">
   <view class="intro">
-    <text class="intro-title">{{title}}</text>
-    <text class="intro-desc">修改开始时间会自动计算结束时间；修改结束时间会保存为本节专属时长。返回上一级后仍需点击总保存。</text>
+    <text class="intro-desc">改开始时间会联动结束时间；改结束时间则自定义本节时长。</text>
     <text class="custom-state">{{customText}}</text>
   </view>
 
@@ -32,6 +31,7 @@
 
   <view class="impact">{{impactText}}</view>
 
-  <button class="save-btn" bindtap="onSave" hover-class="save-btn-pressed">保存本节时间</button>
+  <button class="save-btn" bindtap="onSave" hover-class="save-btn-pressed">确认本节时间</button>
+  <text class="save-hint">返回后点击“保存课程时间”生效。</text>
 </view>
 </block>

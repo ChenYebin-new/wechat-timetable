@@ -783,13 +783,13 @@ button::after {
 
 /* C/E composition: date tools, goal cards, then a complete journal panel. */
 .page { min-height:0; padding:14rpx 22rpx calc(150rpx + env(safe-area-inset-bottom)); }
-.date-controls { display:flex; align-items:center; gap:12rpx; margin:0 0 22rpx; }
-.date-navigation { flex:1; min-width:0; margin:0; }
+.date-controls { display:flex; flex-wrap:wrap; align-items:center; gap:12rpx; margin:0 0 22rpx; }
+.date-navigation { flex:1 1 340rpx; min-width:0; margin:0; }
 .date-picker-content { min-height:108rpx; }
 .date-label { font-size:38rpx; font-weight:700; color:var(--text); }
 .date-arrow { background:var(--soft); border-radius:50%; }
 .plain-button.date-arrow { width:44px !important; min-width:44px; min-height:44px; height:44px; }
-.calendar-toolbar { display:flex; align-items:center; gap:8rpx; margin:0; }
+.calendar-toolbar { display:flex; flex-shrink:0; align-items:center; gap:8rpx; margin:0 0 0 auto; }
 .plain-button.calendar-toggle,.plain-button.today-button { background:var(--surface); border:1rpx solid var(--border); border-radius:18rpx; min-height:44px; margin:0; padding:0 14rpx; color:var(--text); font-size:24rpx; }
 .calendar-toggle-chevron { display:none; }
 .calendar-icon { border-color:var(--text); }
@@ -842,7 +842,7 @@ button::after {
 .status-check { background:var(--success); }
 .status-stem { border-color:var(--on-dark); }
 .note-status.saved { color:var(--muted); }
-.reflection-footer { font-size:21rpx; margin:18rpx 0 0; }
+.reflection-footer { font-size:24rpx; margin:18rpx 0 0; }
 .expiry-hint { margin:12rpx 0 0; padding:0; font-size:21rpx; text-align:left; }
 .save-button,.cancel-button,.note-toggle,.retry-button { min-height:44px; }
 .save-button[disabled] { color:var(--muted); background:var(--disabled); }

@@ -1,20 +1,20 @@
 <page-meta page-style="{{appearanceStyle}}background:var(--page);background-image:var(--page-texture);font-family:var(--font-family);color:var(--text);" />
 <share-home-preview wx:if="{{showShareHomePreview}}" />
 <block wx:else>
-<page-header class="page-masthead" title="设置" subtitle="管理学期、课程时间与本地备份。" home="{{false}}" theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}" art="{{appearanceArt}}" />
+<page-header class="page-masthead" title="设置" subtitle="外观、学期、备份与反馈。" home="{{false}}" theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}" art="{{appearanceArt}}" />
 <view class="page theme-{{themeId}}" style="{{appearanceStyle}}">
   <view wx:if="{{themeId === 'cream'}}" class="intro">
-    <text class="intro-desc">管理学期、每日课程时间，以及课表、待办与随想的本地备份。</text>
+    <text class="intro-desc">调整外观与课程时间，备份数据或反馈问题。</text>
   </view>
 
   <view class="menu-card">
-    <view class="menu-row menu-appearance" bindtap="onAppearance" aria-role="button" aria-label="外观，当前{{appearanceName}}">
+    <view class="menu-row menu-appearance" hover-class="menu-pressed" bindtap="onAppearance" aria-role="button" aria-label="外观，当前{{appearanceName}}">
       <image class="menu-icon" src="{{appearanceIcons.menuAppearance}}" aria-hidden="true" />
       <view class="menu-copy"><text class="menu-title">外观</text><text class="menu-desc">{{appearanceName}} · 课程自动配色</text></view>
       <text class="chevron">›</text>
     </view>
     <view class="divider"></view>
-    <view class="menu-row menu-term" bindtap="onTermSettings" aria-role="button" aria-label="学期设置">
+    <view class="menu-row menu-term" hover-class="menu-pressed" bindtap="onTermSettings" aria-role="button" aria-label="学期设置">
       <image class="menu-icon" src="{{appearanceIcons.menuTerm}}" aria-hidden="true" />
       <view class="menu-copy">
         <text class="menu-title">学期设置</text>
@@ -23,7 +23,7 @@
       <text class="chevron">›</text>
     </view>
     <view class="divider"></view>
-    <view class="menu-row menu-time" bindtap="onPeriodSettings" aria-role="button" aria-label="课程时间设置">
+    <view class="menu-row menu-time" hover-class="menu-pressed" bindtap="onPeriodSettings" aria-role="button" aria-label="课程时间设置">
       <image class="menu-icon" src="{{appearanceIcons.menuTime}}" aria-hidden="true" />
       <view class="menu-copy">
         <text class="menu-title">课程时间设置</text>
@@ -32,7 +32,7 @@
       <text class="chevron">›</text>
     </view>
     <view class="divider"></view>
-    <view class="menu-row menu-data" bindtap="onDataManage" aria-role="button" aria-label="课表数据管理">
+    <view class="menu-row menu-data" hover-class="menu-pressed" bindtap="onDataManage" aria-role="button" aria-label="课表数据管理">
       <image class="menu-icon" src="{{appearanceIcons.menuData}}" aria-hidden="true" />
       <view class="menu-copy">
         <text class="menu-title">课表数据管理</text>
@@ -41,11 +41,20 @@
       <text class="chevron">›</text>
     </view>
     <view class="divider"></view>
-    <view class="menu-row menu-backup" bindtap="onTodoBackup" aria-role="button" aria-label="待办与随想备份">
+    <view class="menu-row menu-backup" hover-class="menu-pressed" bindtap="onTodoBackup" aria-role="button" aria-label="待办与随想备份">
       <image class="menu-icon" src="{{appearanceIcons.menuBackup}}" aria-hidden="true" />
       <view class="menu-copy">
         <text class="menu-title">待办与随想备份</text>
-        <text class="menu-desc">独立导出、覆盖恢复与撤回</text>
+        <text class="menu-desc">备份与恢复每日记录</text>
+      </view>
+      <text class="chevron">›</text>
+    </view>
+    <view class="divider"></view>
+    <view class="menu-row menu-about" hover-class="menu-pressed" bindtap="onAbout" aria-role="button" aria-label="关于我们，联系开发者与意见反馈">
+      <image class="menu-icon" src="{{appearanceIcons.brand}}" aria-hidden="true" />
+      <view class="menu-copy">
+        <text class="menu-title">关于我们</text>
+        <text class="menu-desc">联系开发者与意见反馈</text>
       </view>
       <text class="chevron">›</text>
     </view>

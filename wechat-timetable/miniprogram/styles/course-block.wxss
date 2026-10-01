@@ -1,0 +1,13 @@
+/* Shared by the real timetable, time selection and appearance previews. */
+.course-block { box-sizing:border-box; overflow:hidden; border:0; border-radius:var(--card-radius); box-shadow:none; background-image:none; }
+.course-rail { position:absolute; left:0; top:0; bottom:0; width:var(--course-rail-width,6rpx); border-radius:var(--course-rail-width,6rpx); background:var(--course-accent); pointer-events:none; }
+.course-paper { background-image:var(--page-texture); background-blend-mode:multiply; }
+.course-swiss,.course-pixel { border-radius:0; }
+.course-swiss .course-rail { border-radius:0; }
+.course-pixel .course-rail { top:var(--course-pixel-step,4rpx); bottom:var(--course-pixel-step,4rpx); border-radius:0; }
+.course-pixel-cap { position:absolute; left:0; right:0; height:calc(var(--course-pixel-step,4rpx) * 2); pointer-events:none; }
+.course-pixel-cap::before,.course-pixel-cap::after { content:''; position:absolute; top:0; width:var(--course-pixel-step,4rpx); height:var(--course-pixel-step,4rpx); background:var(--course-accent); }
+.course-pixel-cap::before { left:var(--course-pixel-step,4rpx); box-shadow:calc(0rpx - var(--course-pixel-step,4rpx)) var(--course-pixel-step,4rpx) var(--course-accent); }
+.course-pixel-cap::after { right:var(--course-pixel-step,4rpx); box-shadow:var(--course-pixel-step,4rpx) var(--course-pixel-step,4rpx) var(--course-accent); }
+.cap-top { top:0; }
+.cap-bottom { bottom:0; transform:scaleY(-1); }

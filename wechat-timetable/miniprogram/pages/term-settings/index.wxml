@@ -6,7 +6,7 @@
 <view class="page theme-{{themeId}}" style="{{appearanceStyle}}">
   <view class="card">
     <text class="card-title">第一教学周的星期一</text>
-    <text class="card-desc">请选择新学期开始的第一周对应的星期一，教学周从这一天起每 7 天为一周。日期列表仅显示星期一。</text>
+    <text class="card-desc">教学周从这一天开始计算，日期仅可选择星期一。</text>
     <monday-picker theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}" id="term-monday-picker" value="{{startDate}}" bindchange="onDateChange">
       <view class="picker-value">{{startDate}}（周一）</view>
     </monday-picker>
@@ -36,6 +36,6 @@
     <text class="notice-desc">检测到 {{affectedCount}} 门旧课程。设置学期后，它们将按"全部周"迁移到新学期（迁移前会自动备份当前课表）。</text>
   </view>
 
-  <button class="save-btn hover-btn" hover-class="save-btn-pressed" bindtap="onSave">{{isMigration ? '设置并迁移' : '保存'}}</button>
+  <button class="save-btn hover-btn" hover-class="save-btn-pressed" bindtap="onSave">{{isMigration ? '设置并迁移' : '保存学期设置'}}</button>
 </view>
 </block>

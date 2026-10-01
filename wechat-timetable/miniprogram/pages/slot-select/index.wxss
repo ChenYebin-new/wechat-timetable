@@ -16,15 +16,10 @@
   box-shadow: none;
 }
 
-.intro-title {
-  font-size: 28rpx;
-  font-weight: 700;
-}
-
 .intro-desc {
   color: var(--muted);
-  font-size: 22rpx;
-  line-height: 1.5;
+  font-size: 26rpx;
+  line-height: 1.6;
 }
 
 .grid-frame {
@@ -111,3 +106,5 @@
 .selection-done { background: var(--surface); color: var(--accent); }
 
 .page { min-height: 0; padding-top: 22rpx; }
+.theme-paper .intro { border-radius:8rpx; }
+.theme-swiss .intro,.theme-pixel .intro { border-radius:0; }

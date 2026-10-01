@@ -18,7 +18,6 @@ Page({
     ...appearanceData(),
     ready: false,
     index: 0,
-    title: '',
     start: '08:00',
     end: '08:50',
     originalStart: '08:00',
@@ -56,7 +55,6 @@ Page({
       this.setData({
         ready: true,
         index: init.index,
-        title: `第 ${init.index + 1} 节课`,
         start: period.start,
         end: period.end,
         originalStart: period.start,
@@ -65,9 +63,9 @@ Page({
         durationText: `${end - start} 分钟`,
         impactText:
           init.index < settings.periods.length - 1
-            ? `保存后将按规则更新第 ${init.index + 1}–${settings.periods.length} 节；遇到手动开始锚点时会保留该时间。`
-            : '保存后只更新本节课程时间。',
-        customText: customParts.length > 0 ? `当前已自定义：${customParts.join('、')}` : '当前跟随全局作息规则',
+            ? `确认后重排第 ${init.index + 1}–${settings.periods.length} 节，保留后续手动开始时间。`
+            : '确认后仅更新本节时间。',
+        customText: customParts.length > 0 ? `已自定义：${customParts.join('、')}` : '使用统一课时时长',
       })
       wx.setNavigationBarTitle({ title: `编辑第 ${init.index + 1} 节` })
     })

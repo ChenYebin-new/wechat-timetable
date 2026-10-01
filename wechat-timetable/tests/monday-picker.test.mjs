@@ -202,7 +202,7 @@ test('两个入口共用组件，确认只更新页面，原保存与导入流�
     assert.equal(config.usingComponents['monday-picker'], '/components/monday-picker/index')
     assert.match(markup, /<monday-picker/)
     assert.match(markup, /（周一）/)
-    assert.match(markup, /日期列表仅显示星期一/)
+    assert.match(markup, /日期(?:列表仅显示|仅可选择)星期一/)
     assert.doesNotMatch(markup, /mode="date"/)
   }
   const markup = readFileSync(new URL('../miniprogram/components/monday-picker/index.wxml', import.meta.url), 'utf8')

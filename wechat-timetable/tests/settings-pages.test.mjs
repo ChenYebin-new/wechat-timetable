@@ -40,7 +40,8 @@ test('设置首页提供学期、课程时间和数据管理三级入口', () =>
 test('课程时间设置包含自动联动规则、步进器、自定义标识和固定保存区', () => {
   assert.match(periodMarkup, /每节课时长/)
   assert.match(periodMarkup, /课间休息时长/)
-  assert.match(periodMarkup, /立即更新下方时间/)
+  assert.match(periodMarkup, /修改后自动重排/)
+  assert.match(periodMarkup, /保存后生效/)
   assert.match(periodMarkup, /onDecrease/)
   assert.match(periodMarkup, /onIncrease/)
   assert.match(periodMarkup, /onEditPeriod/)
@@ -50,7 +51,7 @@ test('课程时间设置包含自动联动规则、步进器、自定义标识�
 })
 
 test('单节编辑说明开始时间联动、专属时长和后续重排', () => {
-  assert.match(periodEditMarkup, /修改开始时间会自动计算结束时间/)
+  assert.match(periodEditMarkup, /改开始时间会联动结束时间/)
   assert.match(periodEditMarkup, /本节时长/)
   assert.match(periodEditMarkup, /impactText/)
   assert.doesNotMatch(periodEditMarkup, /下一节开始/)

@@ -15,7 +15,7 @@ function previewData(id: ThemeId) {
       { id: 'demo-sport', name: '体育', room: '操场', day: 3, period: 4 },
     ].map(course => {
       const color = getCourseAppearance({ id: course.id, groupId: course.id }, id)
-      return { ...course, style: `left:${course.day * 14.285714}%;top:${course.period * 38}rpx;background:${color.background};color:${color.text};` }
+      return { ...course, style: `left:${course.day * 14.285714}%;top:${course.period * 38}rpx;background:${color.background};color:${color.text};--course-accent:${color.border};` }
     }),
   }
 }
@@ -24,7 +24,7 @@ Page({
   data: {
     ...appearanceData(), ...previewData(getCurrentThemeId()),
     currentTheme: getCurrentThemeId(), saving: false, problem: '', showShareHomePreview: false,
-    choices: Object.values(THEMES).map(theme => ({ id: theme.id, name: theme.name, description: theme.description, style: themeStyle(theme.id), art: theme.illustration, colors: theme.courseColors.slice(0, 4) })),
+    choices: Object.values(THEMES).map(theme => ({ id: theme.id, name: theme.name, description: theme.description, style: themeStyle(theme.id), art: theme.illustration, colors: theme.courseColors.slice(0, 4).map((background, slot) => ({ slot, background, accent: theme.courseBorders[slot] })) })),
     previewDays: ['一', '二', '三', '四', '五', '六', '日'],
     previewRows: [1, 2, 3, 4, 5, 6, 7, 8],
   },

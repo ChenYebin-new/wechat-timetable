@@ -19,10 +19,10 @@
     </picker>
   </view>
 
-  <view class="helper">修改时长或课间后会立即更新下方时间；午休等手动开始时间和单节自定义时长会保留。</view>
+  <view class="helper">修改后自动重排；保留午休等手动开始时间和单节自定义时长。保存后生效。</view>
 
   <view class="count-card">
-    <text class="row-title">每日课程数</text>
+    <text class="row-title">每日节数</text>
     <view class="stepper">
       <view class="step-btn {{settings.periods.length <= 1 ? 'disabled' : ''}}" bindtap="onDecrease" aria-role="button" aria-label="减少一节" aria-disabled="{{settings.periods.length <= 1}}">−</view>
       <text class="step-value">{{settings.periods.length}}</text>
@@ -47,7 +47,7 @@
   <view class="regenerate" bindtap="onClearOverrides" aria-role="button" aria-label="清除自定义时间并重新排布全部节次">清除自定义时间并重新排布</view>
 
   <view class="save-area">
-    <button class="save-btn" loading="{{saving}}" disabled="{{saving}}" bindtap="onSave" hover-class="save-btn-pressed">保存</button>
+    <button class="save-btn" loading="{{saving}}" disabled="{{saving}}" bindtap="onSave" hover-class="save-btn-pressed">保存课程时间</button>
   </view>
 </view>
 </block>

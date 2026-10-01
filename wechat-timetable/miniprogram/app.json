@@ -10,7 +10,8 @@
     "pages/data-manage/index",
     "pages/todo-backup/index",
     "pages/term-settings/index",
-    "pages/appearance/index"
+    "pages/appearance/index",
+    "pages/about/index"
   ],
   "window": {
     "navigationBarTextStyle": "black",

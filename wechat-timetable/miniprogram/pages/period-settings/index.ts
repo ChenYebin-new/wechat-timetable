@@ -102,7 +102,7 @@ Page({
     if (count < MIN_PERIODS || count > MAX_PERIODS) return
     if (count < this.data.maxUsedPeriod) {
       wx.showModal({
-        title: '无法减少课程数',
+        title: '无法减少节数',
         content: `已有课程使用到第 ${this.data.maxUsedPeriod} 节，请先调整相关课程时段。`,
         showCancel: false,
         confirmText: '知道了',
@@ -153,7 +153,7 @@ Page({
     if (!settings) return
     wx.showModal({
       title: '清除全部自定义时间？',
-      content: '将保留第一节开始时间，清除午休锚点和单节自定义时长，再按当前规则连续排布全部节次。',
+      content: '保留第一节开始时间，清除午休等手动开始时间和单节自定义时长，再连续排布全部节次。',
       confirmText: '清除并重排',
       confirmColor: '#267d78',
       success: (result) => {
