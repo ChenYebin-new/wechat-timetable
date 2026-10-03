@@ -85,3 +85,18 @@
 
 .theme-paper .term-text { font-weight:700; }.theme-paper .week-label { letter-spacing:1rpx; }
 .theme-swiss .week-label { font-variant-numeric:tabular-nums; }
+
+/* Keep the full term and 44px controls on small phones; rpx must not shrink targets. */
+@media (max-width:360px) {
+  .theme-cream .schedule-toolbar,
+  .theme-campus .schedule-toolbar,
+  .theme-pixel .schedule-toolbar { flex-wrap:wrap; gap:8rpx; }
+  .theme-cream .term-label { flex:1; min-width:120px; }
+  .theme-cream .week-bar { flex:0 0 144px; }
+  .theme-campus .week-bar,
+  .theme-pixel .week-bar { flex:1 0 100%; order:0; }
+  .theme-cream .tool-button,
+  .theme-campus .tool-button,
+  .theme-pixel .tool-button { flex:1; order:2; }
+}
+.week-label { font-variant-numeric:tabular-nums; }

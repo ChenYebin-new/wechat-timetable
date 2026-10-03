@@ -26,8 +26,8 @@
       <text class="selection-detail">{{summary || '请点击课表中的空白格'}}</text>
     </view>
     <view class="selection-actions">
-      <view class="selection-cancel" bindtap="onCancel" aria-role="button" aria-label="取消重新选择">取消</view>
-      <view class="selection-done {{selectedCount ? '' : 'disabled'}}" bindtap="onDone" aria-role="button" aria-label="完成时段选择" aria-disabled="{{!selectedCount}}">完成</view>
+      <view class="pressable selection-cancel" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onCancel" aria-role="button" aria-label="取消重新选择">取消</view>
+      <view class="pressable selection-done {{selectedCount ? '' : 'disabled'}}" hover-class="{{!selectedCount ? 'none' : 'press-feedback'}}" hover-start-time="20" hover-stay-time="80" bindtap="onDone" aria-role="button" aria-label="完成时段选择" aria-disabled="{{!selectedCount}}">完成</view>
     </view>
   </view>
 </view>

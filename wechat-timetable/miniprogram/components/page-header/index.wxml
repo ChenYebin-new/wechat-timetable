@@ -4,7 +4,7 @@
   <view class="status-cover {{scrolled ? 'scrolled' : ''}}" style="height:{{statusHeight}}px;" aria-hidden="true" />
   <view style="height:{{navigationHeight}}px;" aria-hidden="true" />
   <view class="navigation {{scrolled ? 'scrolled' : ''}}" style="top:{{statusHeight}}px;height:{{navigationHeight}}px;padding-right:{{capsuleSpace}}px;">
-    <button wx:if="{{!home}}" class="back" bindtap="onBack" aria-label="返回上一页"><view class="back-mark" /></button>
+    <button wx:if="{{!home}}" class="pressable back" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onBack" aria-label="返回上一页"><view class="back-mark" /></button>
     <image wx:if="{{home && themeId === 'paper'}}" class="brand-book" src="/assets/appearance/book-paper-accent.svg" aria-hidden="true" />
     <text wx:if="{{!home || (themeId !== 'campus' && themeId !== 'pixel') || compactTitle}}" class="navigation-title {{themeId === 'campus' || themeId === 'pixel' ? 'compact' : ''}}">{{title}}</text>
   </view>

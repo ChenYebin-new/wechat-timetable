@@ -1,3 +1,4 @@
+@import "../../styles/interaction.wxss";
 :host { display: block; }
 .masthead { position: relative; box-sizing: border-box; background: var(--page); color: var(--text); }
 .navigation { position: fixed; left: 0; right: 0; z-index: 90; display: flex; align-items: center; box-sizing: border-box; padding-left: 24rpx; }
