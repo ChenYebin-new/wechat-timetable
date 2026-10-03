@@ -1,4 +1,5 @@
 @import "../../styles/course-block.wxss";
+@import "../../styles/interaction.wxss";
 /* 124rpx rows + 80rpx header + 16rpx padding match timetable-layout.ts. */
 .timetable { position:relative; padding:8rpx; background:var(--surface); border-radius:20rpx; overflow:hidden; }
 .theme-cream { border-radius:16rpx; background:var(--page); }

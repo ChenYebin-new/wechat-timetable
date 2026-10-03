@@ -5,32 +5,32 @@
 <page-header class="page-masthead" title="拾课课表" subtitle="{{termLabel}}" home="{{true}}" theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}" art="{{appearanceArt}}" />
 <view class="page theme-{{themeId}} {{selectionMode ? 'selecting' : ''}}" style="{{appearanceStyle}}">
   <view class="schedule-toolbar {{selectionMode ? 'actions-disabled' : ''}}">
-    <view wx:if="{{themeId === 'cream' || themeId === 'paper' || themeId === 'swiss'}}" class="term-label" bindtap="onTermSettings" aria-role="button" aria-label="修改学期，{{termLabel}}"><text class="term-text">{{termLabel}}</text><view class="down-mark" /></view>
-    <view class="tool-settings tool-button" bindtap="onSettings" aria-role="button" aria-label="设置" aria-disabled="{{selectionMode}}"><view class="tool-face"><image src="{{appearanceIcons.settings}}" aria-hidden="true" /><text>设置</text></view></view>
+    <view wx:if="{{themeId === 'cream' || themeId === 'paper' || themeId === 'swiss'}}" class="pressable term-label" hover-class="{{selectionMode ? 'none' : 'press-feedback'}}" hover-start-time="20" hover-stay-time="80" bindtap="onTermSettings" aria-role="button" aria-label="修改学期，{{termLabel}}" aria-disabled="{{selectionMode}}"><text class="term-text">{{termLabel}}</text><view class="down-mark" /></view>
+    <view class="pressable tool-settings tool-button" hover-class="{{selectionMode ? 'none' : 'press-feedback'}}" hover-start-time="20" hover-stay-time="80" bindtap="onSettings" aria-role="button" aria-label="设置" aria-disabled="{{selectionMode}}"><view class="tool-face"><image src="{{appearanceIcons.settings}}" aria-hidden="true" /><text>设置</text></view></view>
     <view wx:if="{{termReady}}" class="week-bar {{selectionMode ? 'week-bar-disabled' : ''}}">
-      <view class="week-nav {{currentWeek <= 1 ? 'disabled' : ''}}" bindtap="onPrevWeek" aria-role="button" aria-label="上一周" aria-disabled="{{selectionMode || currentWeek <= 1}}"><view class="week-chevron previous" /></view>
+      <view class="pressable week-nav {{currentWeek <= 1 ? 'disabled' : ''}}" hover-class="{{selectionMode || currentWeek <= 1 ? 'none' : 'press-feedback'}}" hover-start-time="20" hover-stay-time="80" bindtap="onPrevWeek" aria-role="button" aria-label="上一周" aria-disabled="{{selectionMode || currentWeek <= 1}}"><view class="week-chevron previous" /></view>
       <text wx:if="{{themeId === 'swiss'}}" class="week-display" aria-hidden="true">{{currentWeek >= 10 ? '' : '0'}}{{currentWeek}}</text>
       <picker mode="selector" range="{{weekOptions}}" value="{{weekIndex}}" bindchange="onWeekChange" disabled="{{selectionMode}}" aria-label="选择教学周"><view class="week-label"><text>第{{currentWeek}}周</text><view class="down-mark" /></view></picker>
-      <view class="week-nav {{currentWeek >= weekOptions.length ? 'disabled' : ''}}" bindtap="onNextWeek" aria-role="button" aria-label="下一周" aria-disabled="{{selectionMode || currentWeek >= weekOptions.length}}"><view class="week-chevron next" /></view>
+      <view class="pressable week-nav {{currentWeek >= weekOptions.length ? 'disabled' : ''}}" hover-class="{{selectionMode || currentWeek >= weekOptions.length ? 'none' : 'press-feedback'}}" hover-start-time="20" hover-stay-time="80" bindtap="onNextWeek" aria-role="button" aria-label="下一周" aria-disabled="{{selectionMode || currentWeek >= weekOptions.length}}"><view class="week-chevron next" /></view>
     </view>
-    <view class="tool-add tool-button" bindtap="onAdd" aria-role="button" aria-label="新增课程" aria-disabled="{{selectionMode}}"><view class="tool-face"><view class="plus-icon" /><text>新增</text></view></view>
-    <view wx:if="{{themeId !== 'cream'}}" class="tool-term tool-button" bindtap="onTermSettings" aria-role="button" aria-label="修改学期" aria-disabled="{{selectionMode}}"><view class="tool-face"><image src="{{appearanceIcons.term}}" aria-hidden="true" /><text>学期</text></view></view>
+    <view class="pressable tool-add tool-button" hover-class="{{selectionMode ? 'none' : 'press-feedback'}}" hover-start-time="20" hover-stay-time="80" bindtap="onAdd" aria-role="button" aria-label="新增课程" aria-disabled="{{selectionMode}}"><view class="tool-face"><view class="plus-icon" /><text>新增</text></view></view>
+    <view wx:if="{{themeId !== 'cream'}}" class="pressable tool-term tool-button" hover-class="{{selectionMode ? 'none' : 'press-feedback'}}" hover-start-time="20" hover-stay-time="80" bindtap="onTermSettings" aria-role="button" aria-label="修改学期" aria-disabled="{{selectionMode}}"><view class="tool-face"><image src="{{appearanceIcons.term}}" aria-hidden="true" /><text>学期</text></view></view>
   </view>
   <view wx:if="{{storageProblem}}" class="term-banner">
     <text class="term-banner-text">{{storageProblem}}</text>
-    <view class="term-banner-btn" bindtap="onRetry" aria-role="button" aria-label="重新读取课表">重新读取</view>
+    <view class="pressable term-banner-btn" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onRetry" aria-role="button" aria-label="重新读取课表">重新读取</view>
   </view>
   <view wx:if="{{!storageProblem && (!termReady || needsMigration)}}" class="term-banner">
     <text class="term-banner-text">{{needsMigration ? (termReady ? '旧版课表自动升级未完成，原数据已保留' : '检测到旧版课表数据，设置学期后自动升级') : '请先设置学期，才能按教学周查看课表'}}</text>
-    <view wx:if="{{needsMigration && termReady}}" class="term-banner-btn" bindtap="onRetryMigration" aria-role="button" aria-label="重试数据升级">重试</view>
-    <view wx:else class="term-banner-btn" bindtap="onTermSettings" aria-role="button" aria-label="设置学期">去设置</view>
+    <view wx:if="{{needsMigration && termReady}}" class="pressable term-banner-btn" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onRetryMigration" aria-role="button" aria-label="重试数据升级">重试</view>
+    <view wx:else class="pressable term-banner-btn" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onTermSettings" aria-role="button" aria-label="设置学期">去设置</view>
   </view>
   <view wx:if="{{!storageProblem && isEmpty}}" class="empty-notice">
     <view class="empty-copy">
       <text class="empty-title">课表还是空的</text>
       <text class="empty-desc">先添加第一门课程，周课表会立即显示。</text>
     </view>
-    <view class="empty-btn" bindtap="onAdd" aria-role="button" aria-label="开始添加" aria-disabled="{{selectionMode}}">开始添加</view>
+    <view class="pressable empty-btn" hover-class="{{selectionMode ? 'none' : 'press-feedback'}}" hover-start-time="20" hover-stay-time="80" bindtap="onAdd" aria-role="button" aria-label="开始添加" aria-disabled="{{selectionMode}}">开始添加</view>
   </view>
 
   <view wx:if="{{!storageProblem}}" class="grid-scroll">
@@ -92,8 +92,8 @@
       <text class="selection-detail">{{selectionSummary}}</text>
     </view>
     <view class="selection-actions">
-      <view class="selection-cancel" bindtap="onCancelSelection" aria-role="button" aria-label="取消选择">取消</view>
-      <view class="selection-next" bindtap="onSelectionNext" aria-role="button" aria-label="下一步填写课程">下一步</view>
+      <view class="pressable selection-cancel" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onCancelSelection" aria-role="button" aria-label="取消选择">取消</view>
+      <view class="pressable selection-next" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onSelectionNext" aria-role="button" aria-label="下一步填写课程">下一步</view>
     </view>
   </view>
 </view>
