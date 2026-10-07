@@ -6,7 +6,7 @@ import {
   createCourseGroup,
   detachCourseSegment,
   getStorageSnapshot,
-  remove,
+  removeCourseOccurrence,
   removeCourseGroup,
   save,
   updateCourseGroup,
@@ -294,17 +294,20 @@ Page({
     wx.navigateBack()
   },
 
-  confirmDelete(scope: 'segment' | 'group') {
-    const wholeGroup = scope === 'group'
+  confirmDelete() {
+    const wholeGroup = this.data.editMode === 'group-edit'
+    const { id, groupId, sourceWeek } = this.data
     wx.showModal({
-      title: wholeGroup ? '删除整门课程' : '删除本时段',
-      content: wholeGroup ? `确定删除这门课程的全部 ${this.data.groupSize} 个时段吗？` : '确定删除当前这个上课时段吗？',
+      title: wholeGroup ? '删除整门课程' : `删除第${sourceWeek}周本次课`,
+      content: wholeGroup
+        ? `确定删除这门课程在所有教学周的全部 ${this.data.groupSize} 个时段吗？`
+        : `仅删除第 ${sourceWeek} 周当前时段的这一次课，保留其他教学周和其他时段的安排。确定删除吗？`,
       confirmColor: '#e64340',
       success: (result) => {
         if (!result.confirm) return
         try {
-          if (wholeGroup) removeCourseGroup(this.data.groupId)
-          else remove(this.data.id)
+          if (wholeGroup) removeCourseGroup(groupId)
+          else removeCourseOccurrence(id, sourceWeek)
         } catch (error) {
           wx.showModal({
             title: '无法删除',
@@ -321,14 +324,7 @@ Page({
   },
 
   onDelete() {
-    if (!this.data.id) return
-    if (this.data.groupSize <= 1) {
-      this.confirmDelete('segment')
-      return
-    }
-    wx.showActionSheet({
-      itemList: ['仅删除本时段', '删除整门课程'],
-      success: (result) => this.confirmDelete(result.tapIndex === 0 ? 'segment' : 'group'),
-    })
+    if (!this.data.id || this.data.saving) return
+    this.confirmDelete()
   },
 })

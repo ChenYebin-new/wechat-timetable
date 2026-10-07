@@ -12,6 +12,7 @@ globalThis.wx = {
   getMenuButtonBoundingClientRect() { return capsule },
   navigateBack(options) { calls.push(['back', options]) },
   switchTab(options) { calls.push(['tab', options]) },
+  hideKeyboard(options) { options.complete({ errMsg: 'hideKeyboard:ok' }) },
 }
 await import('../miniprogram/components/page-header/index.ts')
 await import('../miniprogram/custom-tab-bar/index.ts')
@@ -68,7 +69,9 @@ test('custom tabs follow actual route and do not show an unconfirmed navigation 
   tab.pageLifetimes.show.call(context)
   assert.equal(context.data.selected, 0)
   context.onSwitch({ currentTarget: { dataset: { index: 1 } } })
-  assert.deepEqual(calls.pop(), ['tab', { url: '/pages/todo/index' }])
+  const [, navigation] = calls.pop()
+  assert.equal(navigation.url, '/pages/todo/index')
+  navigation.complete?.({ errMsg: 'switchTab:ok' })
   assert.equal(context.data.selected, 0)
   stack = [{ route: 'pages/todo/index', data: { showShareHomePreview: false } }]
   tab.pageLifetimes.show.call(context)
@@ -79,4 +82,60 @@ test('custom tabs follow actual route and do not show an unconfirmed navigation 
   stack[0].data.showShareHomePreview = true
   context.syncSelected()
   assert.equal(context.data.hidden, true)
+})
+
+test('returning from todo keeps tab safe padding tied to the screen, not the keyboard-reduced window', () => {
+  const context = instance(tab)
+  stack = [{ route: 'pages/todo/index', data: {} }]
+  windowInfo = { screenHeight: 844, windowHeight: 797, safeArea: { bottom: 810 } }
+  tab.lifetimes.attached.call(context)
+  assert.equal(context.data.safeBottom, 34)
+  windowInfo.windowHeight = 470
+  stack = [{ route: 'pages/timetable/index', data: {} }]
+  tab.pageLifetimes.show.call(context)
+  assert.equal(context.data.safeBottom, 34)
+  assert.equal(context.data.selected, 0)
+  windowInfo = { screenHeight: 800, windowHeight: 500, safeArea: { bottom: 800 } }
+  tab.pageLifetimes.resize.call(context)
+  assert.equal(context.data.safeBottom, 0)
+})
+
+test('missing or invalid device safe area cannot create a screen-sized tab footer', () => {
+  const context = instance(tab)
+  for (const safeArea of [undefined, { bottom: 0 }, { bottom: -1 }, { bottom: 900 }, { bottom: NaN }]) {
+    windowInfo = { screenHeight: 844, safeArea }
+    tab.pageLifetimes.show.call(context)
+    assert.equal(context.data.safeBottom, 0)
+  }
+})
+
+test('tab navigation waits for keyboard dismissal and ignores repeated taps while switching', t => {
+  calls = []
+  let hideOptions
+  t.mock.method(wx, 'hideKeyboard', options => { hideOptions = options })
+  const context = instance(tab)
+  context.data.selected = 1
+  const event = { currentTarget: { dataset: { index: 0 } } }
+  context.onSwitch(event)
+  context.onSwitch(event)
+  assert.deepEqual(calls, [])
+  assert.equal(wx.hideKeyboard.mock.callCount(), 1)
+  hideOptions.complete({ errMsg: 'hideKeyboard:ok' })
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0][1].url, '/pages/timetable/index')
+  assert.equal(context.data.selected, 1)
+  context.onSwitch(event)
+  assert.equal(calls.length, 1)
+  calls[0][1].complete({ errMsg: 'switchTab:fail' })
+  context.onSwitch(event)
+  assert.equal(wx.hideKeyboard.mock.callCount(), 2)
+})
+
+test('an already hidden keyboard does not block tab navigation', t => {
+  calls = []
+  t.mock.method(wx, 'hideKeyboard', options => options.complete({ errMsg: 'hideKeyboard:fail keyboard is not shown' }))
+  const context = instance(tab)
+  context.onSwitch({ currentTarget: { dataset: { index: 1 } } })
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0][1].url, '/pages/todo/index')
 })

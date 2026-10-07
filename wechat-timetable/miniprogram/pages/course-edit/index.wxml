@@ -87,7 +87,7 @@
   </view>
     <view class="actions">
       <button class="btn btn-primary" bindtap="onSave" loading="{{saving}}" disabled="{{saving}}">保存</button>
-      <button wx:if="{{isEdit}}" class="btn btn-danger" bindtap="onDelete"><view wx:if="{{themeId === 'paper'}}" class="delete-rule" aria-hidden="true" /><text>删除课程</text><view wx:if="{{themeId === 'paper'}}" class="delete-rule" aria-hidden="true" /></button>
+      <button wx:if="{{isEdit}}" class="btn btn-danger" bindtap="onDelete" disabled="{{saving}}"><view wx:if="{{themeId === 'paper'}}" class="delete-rule" aria-hidden="true" /><text>{{isGroupMode ? '删除整门课程' : '删除第' + sourceWeek + '周本次课'}}</text><view wx:if="{{themeId === 'paper'}}" class="delete-rule" aria-hidden="true" /></button>
     </view>
 </view>
 </block>
