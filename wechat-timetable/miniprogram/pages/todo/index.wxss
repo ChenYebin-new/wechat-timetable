@@ -848,3 +848,94 @@ button::after {
 .save-button[disabled] { color:var(--muted); background:var(--disabled); }
 .title-input { height:48px; }
 .calendar-open .daily-note-input { min-height:200rpx; }
+
+/* 拖动只改变位移；保留原始行高、间距和按钮触控区域。 */
+.todo-order-hint {
+  display: block;
+  margin: 0 0 16rpx;
+  color: var(--muted);
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
+.todo-row {
+  position: relative;
+  z-index: 1;
+}
+
+.todo-surface {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  min-height: inherit;
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: inherit;
+  transform-origin: center;
+  transform: translateY(0) scale(1);
+  transition: transform var(--todo-move-duration, 220ms) cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 180ms ease-out, background-color 180ms ease-out, opacity 180ms ease-out;
+}
+
+.todo-list {
+  position: relative;
+  --todo-move-duration: 220ms;
+}
+
+/* 伪元素标出插入空位，不改变 first/last-child 和五套主题的行分隔线。 */
+.todo-list::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--todo-slot-height, 0px);
+  box-sizing: border-box;
+  border: 2rpx dashed var(--accent);
+  border-radius: var(--radius-small);
+  background: var(--soft);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(var(--todo-slot-y, 0px));
+  transition: transform var(--todo-move-duration, 220ms) cubic-bezier(0.22, 1, 0.36, 1), opacity 160ms ease-out;
+}
+
+.todo-list.reordering,
+.theme-paper .todo-list.reordering {
+  overflow: visible;
+}
+
+.todo-list.reordering::after { opacity: 0.6; }
+.todo-list.drop-settling::after { opacity: 0; }
+.todo-list.reordering .todo-surface { opacity: 0.84; transform: scale(0.985); }
+
+.todo-row.dragging,
+.todo-row.settling {
+  z-index: 3;
+  background: transparent;
+  border-color: transparent;
+}
+
+.todo-row.dragging .todo-surface {
+  opacity: 1;
+  background: var(--surface);
+  transform: translateY(-8px) scale(1.04);
+  box-shadow: 0 18px 36px rgba(25, 30, 45, 0.22), 0 5px 12px rgba(25, 30, 45, 0.12),
+    inset 0 0 0 1rpx var(--accent);
+}
+
+.todo-row.settling .todo-surface {
+  opacity: 1;
+  background: var(--surface);
+  transform: translateY(0) scale(1);
+  box-shadow: 0 3px 8px rgba(25, 30, 45, 0.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .todo-list { --todo-move-duration: 0ms; }
+  .todo-surface,.todo-list::after { transition: none; }
+  .todo-row.dragging .todo-surface { transform: none; }
+  .todo-list.reordering .todo-surface { transform: none; }
+}

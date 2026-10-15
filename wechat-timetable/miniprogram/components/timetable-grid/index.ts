@@ -137,11 +137,12 @@ Component({
       const state = getHoldState(this)
       state.ignoreTapKey = ''
       state.ignoreTapUntil = 0
-      if (!this.properties.holdEnabled || this.properties.selectionMode) return
+      clearHoldTimer(this)
+      this.setData({ pressingKey: '' })
+      if (e.touches.length !== 1 || !this.properties.holdEnabled || this.properties.selectionMode) return
       if (e.currentTarget.dataset.disabled) return
       const touch = e.touches[0]
       if (!touch) return
-      clearHoldTimer(this)
       state.key = e.currentTarget.dataset.key as string
       state.startX = touch.clientX
       state.startY = touch.clientY
@@ -163,9 +164,8 @@ Component({
     onCellTouchMove(e: WechatMiniprogram.TouchEvent) {
       const state = getHoldState(this)
       if (state.timer === null) return
-      const touch = e.touches[0]
-      if (!touch) return
-      if (Math.abs(touch.clientX - state.startX) > 12 || Math.abs(touch.clientY - state.startY) > 12) {
+      const touch = e.touches.length === 1 ? e.touches[0] : undefined
+      if (!touch || Math.abs(touch.clientX - state.startX) > 12 || Math.abs(touch.clientY - state.startY) > 12) {
         clearHoldTimer(this)
         this.setData({ pressingKey: '' })
       }

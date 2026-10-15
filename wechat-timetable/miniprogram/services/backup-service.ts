@@ -66,7 +66,8 @@ export function exportBackup(): string {
     const storageProblem = getStorageProblem(storage)
     if (storageProblem) throw new Error(storageProblem)
   }
-  if (storage.schemaVersion >= 2 && storage.schemaVersion <= TIMETABLE_SCHEMA_VERSION) {
+  if (storage.schemaVersion >= 2 && storage.schemaVersion <= TIMETABLE_SCHEMA_VERSION
+    && !(storage.term === null && storage.courses.length === 0)) {
     const termCheck = validateTerm(storage.term)
     if (!termCheck.ok) {
       throw new Error(termCheck.reason || '请先设置有效学期再导出')

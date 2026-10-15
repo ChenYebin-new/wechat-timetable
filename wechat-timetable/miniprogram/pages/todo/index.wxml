@@ -1,9 +1,10 @@
 <page-meta page-style="{{appearanceStyle}}background:var(--page);background-image:var(--page-texture);font-family:var(--font-family);color:var(--text);" />
+<wxs module="todoDrag" src="./drag.wxs" />
 <!-- 每日目标、月历与随想共用主题；主题刷新只更新外观，不重置草稿与日期。 -->
 <share-home-preview wx:if="{{showShareHomePreview}}" />
 <block wx:else>
 <page-header class="page-masthead" title="待办" subtitle="专注当下 · 逐步前进" home="{{true}}" theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}" art="{{appearanceArt}}" />
-<view class="page theme-{{themeId}} {{calendarExpanded ? 'calendar-open' : ''}}" style="{{appearanceStyle}}">
+<view class="page theme-{{themeId}} {{calendarExpanded ? 'calendar-open' : ''}}" style="{{appearanceStyle}}" draglayout="{{dragPresentation}}" change:draglayout="{{todoDrag.layoutChanged}}">
   <view class="date-controls">
   <view class="date-navigation">
     <button class="plain-button date-arrow" size="mini" style="width: 88rpx;" bindtap="onPreviousDate" hover-class="control-pressed" aria-label="前一天">
@@ -69,6 +70,7 @@
     <text class="section-title">{{sectionTitle}}</text>
     <text class="completion-count" aria-label="当日已完成{{completedCount}}个目标，共{{totalCount}}个">已完成 {{completedCount}}/{{totalCount}}</text>
   </view>
+  <text wx:if="{{!storageProblem && (completedCount > 1 || totalCount - completedCount > 1)}}" class="todo-order-hint">长按正文调整顺序，也可在更多操作中上移、下移</text>
 
   <view wx:if="{{storageProblem}}" class="problem-panel" aria-role="alert">
     <text class="problem-title">暂时无法读取待办</text>
@@ -81,8 +83,9 @@
     <text class="empty-desc">添加一件要做的事，完成后轻点圆圈。</text>
   </view>
 
-  <view wx:else class="todo-list">
-    <view class="todo-row {{item.completed ? 'completed' : ''}}" wx:for="{{visibleItems}}" wx:key="id">
+  <view wx:else class="todo-list {{draggingId ? 'reordering' : ''}} {{dragSettling ? 'drop-settling' : ''}}" style="{{dragSlotStyle}}">
+    <view class="todo-row {{item.completed ? 'completed' : ''}} {{draggingId === item.id ? (dragSettling ? 'settling' : 'dragging') : ''}}" data-id="{{item.id}}" wx:for="{{visibleItems}}" wx:key="id">
+      <view class="todo-surface">
       <button
         class="plain-button check-control"
         size="mini"
@@ -106,11 +109,17 @@
           size="mini"
           style="width: 100%;"
           data-id="{{item.id}}"
-          bindtap="onEdit"
+          data-draggable="{{!editorOpen && !savingGoal && !storageProblem && (item.completed ? completedCount > 1 : totalCount - completedCount > 1)}}"
+          bindtap="{{todoDrag.tap}}"
+          bindtouchstart="{{todoDrag.touchStart}}"
+          bindlongpress="{{todoDrag.longPress}}"
+          bindtouchmove="{{todoDrag.touchMove}}"
+          bindtouchend="{{todoDrag.touchEnd}}"
+          bindtouchcancel="{{todoDrag.touchCancel}}"
           disabled="{{!!storageProblem || savingGoal}}"
           hover-class="content-pressed"
           aria-disabled="{{!!storageProblem || savingGoal}}"
-          aria-label="编辑目标：{{item.title}}"
+          aria-label="编辑目标：{{item.title}}；长按拖动调整同类目标顺序"
         >
           <text class="todo-title">{{item.title}}</text>
           <text wx:if="{{item.expired}}" class="expired-label">已过期 · 可补记完成</text>
@@ -132,6 +141,7 @@
         <view class="more-dot" aria-hidden="true"></view>
         <view class="more-dot" aria-hidden="true"></view>
       </button>
+      </view>
     </view>
   </view>
 

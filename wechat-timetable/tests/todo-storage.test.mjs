@@ -117,6 +117,77 @@ function assertNoWrites() {
   assert.ok(operations.every(({ operation }) => operation === 'get'))
 }
 
+test('排序只替换指定日期同状态的数组位置，内容、时间戳、另一组及随想保持原样', () => {
+  const raw = current([
+    v3Item({ id: 'a', createdAt: 30 }),
+    v3Item({ id: 'done', completed: true, completedAt: 3 }),
+    v3Item({ id: 'other', taskDate: '2026-09-17' }),
+    v3Item({ id: 'b', createdAt: 10, note: '  原备注\n' }),
+    v3Item({ id: 'c', createdAt: 20 }),
+  ], [{ date: '2026-09-16', content: '原随想', updatedAt: 4 }])
+  seed(raw)
+  todoStorage.reorderTodos('2026-09-16', false, ['c', 'a', 'b'], ['a', 'b', 'c'])
+  assert.deepEqual(storage.get(KEY), { ...raw, items: [raw.items[4], raw.items[1], raw.items[2], raw.items[0], raw.items[3]] })
+  assert.equal(operations.filter(({ operation }) => operation === 'set').length, 1)
+  const snapshot = todoStorage.getTodoSnapshot()
+  assert.deepEqual(snapshot.data, storage.get(KEY))
+})
+
+test('排序重读最新随想，不以手势开始时的快照覆盖交错写入', () => {
+  seed(current([v3Item({ id: 'a' }), v3Item({ id: 'b' })]))
+  todoStorage.saveDailyNote('2026-09-16', '拖动期间保存的随想')
+  todoStorage.reorderTodos('2026-09-16', false, ['b', 'a'], ['a', 'b'])
+  assert.equal(storage.get(KEY).dailyNotes[0].content, '拖动期间保存的随想')
+  assert.deepEqual(storage.get(KEY).items.map(item => item.id), ['b', 'a'])
+})
+
+test('排序拒绝遗漏、重复、跨日期、跨完成状态及陈旧列表，均不写盘', () => {
+  const raw = current([v3Item({ id: 'a' }), v3Item({ id: 'b' }),
+    v3Item({ id: 'other', taskDate: '2026-09-17' }), v3Item({ id: 'done', completed: true, completedAt: 4 })])
+  seed(raw)
+  for (const ids of [['a'], ['a', 'a'], ['other', 'a'], ['a', 'done'], ['a', 'missing']]) {
+    assert.throws(() => todoStorage.reorderTodos('2026-09-16', false, ids, ['a', 'b']), /排序条目/)
+  }
+  for (const original of [['b', 'a'], ['a'], ['a', 'b', 'missing']]) {
+    assert.throws(() => todoStorage.reorderTodos('2026-09-16', false, ['b', 'a'], original), /已变化/)
+  }
+  assert.throws(() => todoStorage.reorderTodos('2026-02-30', false, [], []), /范围/)
+  assert.deepEqual(storage.get(KEY), raw)
+  assertNoWrites()
+})
+
+test('未移动时排序不写盘；新增、编辑及勾选不改变其它事项的相对顺序', () => {
+  seed(current([v3Item({ id: 'b', createdAt: 20 }), v3Item({ id: 'a', createdAt: 10 })]))
+  todoStorage.reorderTodos('2026-09-16', false, ['b', 'a'], ['b', 'a'])
+  assertNoWrites()
+  todoStorage.saveTodo({ id: 'b', title: '编辑后', taskDate: '2026-09-16' })
+  const id = todoStorage.saveTodo({ title: '新增末尾', taskDate: '2026-09-16' })
+  todoStorage.toggleTodo('b')
+  todoStorage.toggleTodo('b')
+  assert.deepEqual(storage.get(KEY).items.map(item => item.id), ['b', 'a', id])
+})
+
+test('排序写入或回读失败精确回滚，不丢失另一组、日期和随想', () => {
+  const raw = current([v3Item({ id: 'a' }), v3Item({ id: 'b' })], [{ date: '2026-09-16', content: '保留随想', updatedAt: 1 }])
+  for (const mode of ['throw', 'truncate', 'throw-after-write', 'ignore', 'corrupt']) {
+    seed(raw)
+    writeModes = [mode]
+    assert.throws(() => todoStorage.reorderTodos('2026-09-16', false, ['b', 'a'], ['a', 'b']), /原数据已恢复/)
+    assert.deepEqual(storage.get(KEY), raw)
+  }
+})
+
+test('旧版、损坏、未知版本或读取失败时排序保持只读保护', () => {
+  for (const raw of [{ schemaVersion: 1, items: [v1Item()] }, { schemaVersion: 99 }, { schemaVersion: 3, items: [{}], dailyNotes: [] }]) {
+    seed(raw)
+    assert.throws(() => todoStorage.reorderTodos('2026-09-16', false, ['b', 'a'], ['a', 'b']))
+    assert.deepEqual(storage.get(KEY), raw)
+  }
+  readModes = ['throw']
+  assert.throws(() => todoStorage.reorderTodos('2026-09-16', false, [], []), /读取/)
+  assertNoWrites()
+})
+
 function assertProtected(raw, expectedKind = 'corrupt') {
   seed(raw)
   assert.equal(todoStorage.getTodoSnapshot().kind, expectedKind)

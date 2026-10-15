@@ -1,0 +1,114 @@
+// 普通滑动不拦截；长按后才阻止页面滚动。跟手位移在渲染层完成。
+function touchStart(event, owner) {
+  var state = owner.getState();
+  if (state.layout && state.layout.settling) owner.callMethod('onTodoDropInterrupted', { token: state.token });
+  if (state.claimed) owner.callMethod('onTodoDragCancel', { token: state.token });
+  state.suppressTap = false;
+  state.claimed = false;
+  state.layout = null;
+  state.row = null;
+  state.pressed = event.touches.length === 1;
+  state.moved = false;
+  if (!state.pressed) { state.suppressTap = true; return; }
+  var touch = event.touches[0];
+  state.touchId = touch.identifier;
+  state.startX = touch.clientX;
+  state.startY = touch.clientY;
+  state.lastY = touch.clientY;
+}
+
+function draw(state) {
+  if (!state.claimed || !state.layout || !state.row) return;
+  var layout = state.layout;
+  var offset = state.lastY - layout.startY + layout.scrollDelta;
+  offset = Math.max(layout.minOffset, Math.min(layout.maxOffset, offset));
+  state.row.setStyle({ transform: 'translateY(' + offset + 'px)' });
+}
+
+function longPress(event, owner) {
+  var state = owner.getState();
+  if (!event.currentTarget.dataset.draggable || !state.pressed || state.moved) return;
+  state.claimed = true;
+  state.suppressTap = true;
+  state.token = (state.token || 0) + 1;
+  owner.callMethod('onTodoDragStart', {
+    id: event.currentTarget.dataset.id, token: state.token, clientY: state.lastY
+  });
+  return false;
+}
+
+function touchMove(event, owner) {
+  var state = owner.getState();
+  if (!state.pressed) return;
+  var touch = event.touches[0];
+  if (event.touches.length !== 1 || !touch || touch.identifier !== state.touchId) {
+    state.pressed = false;
+    if (state.claimed) {
+      state.claimed = false;
+      owner.callMethod('onTodoDragCancel', { token: state.token });
+      return false;
+    }
+    return;
+  }
+  state.lastY = touch.clientY;
+  if (!state.claimed) {
+    if (Math.abs(touch.clientY - state.startY) > 8 || Math.abs(touch.clientX - state.startX) > 8) state.moved = true;
+    return;
+  }
+  draw(state);
+  owner.callMethod('onTodoDragMove', { token: state.token, clientY: touch.clientY });
+  return false;
+}
+
+function touchEnd(event, owner) {
+  var state = owner.getState();
+  state.pressed = false;
+  if (!state.claimed) return;
+  state.claimed = false;
+  var touch = event.changedTouches[0];
+  // 模拟器可能给出全零的结束坐标，此时沿用最后一个有效移动点。
+  var hasPosition = touch && (touch.clientX || touch.clientY || touch.pageX || touch.pageY);
+  owner.callMethod('onTodoDragEnd', { token: state.token, clientY: hasPosition ? touch.clientY : state.lastY });
+  return false;
+}
+
+function touchCancel(event, owner) {
+  var state = owner.getState();
+  state.pressed = false;
+  if (!state.claimed) return;
+  state.claimed = false;
+  owner.callMethod('onTodoDragCancel', { token: state.token });
+  return false;
+}
+
+function tap(event, owner) {
+  var state = owner.getState();
+  if (state.suppressTap || state.moved) return false;
+  owner.callMethod('onEdit', { currentTarget: { dataset: { id: event.currentTarget.dataset.id } } });
+}
+
+function layoutChanged(layout, previous, owner) {
+  var state = owner.getState();
+  if (layout.active && ((!state.claimed && !layout.settling) || layout.token !== state.token)) return;
+  var rows = owner.selectAllComponents('.todo-row');
+  for (var index = 0; index < rows.length; index++) {
+    rows[index].setStyle({
+      transition: !layout.active || (index === layout.source && !layout.settling) ? 'none' : 'transform var(--todo-move-duration, 220ms) cubic-bezier(0.22, 1, 0.36, 1)',
+      transform: 'translateY(' + (layout.active ? layout.offsets[index] || 0 : 0) + 'px)'
+    });
+  }
+  if (!layout.active) {
+    state.claimed = false;
+    state.layout = null;
+    state.row = null;
+    return;
+  }
+  state.layout = layout;
+  state.row = rows[layout.source];
+  draw(state);
+}
+
+module.exports = {
+  touchStart: touchStart, longPress: longPress, touchMove: touchMove,
+  touchEnd: touchEnd, touchCancel: touchCancel, tap: tap, layoutChanged: layoutChanged
+};
