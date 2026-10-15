@@ -30,7 +30,7 @@
   </view>
   <text class="appearance-note">课程自动配色；切换外观不会改变课程安排。</text>
   <text wx:if="{{problem}}" class="error-message" aria-role="alert">{{problem}}</text>
-  <button class="apply-button" bindtap="onApply" disabled="{{saving || selectedTheme === currentTheme}}" loading="{{saving}}" aria-label="{{selectedTheme === currentTheme ? '当前已使用此外观' : '使用' + selectedName + '外观'}}">{{selectedTheme === currentTheme ? '正在使用此外观' : '使用此外观'}}</button>
+  <button class="pressable apply-button" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onApply" disabled="{{saving || selectedTheme === currentTheme}}" loading="{{saving}}" aria-label="{{selectedTheme === currentTheme ? '当前已使用此外观' : '使用' + selectedName + '外观'}}">{{selectedTheme === currentTheme ? '正在使用此外观' : '使用此外观'}}</button>
   <text class="local-note">仅保存在本机，课表与待办数据不变。</text>
 </view>
 </block>

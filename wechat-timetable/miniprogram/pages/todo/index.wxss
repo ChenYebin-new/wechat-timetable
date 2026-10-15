@@ -848,3 +848,26 @@ button::after {
 .save-button[disabled] { color:var(--muted); background:var(--disabled); }
 .title-input { height:48px; }
 .calendar-open .daily-note-input { min-height:200rpx; }
+
+/* A small response to completing a goal; rows and their touch targets stay still. */
+.check-circle { transition:background-color 160ms ease-out, border-color 160ms ease-out; }
+.check-stem { animation:check-settle 160ms ease-out; }
+.calendar-panel { animation:calendar-reveal 180ms ease-out; }
+.plain-button.control-pressed,
+.plain-button.content-pressed,
+.save-button.save-button-pressed { opacity:.72; }
+@keyframes check-settle {
+  from { transform:rotate(45deg) scale(.65); }
+  to { transform:rotate(45deg) scale(1); }
+}
+@keyframes calendar-reveal {
+  from { transform:translateY(-4px); }
+  to { transform:translateY(0); }
+}
+/* Pixel controls change crisply, and reduced motion retains the final visible state. */
+.theme-pixel .check-circle { transition:none; }
+.theme-pixel .check-stem,.theme-pixel .calendar-panel { animation:none; }
+@media (prefers-reduced-motion:reduce) {
+  .check-circle { transition:none; }
+  .check-stem,.calendar-panel { animation:none; }
+}

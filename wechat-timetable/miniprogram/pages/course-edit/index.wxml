@@ -7,14 +7,14 @@
   <view class="form">
     <view class="field">
       <text class="label">课程名称</text>
-      <view class="input-shell"><input class="input" value="{{name}}" placeholder="必填" placeholder-class="ph" bindinput="onName" aria-label="课程名称" /><button wx:if="{{themeId === 'campus' && name}}" class="clear-input" data-field="name" bindtap="onClearField" aria-label="清除课程名称"><view class="clear-mark" /></button></view>
+      <view class="input-shell"><input class="input" value="{{name}}" placeholder="必填" placeholder-class="ph" bindinput="onName" aria-label="课程名称" /><button wx:if="{{themeId === 'campus' && name}}" class="pressable clear-input" data-field="name" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onClearField" aria-label="清除课程名称"><view class="clear-mark" /></button></view>
     </view>
 
     <block wx:if="{{isGroupMode}}">
       <view class="field field-column range-field">
         <view class="range-heading">
           <text class="label">上课时段</text>
-          <view class="range-edit" bindtap="onReselect" aria-role="button" aria-label="重新选择上课时段">重新选择<view class="link-chevron" /></view>
+          <view class="pressable range-edit" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onReselect" aria-role="button" aria-label="重新选择上课时段">重新选择<view class="link-chevron" /></view>
         </view>
         <view wx:if="{{rangeItems.length}}" class="range-list">
           <text class="range-chip" wx:for="{{rangeItems}}" wx:key="*this">{{item}}</text>
@@ -47,12 +47,12 @@
 
     <view class="field">
       <text class="label">教师</text>
-      <view class="input-shell"><input class="input" value="{{teacher}}" placeholder="可选" placeholder-class="ph" bindinput="onTeacher" aria-label="教师" /><button wx:if="{{themeId === 'campus' && teacher}}" class="clear-input" data-field="teacher" bindtap="onClearField" aria-label="清除教师"><view class="clear-mark" /></button></view>
+      <view class="input-shell"><input class="input" value="{{teacher}}" placeholder="可选" placeholder-class="ph" bindinput="onTeacher" aria-label="教师" /><button wx:if="{{themeId === 'campus' && teacher}}" class="pressable clear-input" data-field="teacher" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onClearField" aria-label="清除教师"><view class="clear-mark" /></button></view>
     </view>
 
     <view class="field">
       <text class="label">教室</text>
-      <view class="input-shell"><input class="input" value="{{location}}" placeholder="可选" placeholder-class="ph" bindinput="onLocation" aria-label="教室" /><button wx:if="{{themeId === 'campus' && location}}" class="clear-input" data-field="location" bindtap="onClearField" aria-label="清除教室"><view class="clear-mark" /></button></view>
+      <view class="input-shell"><input class="input" value="{{location}}" placeholder="可选" placeholder-class="ph" bindinput="onLocation" aria-label="教室" /><button wx:if="{{themeId === 'campus' && location}}" class="pressable clear-input" data-field="location" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onClearField" aria-label="清除教室"><view class="clear-mark" /></button></view>
     </view>
 
     <view class="field">
@@ -74,9 +74,9 @@
         <view
           wx:for="{{weekChips}}"
           wx:key="value"
-          class="week-chip {{item.selected ? 'active' : ''}}"
+          class="pressable week-chip {{item.selected ? 'active' : ''}}"
           data-week="{{item.value}}"
-          bindtap="onToggleWeek"
+          hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onToggleWeek"
           aria-role="checkbox"
           aria-label="第{{item.value}}周{{item.selected ? '，已选择' : ''}}"
           aria-checked="{{item.selected}}"
@@ -86,8 +86,8 @@
 
   </view>
     <view class="actions">
-      <button class="btn btn-primary" bindtap="onSave" loading="{{saving}}" disabled="{{saving}}">保存</button>
-      <button wx:if="{{isEdit}}" class="btn btn-danger" bindtap="onDelete"><view wx:if="{{themeId === 'paper'}}" class="delete-rule" aria-hidden="true" /><text>删除课程</text><view wx:if="{{themeId === 'paper'}}" class="delete-rule" aria-hidden="true" /></button>
+      <button class="pressable btn btn-primary" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onSave" loading="{{saving}}" disabled="{{saving}}">保存</button>
+      <button wx:if="{{isEdit}}" class="pressable btn btn-danger" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onDelete"><view wx:if="{{themeId === 'paper'}}" class="delete-rule" aria-hidden="true" /><text>删除课程</text><view wx:if="{{themeId === 'paper'}}" class="delete-rule" aria-hidden="true" /></button>
     </view>
 </view>
 </block>

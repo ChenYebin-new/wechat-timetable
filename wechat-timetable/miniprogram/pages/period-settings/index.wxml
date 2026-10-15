@@ -24,15 +24,15 @@
   <view class="count-card">
     <text class="row-title">每日节数</text>
     <view class="stepper">
-      <view class="step-btn {{settings.periods.length <= 1 ? 'disabled' : ''}}" bindtap="onDecrease" aria-role="button" aria-label="减少一节" aria-disabled="{{settings.periods.length <= 1}}">−</view>
+      <view class="pressable step-btn {{settings.periods.length <= 1 ? 'disabled' : ''}}" hover-class="{{settings.periods.length <= 1 ? 'none' : 'press-feedback'}}" hover-start-time="20" hover-stay-time="80" bindtap="onDecrease" aria-role="button" aria-label="减少一节" aria-disabled="{{settings.periods.length <= 1}}">−</view>
       <text class="step-value">{{settings.periods.length}}</text>
-      <view class="step-btn {{settings.periods.length >= 14 ? 'disabled' : ''}}" bindtap="onIncrease" aria-role="button" aria-label="增加一节" aria-disabled="{{settings.periods.length >= 14}}">＋</view>
+      <view class="pressable step-btn {{settings.periods.length >= 14 ? 'disabled' : ''}}" hover-class="{{settings.periods.length >= 14 ? 'none' : 'press-feedback'}}" hover-start-time="20" hover-stay-time="80" bindtap="onIncrease" aria-role="button" aria-label="增加一节" aria-disabled="{{settings.periods.length >= 14}}">＋</view>
     </view>
   </view>
 
   <view class="period-card">
     <block wx:for="{{periods}}" wx:key="index">
-      <view class="period-row" data-index="{{index}}" bindtap="onEditPeriod" aria-role="button" aria-label="编辑{{item.label}}时间 {{item.time}} {{item.customLabel}}">
+      <view class="pressable period-row" data-index="{{index}}" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onEditPeriod" aria-role="button" aria-label="编辑{{item.label}}时间 {{item.time}} {{item.customLabel}}">
         <text class="row-title">{{item.label}}课</text>
         <view class="period-value">
           <text wx:if="{{item.isCustom}}" class="custom-badge">自定义</text>
@@ -44,7 +44,7 @@
     </block>
   </view>
 
-  <view class="regenerate" bindtap="onClearOverrides" aria-role="button" aria-label="清除自定义时间并重新排布全部节次">清除自定义时间并重新排布</view>
+  <view class="pressable regenerate" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onClearOverrides" aria-role="button" aria-label="清除自定义时间并重新排布全部节次">清除自定义时间并重新排布</view>
 
   <view class="save-area">
     <button class="save-btn" loading="{{saving}}" disabled="{{saving}}" bindtap="onSave" hover-class="save-btn-pressed">保存课程时间</button>

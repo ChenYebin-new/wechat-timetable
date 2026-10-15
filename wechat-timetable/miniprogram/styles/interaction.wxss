@@ -1,0 +1,7 @@
+/* Native hover classes keep feedback inside the original touch target. */
+.pressable { transition: opacity 120ms ease-out; }
+.pressable.press-feedback { opacity: .72; }
+.theme-pixel .pressable { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  .pressable { transition: none; }
+}

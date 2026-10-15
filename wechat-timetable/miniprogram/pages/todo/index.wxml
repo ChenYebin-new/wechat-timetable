@@ -54,7 +54,7 @@
       <text wx:for="{{calendarWeekdays}}" wx:key="*this" class="calendar-weekday">{{item}}</text>
     </view>
     <view class="calendar-grid">
-      <button wx:for="{{calendarDays}}" wx:key="date" class="plain-button calendar-day {{!item.inMonth ? 'outside-month' : ''}} {{item.isToday ? 'calendar-today' : ''}} {{item.isSelected ? 'calendar-selected' : ''}}" size="mini" style="width: 14.285714%;" data-date="{{item.date}}" bindtap="onCalendarDate" hover-class="control-pressed" aria-label="{{item.label}}">
+      <button wx:for="{{calendarDays}}" wx:key="date" class="plain-button calendar-day {{!item.inMonth ? 'outside-month' : ''}} {{item.isToday ? 'calendar-today' : ''}} {{item.isSelected ? 'calendar-selected' : ''}}" size="mini" style="width: 14.285714%;" data-date="{{item.date}}" bindtap="onCalendarDate" hover-class="control-pressed" aria-label="{{item.label}}" aria-pressed="{{item.isSelected}}">
         <view class="calendar-day-face">
           <text class="calendar-day-number">{{item.day}}</text>
           <view class="calendar-goal-dot {{item.hasGoals ? 'has-goals' : ''}}" aria-hidden="true"></view>
