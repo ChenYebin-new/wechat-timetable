@@ -1,4 +1,5 @@
 @import "styles/theme-pages.wxss";
+@import "styles/interaction.wxss";
 page {
   background: var(--page, #F7F3EB); color: var(--text, #2E2923); font-size: 28rpx;
   font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, 'PingFang SC', 'Microsoft Yahei', sans-serif;

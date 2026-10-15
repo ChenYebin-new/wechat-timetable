@@ -18,9 +18,9 @@
       <view
         wx:for="{{commonWeeks}}"
         wx:key="*this"
-        class="chip {{totalWeeks === item ? 'active' : ''}}"
+        class="pressable chip {{totalWeeks === item ? 'active' : ''}}"
         data-week="{{item}}"
-        bindtap="onCommonWeek"
+        hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onCommonWeek"
         aria-role="radio"
         aria-label="学期共{{item}}周{{totalWeeks === item ? '，已选择' : ''}}"
         aria-checked="{{totalWeeks === item}}"
