@@ -1,14 +1,49 @@
 import { appearanceData, syncAppearance } from '../../utils/appearance-page'
 import type { TodoItem } from '../../models/todo'
-import { getTodoById, getTodoSnapshot, migrateTodosToV3, removeTodo, saveDailyNote, saveTodo, toggleTodo } from '../../services/todo-storage'
+import { getTodoById, getTodoSnapshot, migrateTodosToV3, removeTodo, reorderTodos, saveDailyNote, saveTodo, toggleTodo } from '../../services/todo-storage'
 import { initializeHomeSharing, shareHomeToFriend, shareHomeToTimeline } from '../../utils/share'
 import { formatLocalDate, parseLocalDate } from '../../utils/local-date'
 import { buildTodoCalendar, offsetTodoCalendarMonth } from '../../utils/todo-calendar'
 import type { TodoCalendarDay } from '../../utils/todo-calendar'
 import { unsavedDailyNotes, setGoalDraft, todoRevision, takeRequestedDraftDate } from '../../services/todo-session'
+import { todosForDate, todoDragLayout } from '../../utils/todo-order'
+import type { TodoRowRect } from '../../utils/todo-order'
 
 interface TodoView extends TodoItem {
   expired: boolean
+}
+
+interface TodoDragEvent {
+  token: number
+  clientY: number
+}
+
+interface TodoDragState {
+  token: number
+  revision: number
+  date: string
+  completed: boolean
+  originalIds: string[]
+  source: number
+  first: number
+  last: number
+  target: number
+  startY: number
+  clientY: number
+  startScroll: number
+  rows: TodoRowRect[]
+  ready: boolean
+  viewportTop: number
+  viewportBottom: number
+  maxScroll: number
+  scrollTimer: ReturnType<typeof setInterval> | null
+  settling: boolean
+  settleTimer: ReturnType<typeof setTimeout> | null
+  finalItems: TodoView[] | null
+}
+
+function idleDragPresentation() {
+  return { active: false, settling: false, token: 0, source: 0, startY: 0, scrollDelta: 0, minOffset: 0, maxOffset: 0, offsets: [] as number[] }
 }
 
 interface PageState {
@@ -23,6 +58,8 @@ interface PageState {
   noteTimer: ReturnType<typeof setTimeout> | null
   midnightTimer: ReturnType<typeof setTimeout> | null
   goalDates: Set<string>
+  scrollTop: number
+  drag: TodoDragState | null
 }
 
 const pageStates = new WeakMap<object, PageState>()
@@ -31,7 +68,7 @@ const WEEKDAYS = ['星期日', '星期一', '星期二', '星期三', '星期四
 function stateFor(page: object): PageState {
   let state = pageStates.get(page)
   if (!state) {
-    state = { revision: todoRevision(), discardingNote: false, visible: false, followingToday: true, noteFocused: false, noteDate: '', savedNote: '', originalGoal: null, noteTimer: null, midnightTimer: null, goalDates: new Set() }
+    state = { revision: todoRevision(), discardingNote: false, visible: false, followingToday: true, noteFocused: false, noteDate: '', savedNote: '', originalGoal: null, noteTimer: null, midnightTimer: null, goalDates: new Set(), scrollTop: 0, drag: null }
     pageStates.set(page, state)
   }
   return state
@@ -62,6 +99,10 @@ Page({
     calendarWeekdays: ['日', '一', '二', '三', '四', '五', '六'],
     sectionTitle: '今日目标',
     visibleItems: [] as TodoView[],
+    draggingId: '',
+    dragSettling: false,
+    dragSlotStyle: '',
+    dragPresentation: idleDragPresentation(),
     completedCount: 0,
     totalCount: 0,
     storageProblem: '',
@@ -83,7 +124,11 @@ Page({
 
   onPageScroll(event: WechatMiniprogram.Page.IPageScrollOption) {
     this.selectComponent('.page-masthead')?.updateScroll(event.scrollTop)
+    stateFor(this).scrollTop = event.scrollTop
+    if (stateFor(this).drag?.ready) this.updateTodoDrag()
   },
+
+  onResize() { this.cancelTodoDrag() },
 
   onReady() { syncAppearance(this) },
 
@@ -98,6 +143,7 @@ Page({
   onShow() {
     syncAppearance(this)
     if (this.data.showShareHomePreview) return
+    this.cancelTodoDrag()
     const state = stateFor(this)
     if (state.revision !== todoRevision()) {
       this.stopTimers()
@@ -118,6 +164,7 @@ Page({
 
   onHide() {
     if (this.data.showShareHomePreview) return
+    this.cancelTodoDrag()
     stateFor(this).visible = false
     stateFor(this).noteFocused = false
     this.flushDailyNote()
@@ -139,6 +186,7 @@ Page({
 
   refresh() {
     if (this.data.showShareHomePreview) return
+    this.cancelTodoDrag(false)
     const today = formatLocalDate(new Date())
     const selectedDate = this.data.selectedDate || today
     const date = parseLocalDate(selectedDate)
@@ -168,9 +216,7 @@ Page({
       return
     }
 
-    const visibleItems = snapshot.data.items
-      .filter((item) => item.taskDate === selectedDate)
-      .sort((left, right) => Number(left.completed) - Number(right.completed) || left.createdAt - right.createdAt)
+    const visibleItems = todosForDate(snapshot.data.items, selectedDate)
       .map((item) => ({ ...item, expired: !item.completed && item.taskDate < today }))
     const storedNote = snapshot.data.dailyNotes.find((entry) => entry.date === selectedDate)?.content || ''
     const state = stateFor(this)
@@ -183,6 +229,7 @@ Page({
     state.savedNote = storedNote
     this.setData({
       visibleItems,
+      draggingId: '', dragSettling: false, dragSlotStyle: '', dragPresentation: idleDragPresentation(),
       completedCount: visibleItems.filter((item) => item.completed).length,
       totalCount: visibleItems.length,
       storageProblem: '',
@@ -196,6 +243,7 @@ Page({
   },
 
   showStorageProblem(reason: string) {
+    this.cancelTodoDrag()
     stateFor(this).goalDates.clear()
     this.setData({
       visibleItems: [],
@@ -218,6 +266,7 @@ Page({
 
   onToggleCalendar() {
     if (this.data.showShareHomePreview) return
+    this.cancelTodoDrag()
     const calendarExpanded = !this.data.calendarExpanded
     this.setData({ calendarExpanded, ...(calendarExpanded ? { calendarMonth: this.data.selectedDate.slice(0, 7) } : { calendarDays: [] }) })
     this.refreshCalendar()
@@ -244,6 +293,7 @@ Page({
 
   switchDate(date: string) {
     if (this.data.showShareHomePreview || !parseLocalDate(date)) return
+    this.cancelTodoDrag()
     if (date === this.data.selectedDate) {
       this.setData({ calendarMonth: date.slice(0, 7) })
       this.refreshCalendar()
@@ -275,15 +325,197 @@ Page({
   },
 
   onAdd() {
-    if (this.data.showShareHomePreview || this.data.storageProblem || this.data.editorOpen) return
+    this.finishTodoDrop()
+    if (stateFor(this).drag || this.data.showShareHomePreview || this.data.storageProblem || this.data.editorOpen) return
     stateFor(this).originalGoal = { title: '', note: '' }
     this.setData({ editorOpen: true, editorId: '', editorDate: this.data.selectedDate, title: '', note: '', noteExpanded: false, goalProblem: '' })
   },
 
   onEdit(e: WechatMiniprogram.TouchEvent) { this.editGoal(e.currentTarget.dataset.id as string) },
 
+  onTodoDragStart(event: TodoDragEvent & { id: string }) {
+    this.finishTodoDrop()
+    const state = stateFor(this)
+    const source = this.data.visibleItems.findIndex((item) => item.id === event.id)
+    const item = this.data.visibleItems[source]
+    if (!state.visible || state.noteFocused || state.revision !== todoRevision()
+      || this.data.showShareHomePreview || this.data.storageProblem || this.data.editorOpen || this.data.savingGoal
+      || !item || !Number.isFinite(event.clientY)) {
+      this.cancelTodoDrag()
+      return
+    }
+    const originalIds = this.data.visibleItems.filter((entry) => entry.completed === item.completed).map((entry) => entry.id)
+    if (originalIds.length < 2) { this.cancelTodoDrag(); return }
+    if (state.drag && state.drag.scrollTimer !== null) clearInterval(state.drag.scrollTimer)
+    const first = this.data.visibleItems.findIndex((entry) => entry.completed === item.completed)
+    const drag: TodoDragState = {
+      token: event.token, revision: todoRevision(), date: this.data.selectedDate, completed: item.completed,
+      originalIds, source, first, last: first + originalIds.length - 1, target: source,
+      startY: event.clientY, clientY: event.clientY, startScroll: state.scrollTop, rows: [], ready: false,
+      viewportTop: 0, viewportBottom: 0, maxScroll: 0, scrollTimer: null,
+      settling: false, settleTimer: null, finalItems: null,
+    }
+    state.drag = drag
+    // 先测量原始行的位置；松手、切日或恢复数据后，迟到的测量回调直接失效。
+    this.createSelectorQuery().selectAll('.todo-row').boundingClientRect()
+      .selectViewport().scrollOffset().select('.page').boundingClientRect().exec((results) => {
+        if (state.drag !== drag) return
+        if (!state.visible || drag.revision !== todoRevision() || drag.date !== this.data.selectedDate) { this.cancelTodoDrag(); return }
+        const rows = results[0] as Array<TodoRowRect & { dataset: { id: string } }>
+        const scroll = results[1] as { scrollTop: number } | null
+        const page = results[2] as { bottom: number } | null
+        if (!rows || rows.length !== this.data.visibleItems.length || !scroll || !page
+          || !Number.isFinite(scroll.scrollTop) || !Number.isFinite(page.bottom)
+          || rows.some((row, index) => !row || row.height <= 0 || !Number.isFinite(row.height) || !Number.isFinite(row.top)
+            || row.dataset?.id !== this.data.visibleItems[index].id)) {
+          this.cancelTodoDrag()
+          return
+        }
+        const window = wx.getSystemInfoSync()
+        const header = this.selectComponent('.page-masthead')?.data
+        const safeBottom = Math.max(0, window.screenHeight - (window.safeArea?.bottom || window.screenHeight))
+        drag.viewportTop = header ? header.statusHeight + header.navigationHeight : (window.statusBarHeight || 0) + 44
+        drag.viewportBottom = window.windowHeight - Math.max(44, 118 * window.windowWidth / 750) - safeBottom
+        drag.startScroll = scroll.scrollTop
+        state.scrollTop = scroll.scrollTop
+        drag.maxScroll = Math.max(0, page.bottom + scroll.scrollTop - window.windowHeight)
+        drag.rows = rows.map((row) => ({ top: row.top + scroll.scrollTop, height: row.height }))
+        drag.ready = true
+        this.updateTodoDrag()
+      })
+  },
+
+  onTodoDragMove(event: TodoDragEvent) {
+    const drag = stateFor(this).drag
+    if (!drag || drag.settling || drag.token !== event.token || !Number.isFinite(event.clientY)) return
+    drag.clientY = event.clientY
+    if (drag.ready) this.updateTodoDrag()
+  },
+
+  updateTodoDrag() {
+    const state = stateFor(this)
+    const drag = state.drag
+    if (!drag?.ready || drag.settling) return
+    if (drag.revision !== todoRevision() || drag.date !== this.data.selectedDate || !state.visible) {
+      this.cancelTodoDrag()
+      return
+    }
+    const scrollDelta = state.scrollTop - drag.startScroll
+    const layout = todoDragLayout(drag.rows, drag.source, drag.first, drag.last, drag.clientY - drag.startY + scrollDelta)
+    const previous = this.data.dragPresentation
+    if (!previous.active || layout.target !== drag.target || previous.scrollDelta !== scrollDelta) {
+      this.setData({
+        draggingId: this.data.visibleItems[drag.source].id, dragSettling: false,
+        dragSlotStyle: `--todo-slot-y:${drag.rows[drag.source].top + layout.offsets[drag.source] - drag.rows[0].top}px;--todo-slot-height:${drag.rows[drag.source].height}px;`,
+        dragPresentation: {
+          active: true, settling: false, token: drag.token, source: drag.source, startY: drag.startY, scrollDelta,
+          minOffset: layout.minOffset, maxOffset: layout.maxOffset, offsets: layout.offsets,
+        },
+      })
+    }
+    drag.target = layout.target
+    const delta = this.todoDragScrollDelta()
+    if (delta && drag.scrollTimer === null) {
+      drag.scrollTimer = setInterval(() => this.scrollTodoDrag(), 32)
+    } else if (!delta && drag.scrollTimer !== null) {
+      clearInterval(drag.scrollTimer)
+      drag.scrollTimer = null
+    }
+  },
+
+  todoDragScrollDelta(): number {
+    const state = stateFor(this)
+    const drag = state.drag
+    if (!drag?.ready || drag.settling) return 0
+    const first = drag.rows[drag.first]
+    const last = drag.rows[drag.last]
+    if (drag.clientY < drag.viewportTop + 48 && first.top - state.scrollTop < drag.viewportTop && state.scrollTop > 0) {
+      return -Math.min(16, Math.max(4, (drag.viewportTop + 48 - drag.clientY) / 3))
+    }
+    if (drag.clientY > drag.viewportBottom - 48 && last.top + last.height - state.scrollTop > drag.viewportBottom
+      && state.scrollTop < drag.maxScroll) {
+      return Math.min(16, Math.max(4, (drag.clientY - drag.viewportBottom + 48) / 3))
+    }
+    return 0
+  },
+
+  scrollTodoDrag() {
+    const state = stateFor(this)
+    const drag = state.drag
+    if (!drag?.ready || drag.revision !== todoRevision() || !state.visible) { this.cancelTodoDrag(); return }
+    if (drag.settling) return
+    const delta = this.todoDragScrollDelta()
+    if (!delta) { this.updateTodoDrag(); return }
+    wx.pageScrollTo({
+      scrollTop: Math.max(0, Math.min(drag.maxScroll, state.scrollTop + delta)), duration: 0,
+      fail: () => { if (state.drag === drag) this.cancelTodoDrag() },
+    })
+  },
+
+  onTodoDragEnd(event: TodoDragEvent) {
+    const state = stateFor(this)
+    const drag = state.drag
+    if (!drag || drag.settling || drag.token !== event.token) return
+    if (!drag.ready || drag.revision !== todoRevision() || drag.date !== this.data.selectedDate || !state.visible) {
+      this.cancelTodoDrag()
+      return
+    }
+    if (Number.isFinite(event.clientY)) drag.clientY = event.clientY
+    const layout = todoDragLayout(drag.rows, drag.source, drag.first, drag.last,
+      drag.clientY - drag.startY + state.scrollTop - drag.startScroll)
+    const ids = [...drag.originalIds]
+    const [id] = ids.splice(drag.source - drag.first, 1)
+    ids.splice(layout.target - drag.first, 0, id)
+    try {
+      reorderTodos(drag.date, drag.completed, ids, drag.originalIds)
+      if (drag.scrollTimer !== null) clearInterval(drag.scrollTimer)
+      drag.scrollTimer = null
+      drag.settling = true
+      const finalItems = [...this.data.visibleItems]
+      const [item] = finalItems.splice(drag.source, 1)
+      finalItems.splice(layout.target, 0, item)
+      drag.finalItems = finalItems
+      // 先在原 DOM 中落到插入位置，再一次性换序并清零位移，避免松手时跳回原处。
+      this.setData({
+        dragSettling: true,
+        dragSlotStyle: `--todo-slot-y:${drag.rows[drag.source].top + layout.offsets[drag.source] - drag.rows[0].top}px;--todo-slot-height:${drag.rows[drag.source].height}px;`,
+        dragPresentation: {
+          active: true, settling: true, token: drag.token, source: drag.source, startY: drag.startY,
+          scrollDelta: state.scrollTop - drag.startScroll, minOffset: layout.minOffset, maxOffset: layout.maxOffset,
+          offsets: layout.offsets,
+        },
+      })
+      drag.settleTimer = setTimeout(() => { if (state.drag === drag) this.refresh() }, 220)
+    } catch (error) { this.cancelTodoDrag(); this.showGoalError('顺序未保存', error) }
+  },
+
+  onTodoDropInterrupted(event: { token: number }) {
+    if (stateFor(this).drag?.token === event.token) this.finishTodoDrop()
+  },
+
+  finishTodoDrop() {
+    if (stateFor(this).drag?.settling) this.refresh()
+  },
+
+  onTodoDragCancel(event: { token: number }) {
+    if (stateFor(this).drag?.token === event.token) this.cancelTodoDrag()
+  },
+
+  cancelTodoDrag(updateView = true) {
+    const state = stateFor(this)
+    const finalItems = state.drag?.settling && state.drag.revision === todoRevision() ? state.drag.finalItems : null
+    if (state.drag && state.drag.scrollTimer !== null) clearInterval(state.drag.scrollTimer)
+    if (state.drag && state.drag.settleTimer !== null) clearTimeout(state.drag.settleTimer)
+    state.drag = null
+    if (updateView) this.setData({
+      ...(finalItems ? { visibleItems: finalItems } : {}),
+      draggingId: '', dragSettling: false, dragSlotStyle: '', dragPresentation: idleDragPresentation(),
+    })
+  },
+
   editGoal(id: string) {
-    if (this.data.showShareHomePreview || this.data.storageProblem || this.data.savingGoal) return
+    this.finishTodoDrop()
+    if (stateFor(this).drag || this.data.showShareHomePreview || this.data.storageProblem || this.data.savingGoal) return
     this.afterDiscardingGoal(() => {
       try {
         const item = getTodoById(id)
@@ -349,7 +581,8 @@ Page({
   },
 
   onToggle(e: WechatMiniprogram.TouchEvent) {
-    if (this.data.showShareHomePreview || this.data.storageProblem || stateFor(this).revision !== todoRevision()) return
+    this.finishTodoDrop()
+    if (stateFor(this).drag || this.data.showShareHomePreview || this.data.storageProblem || stateFor(this).revision !== todoRevision()) return
     try {
       toggleTodo(e.currentTarget.dataset.id as string)
       this.checkDayRollover()
@@ -357,15 +590,35 @@ Page({
   },
 
   onMore(e: WechatMiniprogram.TouchEvent) {
-    if (this.data.showShareHomePreview || this.data.storageProblem) return
+    this.finishTodoDrop()
+    if (stateFor(this).drag || this.data.showShareHomePreview || this.data.storageProblem) return
     const id = e.currentTarget.dataset.id as string
     const revision = todoRevision()
+    const date = this.data.selectedDate
+    const item = this.data.visibleItems.find((entry) => entry.id === id)
+    if (!item) return
+    const ids = this.data.visibleItems.filter((entry) => entry.completed === item.completed).map((entry) => entry.id)
+    const index = ids.indexOf(id)
+    const moves = [0, 0]
+    const itemList = ['编辑', '删除']
+    if (index > 0) { itemList.push('上移'); moves.push(-1) }
+    if (index < ids.length - 1) { itemList.push('下移'); moves.push(1) }
     wx.showActionSheet({
-      itemList: ['编辑', '删除'],
+      itemList,
       success: (result) => {
-        if (todoRevision() !== revision) return
+        if (todoRevision() !== revision || this.data.selectedDate !== date || stateFor(this).drag) return
         if (result.tapIndex === 0) this.editGoal(id)
         else if (result.tapIndex === 1) this.confirmDelete(id)
+        else if (moves[result.tapIndex]) {
+          const next = [...ids]
+          const target = index + moves[result.tapIndex]
+          next[index] = next[target]
+          next[target] = id
+          try {
+            reorderTodos(date, item.completed, next, ids)
+            this.refresh()
+          } catch (error) { this.showGoalError('顺序未保存', error) }
+        }
       },
     })
   },
@@ -417,6 +670,7 @@ Page({
   },
 
   onDailyNoteFocus() {
+    this.cancelTodoDrag()
     if (!this.data.showShareHomePreview && !this.data.storageProblem) stateFor(this).noteFocused = true
   },
 

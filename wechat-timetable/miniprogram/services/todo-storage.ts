@@ -324,6 +324,25 @@ export function removeTodo(id: string): void {
   persist(loaded.data, loaded.raw, loaded.wasMissing)
 }
 
+/** 只替换当日同状态条目所在的数组位置，不改内容、时间戳或其他记录。 */
+export function reorderTodos(date: string, completed: boolean, ids: string[], originalIds: string[]): void {
+  if (!parseLocalDate(date) || typeof completed !== 'boolean') throw new Error('排序范围无效')
+  const loaded = loadWritable()
+  const group = loaded.data.items.filter((item) => item.taskDate === date && item.completed === completed)
+  if (group.length !== originalIds.length || group.some((item, index) => item.id !== originalIds[index])) {
+    throw new Error('目标列表已变化，请重新拖动排序')
+  }
+  const byId = new Map(group.map((item) => [item.id, item]))
+  if (ids.length !== group.length || new Set(ids).size !== group.length || ids.some((id) => !byId.has(id))) {
+    throw new Error('排序条目无效，请重新拖动')
+  }
+  if (ids.every((id, index) => id === originalIds[index])) return
+  let index = 0
+  loaded.data.items = loaded.data.items.map((item) => item.taskDate === date && item.completed === completed
+    ? byId.get(ids[index++]) as TodoItem : item)
+  persist(loaded.data, loaded.raw, loaded.wasMissing)
+}
+
 export function saveDailyNote(date: string, content: string): void {
   if (!parseLocalDate(date)) throw new Error('随想日期格式无效')
   if (typeof content !== 'string') throw new Error('随想内容格式无效')

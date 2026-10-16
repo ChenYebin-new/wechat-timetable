@@ -71,6 +71,23 @@ test('空数据和完整 V3 数据导出、预览、恢复无损，读操作不�
   assert.deepEqual(storage.get('timetable_courses'), { sentinel: '课程不应被读写' })
 })
 
+test('未完成和已完成手动顺序经导出、整体恢复与最近备份撤回均保留', () => {
+  const data = { ...empty(), items: [item({ id: 'a' }), item({ id: 'c', completed: true, completedAt: 3 }),
+    item({ id: 'b' }), item({ id: 'd', completed: true, completedAt: 4 })] }
+  storage.set(KEY, data)
+  todos.reorderTodos('2026-09-20', false, ['b', 'a'], ['a', 'b'])
+  todos.reorderTodos('2026-09-20', true, ['d', 'c'], ['c', 'd'])
+  const reordered = structuredClone(storage.get(KEY))
+  const exported = service.exportTodoBackup()
+  service.restoreTodoBackup(service.previewTodoBackup(text(empty())))
+  service.restoreTodoBackup(service.previewRecentTodoBackup())
+  assert.deepEqual(storage.get(KEY), reordered)
+  storage.set(KEY, empty())
+  service.restoreTodoBackup(service.previewTodoBackup(exported))
+  assert.deepEqual(storage.get(KEY), reordered)
+  assert.deepEqual(storage.get(KEY).items.map(item => item.id), ['b', 'd', 'a', 'c'])
+})
+
 test('整体覆盖保留旧数据，连续恢复可撤回，空数据也可撤回', () => {
   storage.set(KEY, full())
   const revision = session.todoRevision()

@@ -505,7 +505,36 @@ export function detachCourseSegment(course: CourseDraft): void {
   commitMutation(previous, data)
 }
 
-/** 删除课程。 */
+/** 只删除指定教学周的这一次课；同一时段的其他周继续保留。 */
+export function removeCourseOccurrence(id: string, week: number): void {
+  const data = load()
+  assertWritableStorage(data)
+  assertTermReady(data)
+  const existing = data.courses.find((course) => course.id === id)
+  if (!existing) throw new Error('没有找到要删除的课程')
+  if (!Number.isInteger(week) || week < 1 || week > data.term.totalWeeks || !existing.weeks.includes(week)) {
+    throw new Error('该时段在所选教学周没有课程，请返回课表重新选择')
+  }
+  const previous = cloneStorage(data)
+  const weeks = existing.weeks.filter((value) => value !== week)
+  if (weeks.length === 0) {
+    data.courses = data.courses.filter((course) => course.id !== id)
+  } else {
+    // A group shares its week settings. Detach the changed segment, as in segment editing.
+    const groupSize = data.courses.filter((course) => course.groupId === existing.groupId).length
+    const updated: Course = {
+      ...existing,
+      groupId: groupSize > 1 ? generateId() : existing.groupId,
+      weekMode: 'custom',
+      weeks,
+      updatedAt: Date.now(),
+    }
+    data.courses = data.courses.map((course) => course.id === id ? updated : course)
+  }
+  commitMutation(previous, data)
+}
+
+/** 删除一个时段的所有教学周记录。 */
 export function remove(id: string): void {
   const data = load()
   assertWritableStorage(data)

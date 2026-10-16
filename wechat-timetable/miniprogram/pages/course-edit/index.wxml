@@ -87,7 +87,7 @@
   </view>
     <view class="actions">
       <button class="pressable btn btn-primary" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onSave" loading="{{saving}}" disabled="{{saving}}">保存</button>
-      <button wx:if="{{isEdit}}" class="pressable btn btn-danger" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onDelete"><view wx:if="{{themeId === 'paper'}}" class="delete-rule" aria-hidden="true" /><text>删除课程</text><view wx:if="{{themeId === 'paper'}}" class="delete-rule" aria-hidden="true" /></button>
+      <button wx:if="{{isEdit}}" class="pressable btn btn-danger" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onDelete" disabled="{{saving}}"><view wx:if="{{themeId === 'paper'}}" class="delete-rule" aria-hidden="true" /><text>{{isGroupMode ? '删除整门课程' : '删除第' + sourceWeek + '周本次课'}}</text><view wx:if="{{themeId === 'paper'}}" class="delete-rule" aria-hidden="true" /></button>
     </view>
 </view>
 </block>

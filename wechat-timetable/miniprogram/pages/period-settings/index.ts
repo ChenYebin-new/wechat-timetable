@@ -14,6 +14,7 @@ import { initializeHomeSharing, shareHomeToFriend, shareHomeToTimeline } from '.
 
 const durationOptions = Array.from({ length: 180 }, (_, index) => index + 1)
 const breakOptions = Array.from({ length: 121 }, (_, index) => index)
+const savedReturnTimers = new WeakMap<object, ReturnType<typeof setTimeout>>()
 
 Page({
   data: {
@@ -30,6 +31,16 @@ Page({
   },
 
   onShow() { syncAppearance(this) },
+
+  onHide() {
+    const timer = savedReturnTimers.get(this)
+    if (timer === undefined) return
+    clearTimeout(timer)
+    savedReturnTimers.delete(this)
+    this.setData({ saving: false })
+  },
+
+  onUnload() { this.onHide() },
 
   onPageScroll(event: WechatMiniprogram.Page.IPageScrollOption) {
     this.selectComponent('.page-masthead')?.updateScroll(event.scrollTop)
@@ -192,10 +203,13 @@ Page({
       return
     }
     wx.showToast({ title: '已保存', icon: 'success' })
-    setTimeout(() => {
+    const timer = setTimeout(() => {
+      if (savedReturnTimers.get(this) !== timer) return
+      savedReturnTimers.delete(this)
       wx.navigateBack({
         fail: () => this.setData({ saving: false }),
       })
     }, 400)
+    savedReturnTimers.set(this, timer)
   },
 })

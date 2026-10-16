@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { runInNewContext } from 'node:vm'
 import { afterEach, beforeEach, test } from 'node:test'
 import './helpers/register-typescript.mjs'
 import { sessionTest } from './helpers/isolated-test.mjs'
@@ -187,6 +188,295 @@ function pageContext(show = true) {
   if (show) context.onShow()
   return context
 }
+
+function dragItems() {
+  return [todoItem({ id: 'a', createdAt: 3 }), todoItem({ id: 'b', note: '较高的备注行', createdAt: 2 }),
+    todoItem({ id: 'c', createdAt: 1 }), todoItem({ id: 'd', completed: true, completedAt: 3 }),
+    todoItem({ id: 'e', completed: true, completedAt: 4 }), todoItem({ id: 'other', taskDate: '2026-09-17' })]
+}
+
+function dragHarness(page, { heights = [50, 120, 80, 60, 70], top = 160, scrollTop = 0, deferred = false } = {}) {
+  const pending = []
+  const scrolls = []
+  const header = { data: { statusHeight: 24, navigationHeight: 44 }, updateScroll() {} }
+  page.selectComponent = () => header
+  page.createSelectorQuery = () => {
+    const query = {
+      selectAll() { return query }, selectViewport() { return query }, select() { return query },
+      boundingClientRect() { return query }, scrollOffset() { return query },
+      exec(callback) {
+        let position = top
+        const rows = page.data.visibleItems.map((item, index) => {
+          const row = { top: position, height: heights[index] ?? 80, dataset: { id: item.id } }
+          position += row.height + 10
+          return row
+        })
+        const result = [rows, { scrollTop }, { bottom: Math.max(1200, position + 300) }]
+        if (deferred) pending.push(() => callback(result))
+        else callback(result)
+      },
+    }
+    return query
+  }
+  wx.getSystemInfoSync = () => ({ windowHeight: 640, windowWidth: 375, screenHeight: 667, statusBarHeight: 24, safeArea: { bottom: 667 } })
+  wx.pageScrollTo = options => {
+    scrolls.push(options.scrollTop)
+    scrollTop = options.scrollTop
+    page.onPageScroll({ scrollTop })
+  }
+  return { pending, scrolls }
+}
+
+test('拖动分别调整当日未完成和已完成顺序，跨 Tab、重建页面和备份恢复均保留', () => {
+  seed(dragItems())
+  const page = pageContext()
+  dragHarness(page)
+  page.onTodoDragStart({ id: 'a', token: 1, clientY: 180 })
+  page.onTodoDragMove({ token: 1, clientY: 10000 })
+  assert.equal(writes, 0, '拖动途中不写盘')
+  page.onTodoDragEnd({ token: 1, clientY: 10000 })
+  assert.equal(writes, 1)
+  assert.equal(page.data.dragSettling, true)
+  assert.deepEqual(page.data.visibleItems.map(item => item.id), ['a', 'b', 'c', 'd', 'e'], '落位完成前保留原 DOM 顺序')
+  advance(220)
+  assert.deepEqual(page.data.visibleItems.map(item => item.id), ['b', 'c', 'a', 'd', 'e'])
+  dragHarness(page)
+  page.onTodoDragStart({ id: 'e', token: 2, clientY: 550 })
+  page.onTodoDragEnd({ token: 2, clientY: -10000 })
+  advance(220)
+  assert.deepEqual(page.data.visibleItems.map(item => item.id), ['b', 'c', 'a', 'e', 'd'])
+  const expected = stored()
+  page.onHide(); page.onShow()
+  assert.deepEqual(page.data.visibleItems.map(item => item.id), ['b', 'c', 'a', 'e', 'd'])
+  const reopened = pageContext()
+  assert.deepEqual(reopened.data.visibleItems.map(item => item.id), ['b', 'c', 'a', 'e', 'd'])
+  const exported = todoBackup.exportTodoBackup()
+  seed([])
+  todoBackup.restoreTodoBackup(todoBackup.previewTodoBackup(exported))
+  reopened.onShow()
+  assert.deepEqual(reopened.data.visibleItems.map(item => item.id), ['b', 'c', 'a', 'e', 'd'])
+  assert.deepEqual(stored(), expected)
+  assert.deepEqual(stored().items.find(item => item.id === 'other'), dragItems().at(-1))
+})
+
+test('拖动及测量期间禁止误编辑、误勾选和新增，取消后原操作恢复', () => {
+  seed(dragItems())
+  const page = pageContext()
+  dragHarness(page)
+  page.onTodoDragStart({ id: 'a', token: 1, clientY: 180 })
+  page.onEdit(touch('a')); page.onToggle(touch('a')); page.onMore(touch('a')); page.onAdd()
+  assert.equal(page.data.editorOpen, false)
+  assert.deepEqual(actionSheets, [])
+  assert.equal(writes, 0)
+  page.onTodoDragCancel({ token: 1 })
+  assert.equal(page.data.draggingId, '')
+  page.onEdit(touch('a'))
+  assert.equal(page.data.editorId, 'a')
+  page.onTitle(input('新标题')); page.onSaveGoal()
+  page.onToggle(touch('a'))
+  assert.equal(stored().items.find(item => item.id === 'a').title, '新标题')
+  assert.equal(stored().items.find(item => item.id === 'a').completed, true)
+})
+
+test('切日、隐藏、尺寸变化和展开月历取消拖动，迟到的移动与松手不写盘', () => {
+  for (const action of [page => choose(page, '2026-09-17'), page => page.onHide(), page => page.onResize(), page => page.onToggleCalendar()]) {
+    seed(dragItems())
+    const page = pageContext()
+    dragHarness(page)
+    page.onTodoDragStart({ id: 'a', token: 1, clientY: 180 })
+    page.onTodoDragMove({ token: 1, clientY: 450 })
+    action(page)
+    page.onTodoDragMove({ token: 1, clientY: 800 })
+    page.onTodoDragEnd({ token: 1, clientY: 800 })
+    assert.equal(page.data.draggingId, '')
+    assert.equal(page.data.dragPresentation.active, false)
+    assert.equal(writes, 0)
+    page.onHide()
+  }
+})
+
+test('测量完成前松手或离页不会开启幽灵拖动；迟到的旧手势不会影响新手势', () => {
+  seed(dragItems())
+  const page = pageContext()
+  const harness = dragHarness(page, { deferred: true })
+  page.onTodoDragStart({ id: 'a', token: 1, clientY: 180 })
+  page.onTodoDragEnd({ token: 1, clientY: 500 })
+  harness.pending.shift()()
+  assert.equal(page.data.draggingId, '')
+  page.onTodoDragStart({ id: 'a', token: 2, clientY: 180 })
+  page.onHide()
+  harness.pending.shift()()
+  assert.equal(page.data.draggingId, '')
+  page.onShow()
+  page.onTodoDragStart({ id: 'a', token: 3, clientY: 180 })
+  harness.pending.shift()()
+  page.onTodoDragCancel({ token: 2 })
+  page.onTodoDragEnd({ token: 2, clientY: 500 })
+  assert.equal(page.data.draggingId, 'a')
+  page.onTodoDragCancel({ token: 3 })
+  assert.equal(writes, 0)
+})
+
+test('拖动保存失败恢复原序，列表在手势中新增或完成变化时拒绝陈旧排序', () => {
+  for (const change of [() => { failWrites = 1 }, () => todoStorage.saveTodo({ title: '后来新增', taskDate: '2026-09-16' }), () => todoStorage.toggleTodo('a')]) {
+    seed(dragItems())
+    const page = pageContext()
+    dragHarness(page)
+    page.onTodoDragStart({ id: 'a', token: 1, clientY: 180 })
+    page.onTodoDragMove({ token: 1, clientY: 450 })
+    change()
+    const before = stored()
+    page.onTodoDragEnd({ token: 1, clientY: 450 })
+    assert.deepEqual(stored(), before)
+    assert.equal(page.data.draggingId, '')
+    assert.equal(modals.at(-1).title, '顺序未保存')
+    page.onHide()
+  }
+})
+
+test('恢复数据使正在拖动和待测量的旧手势失效，不覆盖恢复结果', () => {
+  for (const deferred of [false, true]) {
+    seed(dragItems())
+    const page = pageContext()
+    const harness = dragHarness(page, { deferred })
+    page.onTodoDragStart({ id: 'a', token: 1, clientY: 180 })
+    const backup = JSON.parse(todoBackup.exportTodoBackup())
+    backup.data.items = [todoItem({ id: 'restored' })]
+    todoBackup.restoreTodoBackup(todoBackup.previewTodoBackup(JSON.stringify(backup)))
+    if (deferred) harness.pending.shift()()
+    page.onTodoDragEnd({ token: 1, clientY: 450 })
+    page.onShow()
+    assert.deepEqual(page.data.visibleItems.map(item => item.id), ['restored'])
+    assert.deepEqual(stored().items, backup.data.items)
+    page.onHide()
+  }
+})
+
+test('长列表边缘自动滚动计入位移，回到中间或结束手势即停止滚动', () => {
+  seed(Array.from({ length: 20 }, (_, index) => todoItem({ id: String(index) })))
+  const page = pageContext()
+  const harness = dragHarness(page, { heights: Array(20).fill(80) })
+  page.onTodoDragStart({ id: '0', token: 1, clientY: 180 })
+  page.onTodoDragMove({ token: 1, clientY: 580 })
+  advance(160)
+  assert.equal(harness.scrolls.length, 5)
+  assert.ok(page.data.dragPresentation.scrollDelta > 0)
+  page.onTodoDragMove({ token: 1, clientY: 300 })
+  advance(64)
+  assert.equal(harness.scrolls.length, 5)
+  page.onTodoDragMove({ token: 1, clientY: 580 })
+  advance(32)
+  page.onTodoDragEnd({ token: 1, clientY: 580 })
+  const count = harness.scrolls.length
+  advance(64)
+  assert.equal(harness.scrolls.length, count)
+  advance(156)
+  assert.notEqual(page.data.visibleItems[0].id, '0')
+})
+
+test('落位动画可被新的编辑或勾选打断，已保存的顺序不回退且没有迟到回调', () => {
+  for (const action of [page => page.onEdit(touch('a')), page => page.onToggle(touch('a')), page => page.onHide()]) {
+    seed(dragItems())
+    const page = pageContext()
+    dragHarness(page)
+    page.onTodoDragStart({ id: 'a', token: 1, clientY: 180 })
+    page.onTodoDragEnd({ token: 1, clientY: 450 })
+    assert.equal(page.data.dragSettling, true)
+    action(page)
+    assert.equal(page.data.dragSettling, false)
+    assert.deepEqual(page.data.visibleItems.filter(item => !item.completed || item.id === 'a').map(item => item.id), ['b', 'c', 'a'])
+    const after = stored()
+    advance(300)
+    assert.deepEqual(stored(), after)
+    page.onHide()
+    todoSession.setGoalDraft(page, null)
+  }
+})
+
+test('真实页面属性观察顺序下，长按浮起、持续跟手、松手落位及保存连贯完成', () => {
+  seed(dragItems())
+  const page = pageContext()
+  dragHarness(page)
+  const module = { exports: {} }
+  runInNewContext(readFileSync(new URL('../miniprogram/pages/todo/drag.wxs', import.meta.url), 'utf8'), { module })
+  const api = module.exports
+  const wxsState = {}
+  const rows = page.data.visibleItems.map(() => ({ style: {}, setStyle(style) { Object.assign(this.style, style) } }))
+  const owner = {
+    getState: () => wxsState, selectAllComponents: () => rows,
+    callMethod(method, event) { page[method](event) },
+  }
+  const setData = page.setData
+  page.setData = function(changes) {
+    setData.call(this, changes)
+    api.layoutChanged(this.data.dragPresentation, null, owner)
+  }
+  const event = y => ({ currentTarget: { dataset: { id: 'a', draggable: true } },
+    touches: [{ identifier: 1, clientX: 80, clientY: y }], changedTouches: [{ identifier: 1, clientX: 80, clientY: y }] })
+  api.touchStart(event(180), owner)
+  api.longPress(event(180), owner)
+  assert.equal(wxsState.claimed, true, '浮起状态不能被首次 setData 的旧空闲值清除')
+  api.touchMove(event(380), owner)
+  assert.equal(rows[0].style.transform, 'translateY(200px)')
+  api.touchEnd(event(380), owner)
+  assert.equal(page.data.dragSettling, true)
+  assert.equal(writes, 1)
+  advance(220)
+  assert.equal(page.data.dragSettling, false)
+  assert.deepEqual(page.data.visibleItems.map(item => item.id), ['b', 'c', 'a', 'd', 'e'])
+  assert.equal(api.tap(event(380), owner), false)
+})
+
+test('更多操作按同日同状态提供上移下移，原编辑删除入口保持位置', () => {
+  seed(dragItems())
+  const page = pageContext()
+  page.onMore(touch('a'))
+  assert.deepEqual(actionSheets.at(-1).itemList, ['编辑', '删除', '下移'])
+  actionSheets.at(-1).success({ tapIndex: 2 })
+  assert.deepEqual(page.data.visibleItems.map(item => item.id), ['b', 'a', 'c', 'd', 'e'])
+  page.onMore(touch('a'))
+  assert.deepEqual(actionSheets.at(-1).itemList, ['编辑', '删除', '上移', '下移'])
+  actionSheets.at(-1).success({ tapIndex: 3 })
+  page.onMore(touch('e'))
+  assert.deepEqual(actionSheets.at(-1).itemList, ['编辑', '删除', '上移'])
+  actionSheets.at(-1).success({ tapIndex: 2 })
+  assert.deepEqual(page.data.visibleItems.map(item => item.id), ['b', 'c', 'a', 'e', 'd'])
+})
+
+test('向上拖至长列表顶部时向上滚动，隐藏页面清除滚动计时器', () => {
+  seed(Array.from({ length: 20 }, (_, index) => todoItem({ id: String(index) })))
+  const page = pageContext()
+  const harness = dragHarness(page, { heights: Array(20).fill(80), top: -300, scrollTop: 400 })
+  page.onTodoDragStart({ id: '8', token: 1, clientY: 430 })
+  page.onTodoDragMove({ token: 1, clientY: 80 })
+  advance(64)
+  assert.ok(harness.scrolls.length > 0)
+  assert.ok(harness.scrolls.at(-1) < 400)
+  assert.ok(page.data.dragPresentation.scrollDelta < 0)
+  page.onHide()
+  const count = harness.scrolls.length
+  advance(64)
+  assert.equal(harness.scrolls.length, count)
+  assert.equal(writes, 0)
+})
+
+test('单条、正在编辑和测量异常均不启动拖动，不影响后续编辑', () => {
+  seed([todoItem()])
+  const page = pageContext()
+  page.createSelectorQuery = () => assert.fail('不应测量不能排序的列表')
+  page.onTodoDragStart({ id: 'todo-1', token: 1, clientY: 180 })
+  seed(dragItems()); page.refresh()
+  page.onEdit(touch('a'))
+  page.onTodoDragStart({ id: 'a', token: 2, clientY: 180 })
+  assert.equal(page.data.editorId, 'a')
+  page.onCancelEditor()
+  dragHarness(page, { heights: [NaN] })
+  page.onTodoDragStart({ id: 'a', token: 3, clientY: 180 })
+  assert.equal(page.data.dragPresentation.active, false)
+  page.onEdit(touch('a'))
+  assert.equal(page.data.editorId, 'a')
+  assert.equal(writes, 0)
+})
 
 test('目标脏状态跨 Tab 阻止恢复，保存或取消后解除', () => {
   seed()
@@ -454,7 +744,7 @@ test('直接选日和前后箭头正确跨越月末、年末与闰日，回到�
   assert.equal(context.data.isToday, true)
 })
 
-test('目标仅显示选定日期，未完成在前、已完成在后，组内按创建顺序', () => {
+test('目标仅显示选定日期，未完成在前、已完成在后，组内保留已存顺序', () => {
   seed([
     todoItem({ id: 'done-new', completed: true, completedAt: 50, createdAt: 4 }),
     todoItem({ id: 'pending-new', createdAt: 3 }),
@@ -464,7 +754,7 @@ test('目标仅显示选定日期，未完成在前、已完成在后，组内�
   ])
   const context = pageContext()
   assert.deepEqual(context.data.visibleItems.map((item) => item.id), [
-    'pending-old', 'pending-new', 'done-old', 'done-new',
+    'pending-new', 'pending-old', 'done-new', 'done-old',
   ])
   assert.equal(context.data.completedCount, 2)
   assert.equal(context.data.totalCount, 4)
