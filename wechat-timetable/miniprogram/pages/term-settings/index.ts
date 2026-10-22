@@ -13,6 +13,7 @@ import { initializeHomeSharing, shareHomeToFriend, shareHomeToTimeline } from '.
 
 const weekOptions: string[] = []
 for (let w = 1; w <= MAX_TOTAL_WEEKS; w++) weekOptions.push(`${w} 周`)
+const confirmations = new WeakMap<object, object>()
 
 function errorMessage(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback
@@ -31,6 +32,9 @@ Page({
   },
 
   onShow() { syncAppearance(this) },
+
+  onHide() { confirmations.delete(this) },
+  onUnload() { this.onHide() },
 
   onPageScroll(event: WechatMiniprogram.Page.IPageScrollOption) {
     this.selectComponent('.page-masthead')?.updateScroll(event.scrollTop)
@@ -86,6 +90,7 @@ Page({
   },
 
   onSave() {
+    if (confirmations.has(this)) return
     const term: TermSettings = {
       startDate: this.data.startDate,
       totalWeeks: this.data.totalWeeks,
@@ -102,6 +107,8 @@ Page({
     }
     const count = this.data.affectedCount
     const isMigration = this.data.isMigration
+    const confirmation = {}
+    confirmations.set(this, confirmation)
     wx.showModal({
       title: isMigration ? '迁移确认' : '保存设置',
       content: isMigration
@@ -109,6 +116,8 @@ Page({
         : `保存后 ${count} 门课程的周次将按新总周数（${term.totalWeeks} 周）重新计算，指定周次课程只保留仍在新范围内的周次。保存前会自动备份当前课表。`,
       confirmText: isMigration ? '确认迁移' : '保存',
       success: (res) => {
+        if (confirmations.get(this) !== confirmation) return
+        confirmations.delete(this)
         if (!res.confirm) return
         let result
         try {
@@ -133,6 +142,9 @@ Page({
             confirmText: '知道了',
           })
         }
+      },
+      complete: () => {
+        if (confirmations.get(this) === confirmation) confirmations.delete(this)
       },
     })
   },

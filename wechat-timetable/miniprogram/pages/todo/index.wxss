@@ -537,6 +537,90 @@ button::after {
   padding: 24rpx;
 }
 
+/* 编辑器留在原行，新增仍沿用列表末尾的表单。 */
+.inline-goal-editor {
+  width: 100%;
+  min-width: 0;
+  border: 1rpx solid var(--accent);
+  border-radius: var(--radius-small);
+  background: var(--surface);
+  box-sizing: border-box;
+}
+
+.inline-goal-editor .editor-content {
+  padding: 20rpx;
+}
+
+.inline-goal-editor .editor-heading {
+  margin-bottom: 12rpx;
+  font-size: 26rpx;
+  font-weight: 500;
+}
+
+.editor-label {
+  display: block;
+  margin-bottom: 8rpx;
+  color: var(--muted);
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
+.inline-goal-editor .title-input {
+  min-height: 44px;
+  font-size: 30rpx;
+}
+
+.inline-goal-editor .goal-note-input {
+  height: 128rpx;
+  min-height: 64px;
+}
+
+.inline-goal-editor .editor-actions {
+  margin-top: 20rpx;
+}
+
+.inline-goal-editor .plain-button.note-toggle {
+  justify-content: flex-start;
+}
+
+.inline-goal-editor .cancel-button {
+  border: 1rpx solid var(--accent);
+  color: var(--accent);
+}
+
+.inline-goal-editor .cancel-button,
+.inline-goal-editor .save-button {
+  min-height: 44px;
+  flex: none;
+  margin: 0;
+}
+
+.page.theme-paper .inline-goal-editor {
+  background: var(--page);
+  background-image: var(--page-texture);
+  border-radius: 6rpx;
+}
+
+.page.theme-swiss .inline-goal-editor,
+.page.theme-swiss .inline-goal-editor input,
+.page.theme-swiss .inline-goal-editor textarea,
+.page.theme-swiss .inline-goal-editor button {
+  border-radius: 0;
+}
+
+.page.theme-pixel .inline-goal-editor {
+  border: 6rpx solid transparent;
+  border-image: var(--pixel-frame) 6 / 12rpx stretch;
+  border-radius: 0;
+  background: var(--soft);
+}
+
+.page.theme-pixel .inline-goal-editor button,
+.page.theme-pixel .inline-goal-editor input,
+.page.theme-pixel .inline-goal-editor textarea {
+  border-radius: 0;
+}
+
 .editor-heading {
   margin-bottom: 24rpx;
 }

@@ -603,6 +603,135 @@ function confirmLast(confirm) {
   modals.at(-1).success({ confirm, cancel: !confirm })
 }
 
+for (const lifecycle of ['onHide', 'onUnload']) {
+  test(`待办删除确认在 ${lifecycle} 后作废，不删除旧页面目标`, () => {
+    seed([todoItem()])
+    const page = pageContext()
+    page.confirmDelete('todo-1')
+    const dialog = modals.at(-1)
+    page[lifecycle]()
+    dialog.success({ confirm: true })
+    assert.equal(stored().items.length, 1)
+    assert.equal(writes, 0)
+  })
+}
+
+test('切日的放弃目标确认在离页再返回后作废，保留当前编辑草稿', () => {
+  seed([todoItem()])
+  const page = pageContext()
+  page.onEdit(touch('todo-1'))
+  page.onTitle(input('未保存的内容'))
+  page.switchDate('2026-09-17')
+  const dialog = modals.at(-1)
+  page.onHide(); page.onShow()
+  dialog.success({ confirm: true })
+  assert.equal(page.data.selectedDate, '2026-09-16')
+  assert.equal(page.data.editorOpen, true)
+  assert.equal(page.data.title, '未保存的内容')
+  assert.equal(writes, 0)
+})
+
+test('原位编辑与末尾新增共用表单，编辑卡片替换普通表面且不重复末尾编辑器', () => {
+  const markup = readFileSync(new URL('../miniprogram/pages/todo/index.wxml', import.meta.url), 'utf8')
+  assert.match(markup, /<template name="goal-editor">/)
+  assert.match(markup, /wx:if="{{editorOpen && editorId === item.id}}" class="inline-goal-editor"/)
+  assert.match(markup, /<view wx:else class="todo-surface">/)
+  assert.match(markup, /wx:if="{{!editorOpen \|\| editorId}}" class="plain-button add-goal"/)
+  assert.equal([...markup.matchAll(/is="goal-editor"/g)].length, 2)
+  assert.equal([...markup.matchAll(/bindinput="onTitle"/g)].length, 1)
+  assert.match(markup, /focus="{{editorFocus}}"/)
+  assert.match(markup, /auto-height="{{!editorId}}"/)
+})
+
+test('编辑取消与保存均保留手动顺序，之后新增仍放未完成组末尾且能继续拖动', () => {
+  seed(dragItems())
+  const page = pageContext()
+  dragHarness(page)
+  page.onTodoDragStart({ id: 'a', token: 1, clientY: 180 })
+  page.onTodoDragEnd({ token: 1, clientY: 10000 })
+  advance(220)
+  const order = page.data.visibleItems.map(item => item.id)
+  const original = stored()
+  page.onEdit(touch('b'))
+  assert.equal(page.data.editorFocus, true)
+  page.onTitle(input('取消的内容'))
+  page.onNote(input('取消的备注'))
+  page.onCancelEditor()
+  assert.deepEqual(stored(), original)
+  assert.deepEqual(page.data.visibleItems.map(item => item.id), order)
+  page.onEdit(touch('b'))
+  page.onTitle(input('修改后的目标'))
+  page.onNote(input('修改后的备注'))
+  page.onSaveGoal()
+  assert.equal(page.data.editorFocus, false)
+  assert.deepEqual(page.data.visibleItems.map(item => item.id), order)
+  assert.equal(stored().items.find(item => item.id === 'b').note, '修改后的备注')
+  page.onAdd()
+  assert.equal(page.data.editorId, '')
+  page.onTitle(input('后续新增'))
+  page.onSaveGoal()
+  assert.equal(page.data.visibleItems[3].title, '后续新增')
+  assert.deepEqual(page.data.visibleItems.slice(-2).map(item => item.id), ['d', 'e'])
+  page.onTodoDragStart({ id: 'b', token: 2, clientY: 180 })
+  assert.equal(page.data.draggingId, 'b')
+  page.onTodoDragCancel({ token: 2 })
+})
+
+test('目标键盘只在编辑时隐藏Tab，面板完整避让并忽略旧测量与隐藏后的键盘事件', () => {
+  seed(dragItems())
+  const page = pageContext()
+  const tab = { data: {}, setData(changes) { Object.assign(this.data, changes) } }
+  page.getTabBar = () => tab
+  page.selectComponent = () => ({ data: { statusHeight: 24, navigationHeight: 44 } })
+  wx.getSystemInfoSync = () => ({ windowHeight: 844 })
+  const scrolls = []
+  wx.pageScrollTo = options => scrolls.push(options)
+  const pending = []
+  let rect = { top: 360, bottom: 640, height: 280 }
+  page.createSelectorQuery = () => {
+    const q = { select() { return q }, boundingClientRect() { return q }, selectViewport() { return q }, scrollOffset() { return q },
+      exec(callback) { pending.push(() => callback([rect, { scrollTop: 100 }])) } }
+    return q
+  }
+  const keyboard = height => page.onGoalKeyboardHeightChange({ detail: { height } })
+  keyboard(300)
+  assert.equal(tab.data.hidden, undefined)
+  page.onEdit(touch('b'))
+  page.onGoalTitleBlur()
+  assert.equal(page.data.editorFocus, false)
+  keyboard(300)
+  assert.equal(tab.data.hidden, true)
+  pending.shift()()
+  assert.deepEqual(scrolls, [{ scrollTop: 208, duration: 0 }])
+  rect = { top: 40, bottom: 320, height: 280 }
+  keyboard(300)
+  pending.shift()()
+  assert.equal(scrolls.at(-1).scrollTop, 60)
+  rect = { top: 100, bottom: 700, height: 600 }
+  keyboard(300)
+  pending.shift()()
+  assert.equal(scrolls.length, 2, '大于可用高度时交给原生光标避让，不强拉到面板底部')
+  keyboard(300)
+  page.onEdit(touch('a'))
+  pending.shift()()
+  assert.equal(scrolls.length, 2)
+  keyboard(0)
+  assert.equal(tab.data.hidden, false)
+  keyboard(300)
+  page.onCancelEditor()
+  pending.shift()()
+  assert.equal(tab.data.hidden, false)
+  assert.equal(page.data.goalKeyboardHeight, 0)
+  page.onAdd()
+  keyboard(300)
+  page.onHide()
+  pending.shift()()
+  keyboard(300)
+  assert.equal(page.data.goalKeyboardHeight, 0)
+  assert.equal(page.data.editorFocus, false)
+  assert.equal(scrolls.length, 2)
+})
+
 test('待办沿用原生课表入口并在单页提供日期、目标和随想，不再注册旧编辑页', () => {
   const config = JSON.parse(readFileSync(new URL('../miniprogram/app.json', import.meta.url), 'utf8'))
   const markup = readFileSync(new URL('../miniprogram/pages/todo/index.wxml', import.meta.url), 'utf8')
