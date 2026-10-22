@@ -48,6 +48,7 @@ function idleDragPresentation() {
 
 interface PageState {
   revision: number
+  lifecycle: number
   discardingNote: boolean
   visible: boolean
   followingToday: boolean
@@ -59,6 +60,7 @@ interface PageState {
   midnightTimer: ReturnType<typeof setTimeout> | null
   goalDates: Set<string>
   scrollTop: number
+  goalViewportHeight: number
   drag: TodoDragState | null
 }
 
@@ -68,7 +70,7 @@ const WEEKDAYS = ['星期日', '星期一', '星期二', '星期三', '星期四
 function stateFor(page: object): PageState {
   let state = pageStates.get(page)
   if (!state) {
-    state = { revision: todoRevision(), discardingNote: false, visible: false, followingToday: true, noteFocused: false, noteDate: '', savedNote: '', originalGoal: null, noteTimer: null, midnightTimer: null, goalDates: new Set(), scrollTop: 0, drag: null }
+    state = { revision: todoRevision(), lifecycle: 0, discardingNote: false, visible: false, followingToday: true, noteFocused: false, noteDate: '', savedNote: '', originalGoal: null, noteTimer: null, midnightTimer: null, goalDates: new Set(), scrollTop: 0, goalViewportHeight: 0, drag: null }
     pageStates.set(page, state)
   }
   return state
@@ -109,6 +111,8 @@ Page({
     editorOpen: false,
     editorId: '',
     editorDate: '',
+    editorFocus: false,
+    goalKeyboardHeight: 0,
     title: '',
     note: '',
     noteExpanded: false,
@@ -165,8 +169,10 @@ Page({
   onHide() {
     if (this.data.showShareHomePreview) return
     this.cancelTodoDrag()
+    stateFor(this).lifecycle += 1
     stateFor(this).visible = false
     stateFor(this).noteFocused = false
+    this.setData({ editorFocus: false, goalKeyboardHeight: 0 })
     this.flushDailyNote()
     this.stopTimers()
   },
@@ -310,7 +316,10 @@ Page({
 
   afterDiscardingGoal(action: () => void) {
     const revision = todoRevision()
-    const run = () => { if (stateFor(this).revision === revision && todoRevision() === revision) action() }
+    const lifecycle = stateFor(this).lifecycle
+    const run = () => {
+      if (stateFor(this).lifecycle === lifecycle && stateFor(this).revision === revision && todoRevision() === revision) action()
+    }
     const original = stateFor(this).originalGoal
     const dirty = this.data.editorOpen && original !== null
       && (this.data.title !== original.title || this.data.note !== original.note)
@@ -328,7 +337,8 @@ Page({
     this.finishTodoDrop()
     if (stateFor(this).drag || this.data.showShareHomePreview || this.data.storageProblem || this.data.editorOpen) return
     stateFor(this).originalGoal = { title: '', note: '' }
-    this.setData({ editorOpen: true, editorId: '', editorDate: this.data.selectedDate, title: '', note: '', noteExpanded: false, goalProblem: '' })
+    this.prepareGoalFocus()
+    this.setData({ editorOpen: true, editorId: '', editorDate: this.data.selectedDate, editorFocus: true, title: '', note: '', noteExpanded: false, goalProblem: '' })
   },
 
   onEdit(e: WechatMiniprogram.TouchEvent) { this.editGoal(e.currentTarget.dataset.id as string) },
@@ -521,7 +531,8 @@ Page({
         const item = getTodoById(id)
         if (!item) throw new Error('这条目标可能已经被删除，请重新读取')
         stateFor(this).originalGoal = { title: item.title, note: item.note }
-        this.setData({ editorOpen: true, editorId: id, editorDate: item.taskDate, title: item.title, note: item.note, noteExpanded: !!item.note, goalProblem: '' })
+        this.prepareGoalFocus()
+        this.setData({ editorOpen: true, editorId: id, editorDate: item.taskDate, editorFocus: true, title: item.title, note: item.note, noteExpanded: !!item.note, goalProblem: '' })
         this.trackGoalDraft()
       } catch (error) {
         this.setData({ goalProblem: errorMessage(error, '无法读取目标，请重新读取') })
@@ -550,13 +561,54 @@ Page({
   },
 
   onExpandNote() {
-    if (!this.data.storageProblem) this.setData({ noteExpanded: !this.data.noteExpanded })
+    if (!this.data.storageProblem) this.setData({ noteExpanded: !this.data.noteExpanded }, () => this.keepGoalEditorVisible())
+  },
+
+  prepareGoalFocus() {
+    if (!this.data.goalKeyboardHeight) {
+      stateFor(this).goalViewportHeight = wx.getSystemInfoSync?.().windowHeight || 0
+    }
+  },
+
+  onGoalTitleBlur() { this.setData({ editorFocus: false }) },
+
+  onGoalKeyboardHeightChange(event: WechatMiniprogram.InputKeyboardHeightChange) {
+    if (!stateFor(this).visible || !this.data.editorOpen) return
+    const height = Math.max(0, event.detail.height)
+    this.setData({ goalKeyboardHeight: height })
+    this.getTabBar?.()?.setData({ hidden: height > 0 })
+    if (height) this.keepGoalEditorVisible()
+  },
+
+  keepGoalEditorVisible() {
+    const state = stateFor(this)
+    const height = this.data.goalKeyboardHeight
+    if (!state.visible || !this.data.editorOpen || !height || !state.goalViewportHeight) return
+    const id = this.data.editorId
+    const revision = todoRevision()
+    // 原生输入框负责光标避让；面板能完整放下时，再让保存/取消也留在键盘上方。
+    this.createSelectorQuery().select('.active-goal-editor').boundingClientRect()
+      .selectViewport().scrollOffset().exec((results) => {
+        if (!state.visible || !this.data.editorOpen || this.data.editorId !== id
+          || this.data.goalKeyboardHeight !== height || todoRevision() !== revision) return
+        const rect = results[0] as WechatMiniprogram.BoundingClientRectCallbackResult | null
+        const scroll = results[1] as { scrollTop: number } | null
+        if (!rect || !scroll) return
+        const header = this.selectComponent('.page-masthead')?.data
+        const top = (header?.statusHeight || 0) + (header?.navigationHeight || 0) + 12
+        const bottom = Math.min(state.goalViewportHeight - height, wx.getSystemInfoSync().windowHeight) - 12
+        if (rect.height > bottom - top) return
+        const delta = rect.top < top ? rect.top - top : Math.max(0, rect.bottom - bottom)
+        if (Math.abs(delta) > 1) wx.pageScrollTo({ scrollTop: Math.max(0, scroll.scrollTop + delta), duration: 0 })
+      })
   },
 
   closeEditor() {
     setGoalDraft(this, null)
     stateFor(this).originalGoal = null
-    this.setData({ editorOpen: false, editorId: '', editorDate: '', title: '', note: '', noteExpanded: false, savingGoal: false, goalProblem: '' })
+    this.setData({ editorOpen: false, editorId: '', editorDate: '', editorFocus: false, goalKeyboardHeight: 0, title: '', note: '', noteExpanded: false, savingGoal: false, goalProblem: '' })
+    this.getTabBar?.()?.setData({ hidden: this.data.showShareHomePreview })
+    wx.hideKeyboard?.()
   },
 
   onCancelEditor() {
@@ -595,6 +647,7 @@ Page({
     const id = e.currentTarget.dataset.id as string
     const revision = todoRevision()
     const date = this.data.selectedDate
+    const lifecycle = stateFor(this).lifecycle
     const item = this.data.visibleItems.find((entry) => entry.id === id)
     if (!item) return
     const ids = this.data.visibleItems.filter((entry) => entry.completed === item.completed).map((entry) => entry.id)
@@ -606,7 +659,7 @@ Page({
     wx.showActionSheet({
       itemList,
       success: (result) => {
-        if (todoRevision() !== revision || this.data.selectedDate !== date || stateFor(this).drag) return
+        if (stateFor(this).lifecycle !== lifecycle || todoRevision() !== revision || this.data.selectedDate !== date || stateFor(this).drag) return
         if (result.tapIndex === 0) this.editGoal(id)
         else if (result.tapIndex === 1) this.confirmDelete(id)
         else if (moves[result.tapIndex]) {
@@ -626,12 +679,13 @@ Page({
   confirmDelete(id: string) {
     if (this.data.showShareHomePreview || this.data.storageProblem) return
     const revision = todoRevision()
+    const lifecycle = stateFor(this).lifecycle
     wx.showModal({
       title: '删除目标',
       content: '确定删除这条目标吗？删除后无法恢复。',
       confirmColor: '#e64340',
       success: (result) => {
-        if (!result.confirm || this.data.storageProblem || todoRevision() !== revision) return
+        if (!result.confirm || stateFor(this).lifecycle !== lifecycle || this.data.storageProblem || todoRevision() !== revision) return
         try {
           removeTodo(id)
           if (this.data.editorId === id) this.closeEditor()

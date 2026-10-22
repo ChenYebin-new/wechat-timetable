@@ -52,6 +52,7 @@ Page({
     this.clearPreview()
     this.setData({ busy: false })
   },
+  onUnload() { this.onHide() },
   clearPreview() {
     previews.delete(this)
     this.setData({ preview: null, previewSource: '', currentItemCount: 0, currentNoteCount: 0 })

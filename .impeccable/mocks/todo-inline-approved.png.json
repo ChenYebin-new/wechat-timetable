@@ -1,0 +1,10 @@
+{
+  "approved": true,
+  "approvalDate": "2026-10-16",
+  "approvalSource": "用户确认按此效果图实现，并适配其他主题，保留新增和拖动排序。",
+  "source": "image_gen built-in",
+  "originalFile": "C:/Users/Yebin/.codex/generated_images/01a1430b-28f5-7ea2-b771-7df83bb7f872/exec-514d61c6-8dea-427f-9fa6-9455801df5c6.png",
+  "sha256": "d42d4bb803bfc5d4b04ad1cfe010d70bfc0833128311326688037d4dcf22e8f0",
+  "promptSummary": "Chinese WeChat mini-program ui-mockup showing ordinary todo list and inline editing of its second row side by side, existing A 纸上拾课 paper theme with #F7F3EB page, #2E2923 ink, #994A36 primary, tiny radii, subtle paper texture and Chinese Songti. Edit same row in place with title, optional note, Cancel and Save inside it; show native keyboard under expanded editor, preserve list order and two tabs. No duplicate bottom editor or popup. Synthetic English reading, calculus review and course assignment tasks. Other themes inherit their existing visual systems during implementation.",
+  "usage": "Approved interaction and A-theme layout reference only; rendered UI uses native WXML/WXSS controls."
+}

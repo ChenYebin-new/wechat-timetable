@@ -1,5 +1,55 @@
 <page-meta page-style="{{appearanceStyle}}background:var(--page);background-image:var(--page-texture);font-family:var(--font-family);color:var(--text);" />
 <wxs module="todoDrag" src="./drag.wxs" />
+<template name="goal-editor">
+  <view class="editor-content active-goal-editor">
+    <view class="editor-heading">
+      <view wx:if="{{!editorId}}" class="add-mark" aria-hidden="true"><view class="plus-line horizontal"></view><view class="plus-line vertical"></view></view>
+      <text>{{editorId ? '编辑目标' : '添加目标'}}</text>
+    </view>
+    <text wx:if="{{editorId}}" class="editor-label">标题</text>
+    <input
+      class="title-input"
+      value="{{title}}"
+      focus="{{editorFocus}}"
+      maxlength="60"
+      placeholder="写下一件要做的事"
+      placeholder-class="placeholder"
+      bindinput="onTitle"
+      bindblur="onGoalTitleBlur"
+      bindkeyboardheightchange="onGoalKeyboardHeightChange"
+      bindconfirm="onSaveGoal"
+      confirm-type="done"
+      disabled="{{!!storageProblem || savingGoal}}"
+      adjust-position="{{true}}"
+      cursor-spacing="120"
+      aria-label="目标标题，最多60个字"
+    />
+    <button class="plain-button note-toggle" style="width: 100%;" bindtap="onExpandNote" disabled="{{!!storageProblem || savingGoal}}" hover-class="content-pressed" aria-disabled="{{!!storageProblem || savingGoal}}" aria-expanded="{{noteExpanded}}" aria-label="{{noteExpanded ? '收起可选备注' : '展开可选备注'}}">
+      <text>备注（可选）</text>
+      <view class="note-chevron {{noteExpanded ? 'expanded' : ''}}" aria-hidden="true"></view>
+    </button>
+    <textarea
+      wx:if="{{noteExpanded}}"
+      class="goal-note-input"
+      value="{{note}}"
+      maxlength="200"
+      auto-height="{{!editorId}}"
+      placeholder="补充说明，可留空"
+      placeholder-class="placeholder"
+      bindinput="onNote"
+      bindkeyboardheightchange="onGoalKeyboardHeightChange"
+      disabled="{{!!storageProblem || savingGoal}}"
+      adjust-position="{{true}}"
+      cursor-spacing="100"
+      aria-label="可选备注，最多200个字"
+    ></textarea>
+    <text wx:if="{{goalProblem}}" class="inline-problem" aria-role="alert">{{goalProblem}}</text>
+    <view class="editor-actions">
+      <button class="plain-button cancel-button" style="{{editorId ? 'width: 144rpx;' : ''}}" bindtap="onCancelEditor" disabled="{{!!storageProblem || savingGoal}}" hover-class="control-pressed" aria-disabled="{{!!storageProblem || savingGoal}}">取消</button>
+      <button class="save-button" style="{{editorId ? 'width: 168rpx;' : ''}}" bindtap="onSaveGoal" loading="{{savingGoal}}" disabled="{{!!storageProblem || savingGoal}}" hover-class="save-button-pressed" aria-disabled="{{!!storageProblem || savingGoal}}" aria-label="{{goalProblem ? '重试保存目标' : '保存目标'}}">{{goalProblem ? '重试保存' : '保存'}}</button>
+    </view>
+  </view>
+</template>
 <!-- 每日目标、月历与随想共用主题；主题刷新只更新外观，不重置草稿与日期。 -->
 <share-home-preview wx:if="{{showShareHomePreview}}" />
 <block wx:else>
@@ -84,8 +134,11 @@
   </view>
 
   <view wx:else class="todo-list {{draggingId ? 'reordering' : ''}} {{dragSettling ? 'drop-settling' : ''}}" style="{{dragSlotStyle}}">
-    <view class="todo-row {{item.completed ? 'completed' : ''}} {{draggingId === item.id ? (dragSettling ? 'settling' : 'dragging') : ''}}" data-id="{{item.id}}" wx:for="{{visibleItems}}" wx:key="id">
-      <view class="todo-surface">
+    <view class="todo-row {{item.completed ? 'completed' : ''}} {{editorOpen && editorId === item.id ? 'editing' : ''}} {{draggingId === item.id ? (dragSettling ? 'settling' : 'dragging') : ''}}" data-id="{{item.id}}" wx:for="{{visibleItems}}" wx:key="id">
+      <view wx:if="{{editorOpen && editorId === item.id}}" class="inline-goal-editor">
+        <template is="goal-editor" data="{{editorId, title, note, noteExpanded, editorFocus, storageProblem, savingGoal, goalProblem}}" />
+      </view>
+      <view wx:else class="todo-surface">
       <button
         class="plain-button check-control"
         size="mini"
@@ -146,53 +199,11 @@
   </view>
 
   <view class="goal-editor">
-    <button wx:if="{{!editorOpen}}" class="plain-button add-goal" bindtap="onAdd" disabled="{{!!storageProblem || savingGoal}}" hover-class="content-pressed" aria-disabled="{{!!storageProblem || savingGoal}}" aria-label="添加当日目标">
+    <button wx:if="{{!editorOpen || editorId}}" class="plain-button add-goal" bindtap="onAdd" disabled="{{!!storageProblem || savingGoal || editorOpen}}" hover-class="content-pressed" aria-disabled="{{!!storageProblem || savingGoal || editorOpen}}" aria-label="添加当日目标">
       <view class="add-mark" aria-hidden="true"><view class="plus-line horizontal"></view><view class="plus-line vertical"></view></view>
       <text>添加目标</text>
     </button>
-    <view wx:else class="editor-content">
-      <view class="editor-heading">
-        <view wx:if="{{!editorId}}" class="add-mark" aria-hidden="true"><view class="plus-line horizontal"></view><view class="plus-line vertical"></view></view>
-        <text>{{editorId ? '编辑目标' : '添加目标'}}</text>
-      </view>
-      <input
-        class="title-input"
-        value="{{title}}"
-        maxlength="60"
-        placeholder="写下一件要做的事"
-        placeholder-class="placeholder"
-        bindinput="onTitle"
-        bindconfirm="onSaveGoal"
-        confirm-type="done"
-        disabled="{{!!storageProblem || savingGoal}}"
-        adjust-position="{{true}}"
-        cursor-spacing="32"
-        aria-label="目标标题，最多60个字"
-      />
-      <button class="plain-button note-toggle" bindtap="onExpandNote" disabled="{{!!storageProblem || savingGoal}}" hover-class="content-pressed" aria-disabled="{{!!storageProblem || savingGoal}}" aria-expanded="{{noteExpanded}}" aria-label="{{noteExpanded ? '收起可选备注' : '展开可选备注'}}">
-        <text>备注（可选）</text>
-        <view class="note-chevron {{noteExpanded ? 'expanded' : ''}}" aria-hidden="true"></view>
-      </button>
-      <textarea
-        wx:if="{{noteExpanded}}"
-        class="goal-note-input"
-        value="{{note}}"
-        maxlength="200"
-        auto-height="{{true}}"
-        placeholder="补充说明，可留空"
-        placeholder-class="placeholder"
-        bindinput="onNote"
-        disabled="{{!!storageProblem || savingGoal}}"
-        adjust-position="{{true}}"
-        cursor-spacing="32"
-        aria-label="可选备注，最多200个字"
-      ></textarea>
-      <text wx:if="{{goalProblem}}" class="inline-problem" aria-role="alert">{{goalProblem}}</text>
-      <view class="editor-actions">
-        <button class="plain-button cancel-button" bindtap="onCancelEditor" disabled="{{!!storageProblem || savingGoal}}" hover-class="control-pressed" aria-disabled="{{!!storageProblem || savingGoal}}">取消</button>
-        <button class="save-button" bindtap="onSaveGoal" loading="{{savingGoal}}" disabled="{{!!storageProblem || savingGoal}}" hover-class="save-button-pressed" aria-disabled="{{!!storageProblem || savingGoal}}" aria-label="{{goalProblem ? '重试保存目标' : '保存目标'}}">{{goalProblem ? '重试保存' : '保存'}}</button>
-      </view>
-    </view>
+    <template wx:else is="goal-editor" data="{{editorId, title, note, noteExpanded, editorFocus, storageProblem, savingGoal, goalProblem}}" />
   </view>
 
   <view wx:if="{{goalProblem && !editorOpen}}" class="goal-read-problem" aria-role="alert">

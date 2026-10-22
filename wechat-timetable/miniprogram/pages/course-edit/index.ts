@@ -17,6 +17,7 @@ import { buildPeriodViews } from '../../utils/period-settings'
 import { initializeHomeSharing, shareHomeToFriend, shareHomeToTimeline } from '../../utils/share'
 
 const legacyCourseColors = new WeakMap<object, string>()
+const deleteConfirmations = new WeakMap<object, object>()
 
 const dayOptions = DAYS
 const weekModeLabels = WEEK_MODES.map((m) => m.label)
@@ -69,6 +70,9 @@ Page({
   },
 
   onShow() { syncAppearance(this) },
+
+  onHide() { deleteConfirmations.delete(this) },
+  onUnload() { this.onHide() },
 
   onPageScroll(event: WechatMiniprogram.Page.IPageScrollOption) {
     this.selectComponent('.page-masthead')?.updateScroll(event.scrollTop)
@@ -295,8 +299,11 @@ Page({
   },
 
   confirmDelete() {
+    if (deleteConfirmations.has(this)) return
     const wholeGroup = this.data.editMode === 'group-edit'
     const { id, groupId, sourceWeek } = this.data
+    const confirmation = {}
+    deleteConfirmations.set(this, confirmation)
     wx.showModal({
       title: wholeGroup ? '删除整门课程' : `删除第${sourceWeek}周本次课`,
       content: wholeGroup
@@ -304,6 +311,8 @@ Page({
         : `仅删除第 ${sourceWeek} 周当前时段的这一次课，保留其他教学周和其他时段的安排。确定删除吗？`,
       confirmColor: '#e64340',
       success: (result) => {
+        if (deleteConfirmations.get(this) !== confirmation) return
+        deleteConfirmations.delete(this)
         if (!result.confirm) return
         try {
           if (wholeGroup) removeCourseGroup(groupId)
@@ -319,6 +328,9 @@ Page({
         }
         wx.showToast({ title: '已删除', icon: 'success' })
         wx.navigateBack()
+      },
+      complete: () => {
+        if (deleteConfirmations.get(this) === confirmation) deleteConfirmations.delete(this)
       },
     })
   },
