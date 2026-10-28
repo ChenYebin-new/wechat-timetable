@@ -8,7 +8,7 @@
     <text class="card-title">第一教学周的星期一</text>
     <text class="card-desc">教学周从这一天开始计算，日期仅可选择星期一。</text>
     <monday-picker theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}" id="term-monday-picker" value="{{startDate}}" bindchange="onDateChange">
-      <view class="picker-value">{{startDate}}（周一）</view>
+      <view class="picker-value" hover-class="{{themeId === 'aqua' ? 'aqua-picker-pressed' : 'none'}}" hover-start-time="20" hover-stay-time="80">{{startDate}}（周一）</view>
     </monday-picker>
   </view>
 
@@ -27,7 +27,7 @@
       >{{item}} 周</view>
     </view>
     <picker mode="selector" range="{{weekOptions}}" value="{{totalWeeks - 1}}" bindchange="onWeeksChange" aria-label="选择学期总周数">
-      <view class="picker-value">{{totalWeeks}} 周（1–30 可调）</view>
+      <view class="picker-value" hover-class="{{themeId === 'aqua' ? 'aqua-picker-pressed' : 'none'}}" hover-start-time="20" hover-stay-time="80">{{totalWeeks}} 周（1–30 可调）</view>
     </picker>
   </view>
 

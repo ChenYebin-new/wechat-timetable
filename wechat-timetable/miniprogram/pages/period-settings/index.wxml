@@ -5,14 +5,14 @@
 <view class="page theme-{{themeId}}" style="{{appearanceStyle}}">
   <view class="rule-card">
     <picker mode="selector" range="{{durationOptions}}" value="{{durationIndex}}" bindchange="onDurationChange" aria-label="选择每节课时长">
-      <view class="rule-row">
+      <view class="rule-row" hover-class="{{themeId === 'aqua' ? 'aqua-picker-pressed' : 'none'}}" hover-start-time="20" hover-stay-time="80">
         <text class="row-title">每节课时长</text>
         <view class="row-value"><text>{{settings.durationMinutes}} 分钟</text><text class="chevron">›</text></view>
       </view>
     </picker>
     <view class="divider"></view>
     <picker mode="selector" range="{{breakOptions}}" value="{{breakIndex}}" bindchange="onBreakChange" aria-label="选择课间休息时长">
-      <view class="rule-row">
+      <view class="rule-row" hover-class="{{themeId === 'aqua' ? 'aqua-picker-pressed' : 'none'}}" hover-start-time="20" hover-stay-time="80">
         <text class="row-title">课间休息时长</text>
         <view class="row-value"><text>{{settings.breakMinutes}} 分钟</text><text class="chevron">›</text></view>
       </view>

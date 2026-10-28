@@ -6,7 +6,7 @@ import { initializeHomeSharing, shareHomeToFriend, shareHomeToTimeline } from '.
 function previewData(id: ThemeId) {
   const theme = THEMES[id]
   return {
-    selectedTheme: id, selectedName: theme.name, previewStyle: themeStyle(id), previewArt: theme.illustration,
+    selectedTheme: id, selectedName: theme.name, previewStyle: themeStyle(id), previewArt: theme.illustration, previewIcons: theme.icons,
     previewCourses: [
       { id: 'demo-math', name: '高等数学', room: 'A201', day: 0, period: 0 },
       { id: 'demo-code', name: '程序设计', room: 'C402', day: 1, period: 2 },
@@ -26,6 +26,7 @@ Page({
     currentTheme: getCurrentThemeId(), saving: false, problem: '', showShareHomePreview: false,
     choices: Object.values(THEMES).map(theme => ({ id: theme.id, name: theme.name, description: theme.description, style: themeStyle(theme.id), art: theme.illustration, colors: theme.courseColors.slice(0, 4).map((background, slot) => ({ slot, background, accent: theme.courseBorders[slot] })) })),
     previewDays: ['一', '二', '三', '四', '五', '六', '日'],
+    previewDates: [28, 29, 30, 1, 2, 3, 4],
     previewRows: [1, 2, 3, 4, 5, 6, 7, 8],
   },
   onLoad(options: Record<string, string | undefined>) {

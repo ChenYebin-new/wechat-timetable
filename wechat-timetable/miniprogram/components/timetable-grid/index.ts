@@ -4,6 +4,8 @@ import { DAYS, GRID_HOLD_DURATION_MS } from '../../constants/timetable'
 import type { PeriodView } from '../../constants/timetable'
 import { cellKey } from '../../utils/grid-selection'
 import type { TimetableCardItem } from '../../utils/timetable-layout'
+import { computeCardStyle, timetableMetrics } from '../../utils/timetable-layout'
+import type { TimetableDate } from '../../utils/timetable-dates'
 
 interface GridCellItem {
   key: string
@@ -51,6 +53,8 @@ Component({
   properties: {
     themeId: { type: String, value: DEFAULT_THEME },
     appearanceStyle: { type: String, value: '' },
+    calendarDays: { type: Array, value: [] as TimetableDate[] },
+    monthLabel: { type: String, value: '' },
     periods: {
       type: Array,
       value: [] as PeriodView[],
@@ -81,6 +85,7 @@ Component({
     days: DAYS,
     columns: [] as GridColumnItem[],
     pressingKey: '',
+    metrics: timetableMetrics(),
   },
 
   observers: {
@@ -108,11 +113,12 @@ Component({
       const selected = new Set(this.properties.selectedKeys as string[])
       const disabled = new Set(this.properties.disabledKeys as string[])
       const daySlots = this.properties.daySlots as TimetableCardItem[][]
+      const themeId = isThemeId(this.properties.themeId) ? this.properties.themeId : DEFAULT_THEME
       const columns = DAYS.map((_, dayIndex) => ({
         day: dayIndex + 1,
         slots: (daySlots[dayIndex] || []).map(item => {
-          const colors = getCourseAppearance(item.course, isThemeId(this.properties.themeId) ? this.properties.themeId : DEFAULT_THEME)
-          return { ...item, backgroundColor: colors.background, textColor: colors.text, borderColor: colors.border }
+          const colors = getCourseAppearance(item.course, themeId)
+          return { ...item, style: computeCardStyle(item.course, themeId), backgroundColor: colors.background, textColor: colors.text, borderColor: colors.border }
         }),
         cells: (this.properties.periods as PeriodView[]).map((period) => {
           const key = cellKey(dayIndex + 1, period.index)
@@ -125,7 +131,7 @@ Component({
           }
         }),
       }))
-      this.setData({ columns })
+      this.setData({ columns, metrics: timetableMetrics(themeId) })
     },
 
     onCardTap(e: WechatMiniprogram.TouchEvent) {

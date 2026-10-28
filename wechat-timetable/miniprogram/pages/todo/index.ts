@@ -13,6 +13,8 @@ interface TodoView extends TodoItem {
   expired: boolean
 }
 
+type FocusedField = '' | 'goal-title' | 'goal-note' | 'journal'
+
 interface TodoDragEvent {
   token: number
   clientY: number
@@ -89,6 +91,7 @@ function offsetDate(date: string, days: number): string {
 Page({
   data: {
     ...appearanceData(),
+    focusedField: '' as FocusedField,
     selectedDate: '',
     dateLabel: '',
     shortDateLabel: '',
@@ -172,7 +175,7 @@ Page({
     stateFor(this).lifecycle += 1
     stateFor(this).visible = false
     stateFor(this).noteFocused = false
-    this.setData({ editorFocus: false, goalKeyboardHeight: 0 })
+    this.setData({ editorFocus: false, goalKeyboardHeight: 0, focusedField: '' })
     this.flushDailyNote()
     this.stopTimers()
   },
@@ -561,7 +564,12 @@ Page({
   },
 
   onExpandNote() {
-    if (!this.data.storageProblem) this.setData({ noteExpanded: !this.data.noteExpanded }, () => this.keepGoalEditorVisible())
+    if (!this.data.storageProblem) {
+      this.setData({
+        noteExpanded: !this.data.noteExpanded,
+        ...(this.data.noteExpanded && this.data.focusedField === 'goal-note' ? { focusedField: '' as FocusedField } : {}),
+      }, () => this.keepGoalEditorVisible())
+    }
   },
 
   prepareGoalFocus() {
@@ -570,7 +578,20 @@ Page({
     }
   },
 
-  onGoalTitleBlur() { this.setData({ editorFocus: false }) },
+  onGoalFieldFocus(e: WechatMiniprogram.InputFocus) {
+    if (this.data.themeId !== 'aqua' || !stateFor(this).visible || this.data.showShareHomePreview
+      || this.data.storageProblem || !this.data.editorOpen || this.data.savingGoal) return
+    const field = e.currentTarget.dataset.field
+    if (field === 'goal-title' || field === 'goal-note') this.setData({ focusedField: field })
+  },
+
+  onGoalFieldBlur(e: WechatMiniprogram.InputBlur) {
+    if (this.data.focusedField && this.data.focusedField === e.currentTarget.dataset.field) this.setData({ focusedField: '' })
+  },
+
+  onGoalTitleBlur() {
+    this.setData({ editorFocus: false, ...(this.data.focusedField === 'goal-title' ? { focusedField: '' as FocusedField } : {}) })
+  },
 
   onGoalKeyboardHeightChange(event: WechatMiniprogram.InputKeyboardHeightChange) {
     if (!stateFor(this).visible || !this.data.editorOpen) return
@@ -606,7 +627,7 @@ Page({
   closeEditor() {
     setGoalDraft(this, null)
     stateFor(this).originalGoal = null
-    this.setData({ editorOpen: false, editorId: '', editorDate: '', editorFocus: false, goalKeyboardHeight: 0, title: '', note: '', noteExpanded: false, savingGoal: false, goalProblem: '' })
+    this.setData({ editorOpen: false, editorId: '', editorDate: '', editorFocus: false, goalKeyboardHeight: 0, focusedField: '', title: '', note: '', noteExpanded: false, savingGoal: false, goalProblem: '' })
     this.getTabBar?.()?.setData({ hidden: this.data.showShareHomePreview })
     wx.hideKeyboard?.()
   },
@@ -726,10 +747,14 @@ Page({
   onDailyNoteFocus() {
     this.cancelTodoDrag()
     if (!this.data.showShareHomePreview && !this.data.storageProblem) stateFor(this).noteFocused = true
+    if (this.data.themeId === 'aqua' && stateFor(this).visible && !this.data.showShareHomePreview && !this.data.storageProblem) {
+      this.setData({ focusedField: 'journal' })
+    }
   },
 
   onDailyNoteBlur() {
     stateFor(this).noteFocused = false
+    if (this.data.focusedField === 'journal') this.setData({ focusedField: '' })
     if (stateFor(this).discardingNote) return
     this.flushDailyNote()
   },

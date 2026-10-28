@@ -1,23 +1,23 @@
 @import "../../styles/course-block.wxss";
 @import "../../styles/interaction.wxss";
-/* 124rpx rows + 80rpx header + 16rpx padding match timetable-layout.ts. */
+/* CSS dimensions and absolute card positions share timetableMetrics(). */
 .timetable { position:relative; padding:8rpx; background:var(--surface); border-radius:20rpx; overflow:hidden; }
 .theme-cream { border-radius:16rpx; background:var(--page); }
 /* Frame the grid itself once, without a second border around its padding. */
 .theme-cream::after { content:''; position:absolute; inset:8rpx; border:1rpx solid var(--grid-line); border-radius:10rpx; pointer-events:none; }
 .head { display:flex; border-radius:10rpx 10rpx 0 0; overflow:hidden; }
-.head-corner,.head-day { display:flex; align-items:center; justify-content:center; height:80rpx; box-sizing:border-box; font-size:24rpx; font-weight:400; color:var(--text); background:var(--grid-head); border-right:1rpx solid var(--grid-line); border-bottom:1rpx solid var(--grid-line); }
+.head-corner,.head-day { display:flex; align-items:center; justify-content:center; height:var(--head-height,80rpx); box-sizing:border-box; font-size:24rpx; font-weight:400; color:var(--text); background:var(--grid-head); border-right:1rpx solid var(--grid-line); border-bottom:1rpx solid var(--grid-line); }
 .head-corner,.time-col { width:70rpx; flex-shrink:0; }
 .head-corner { font-size:21rpx; }
 .head-day { flex:1; min-width:0; }
 .body { display:flex; border-radius:0 0 10rpx 10rpx; overflow:hidden; }
-.time-cell { height:124rpx; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8rpx; border-right:1rpx solid var(--grid-line); border-bottom:1rpx solid var(--grid-line); box-sizing:border-box; }
+.time-cell { height:var(--cell-height,124rpx); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8rpx; border-right:1rpx solid var(--grid-line); border-bottom:1rpx solid var(--grid-line); box-sizing:border-box; }
 .period-index { font-size:30rpx; font-weight:600; line-height:1; color:var(--text); }
 .time-meta { display:flex; flex-direction:column; align-items:center; }
 .time-range { font-size:20rpx; line-height:1.3; color:var(--grid-time); font-variant-numeric:tabular-nums; }
 .days { flex:1; display:flex; min-width:0; }
 .day-col { position:relative; flex:1; min-width:0; display:flex; flex-direction:column; }
-.pcell { position:relative; height:124rpx; border-right:1rpx solid var(--grid-line); border-bottom:1rpx solid var(--grid-line); box-sizing:border-box; overflow:hidden; }
+.pcell { position:relative; height:var(--cell-height,124rpx); border-right:1rpx solid var(--grid-line); border-bottom:1rpx solid var(--grid-line); box-sizing:border-box; overflow:hidden; }
 .pcell.pressing { animation:hold-fill 1.2s linear forwards; }
 .pcell.selected { background:var(--selected); box-shadow:inset 0 0 0 2rpx var(--accent); }
 .pcell.disabled { background:transparent; }
@@ -64,3 +64,25 @@
 .theme-swiss .card-name,.theme-pixel .card-name { font-weight:700; }
 .theme-pixel .card-name { font-size:28rpx; }
 .theme-paper .card.single .card-name,.theme-pixel .card.single .card-name { font-size:25rpx; }
+
+/* Aqua keeps the calendar airy and the seven columns continuous. */
+.theme-aqua { padding:0; border-radius:0; background:transparent; }
+.theme-aqua .head { border-radius:0; }
+.theme-aqua .head-corner,.theme-aqua .head-day { background:transparent; border:0; }
+.theme-aqua .head-corner,.theme-aqua .time-col { width:64rpx; }
+.theme-aqua .head-month { flex-direction:column; gap:10rpx; font-size:24rpx; line-height:1.2; }
+.theme-aqua .dated-day { flex-direction:column; justify-content:flex-start; padding-top:12rpx; gap:6rpx; }
+.theme-aqua .day-label { font-size:27rpx; line-height:38rpx; }
+.theme-aqua .day-date { display:flex; align-items:center; justify-content:center; width:54rpx; height:54rpx; border-radius:50%; font-size:26rpx; font-variant-numeric:tabular-nums; color:var(--muted); }
+.theme-aqua .day-date.is-today { color:var(--text); font-weight:600; background:linear-gradient(110deg,#D5FFE6,#B9DEFF); }
+.theme-aqua .body { border-radius:32rpx 32rpx 0 0; background:#FFFFFF; }
+.theme-aqua .time-cell { justify-content:flex-start; padding-top:18rpx; gap:12rpx; border:0; }
+.theme-aqua .period-index { font-size:27rpx; font-weight:600; line-height:1.2; }
+.theme-aqua .time-range { font-size:19rpx; line-height:1.5; color:var(--grid-time); }
+.theme-aqua .pcell { border-right:0; border-bottom:2rpx dashed var(--grid-line); }
+.theme-aqua .card { left:0; right:0; padding:10rpx 7rpx 10rpx 12rpx; }
+.theme-aqua .card-name { max-width:100%; font-size:24rpx; line-height:1.35; font-weight:600; -webkit-line-clamp:3; }
+.theme-aqua .card-loc { font-family:var(--font-family); font-size:20rpx; line-height:1.5; margin-top:4rpx; white-space:normal; word-break:break-all; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+.theme-aqua .card.single { padding-top:6rpx; padding-bottom:6rpx; }
+.theme-aqua .card.single .card-name { font-size:22rpx; -webkit-line-clamp:2; }
+.theme-aqua .card.single .card-loc { font-size:18rpx; line-height:1.3; margin-top:2rpx; -webkit-line-clamp:1; }

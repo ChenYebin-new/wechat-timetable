@@ -1,4 +1,5 @@
 <picker
+  class="monday-picker theme-{{themeId}}"
   style="{{appearanceStyle}}"
   mode="multiSelector"
   range="{{picker.range}}"

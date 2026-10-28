@@ -30,6 +30,9 @@ const [appearancePage, coursePage, timetablePage, todoPage] = pages
 let grid
 globalThis.Component = definition => { grid = definition }
 await import('../miniprogram/components/timetable-grid/index.ts')
+let sharePreview
+globalThis.Component = definition => { sharePreview = definition }
+await import('../miniprogram/components/share-home-preview/index.ts')
 const KEY = appearance.APPEARANCE_STORAGE_KEY
 
 function reset(value) {
@@ -44,16 +47,23 @@ function course(overrides = {}) {
   return { id: 'math-1', groupId: 'math', name: '高等数学', color: '#abcdef', day: 1, startPeriod: 1, endPeriod: 2, weekMode: 'all', weeks: [1,2,3,4,5,6], createdAt: 1, updatedAt: 1, ...overrides }
 }
 
-test('A is the only default; missing, unknown and malformed preferences are read-only fallbacks', () => {
+test('aqua is the default; missing, unknown and malformed preferences are read-only fallbacks', () => {
+  assert.equal(themes.DEFAULT_THEME, 'aqua')
   for (const value of [undefined, '', null, [], 'campus', {version:2,themeId:'campus'}, {version:1,themeId:'old'}, {version:1,themeId:'cream',extra:true}]) {
     reset(value)
     const before = structuredClone([...storage])
-    assert.equal(appearance.getCurrentThemeId(), 'paper')
+    assert.equal(appearance.getCurrentThemeId(), 'aqua')
     assert.deepEqual([...storage], before)
     assert.deepEqual(writes, [])
   }
+  reset({ version: 1, themeId: 'paper' })
+  const savedPreference = structuredClone([...storage])
   readFailure = true
-  assert.equal(appearance.initializeAppearance(), 'paper')
+  assert.equal(appearance.initializeAppearance(), 'aqua')
+  assert.deepEqual([...storage], savedPreference)
+  assert.deepEqual(writes, [])
+  readFailure = false
+  assert.equal(appearance.initializeAppearance(), 'paper', 'a temporary read failure must not replace the saved preference')
 })
 
 test('known appearance survives restart; only the separate preference key is written', () => {
@@ -70,7 +80,7 @@ test('known appearance survives restart; only the separate preference key is wri
   assert.deepEqual(writes, [KEY])
 })
 
-test('all existing explicit preferences, including C, survive the new A default', () => {
+test('all six explicit preferences survive the new aqua default without being rewritten', () => {
   for (const id of themes.THEME_IDS) {
     const preference = {version:1,themeId:id}
     reset(preference)
@@ -146,7 +156,7 @@ function luminance(hex) {
   return values[0]*.2126 + values[1]*.7152 + values[2]*.0722
 }
 function contrast(a,b) { const l=[luminance(a),luminance(b)].sort((x,y)=>y-x); return (l[0]+.05)/(l[1]+.05) }
-test('all five palettes have seven accessible colors and tokenized readable controls', () => {
+test('all palettes have seven accessible colors and tokenized readable controls', () => {
   for (const id of themes.THEME_IDS) {
     const theme = themes.THEMES[id]
     assert.equal(theme.courseColors.length,7)
@@ -182,7 +192,7 @@ test('every theme preview uses the same course fill, ink and rail mapping as the
     }
   }
   assert.deepEqual(writes,[])
-  assert.equal(appearance.getCurrentThemeId(),'paper')
+  assert.equal(appearance.getCurrentThemeId(),'aqua')
 })
 
 test('A B F can be previewed, applied and restored without changing business or backup storage', () => {
@@ -227,8 +237,8 @@ test('appearance preview is synthetic and does not apply until explicitly used',
   context.onLoad({})
   context.onChoose({currentTarget:{dataset:{id:'campus'}}})
   assert.equal(context.data.selectedTheme,'campus')
-  assert.equal(context.data.themeId,'paper')
-  assert.equal(context.data.currentTheme,'paper')
+  assert.equal(context.data.themeId,'aqua')
+  assert.equal(context.data.currentTheme,'aqua')
   assert.equal(context.data.previewCourses.length,5)
   assert.deepEqual(writes,[])
   context.onChoose({currentTarget:{dataset:{id:'not-a-theme'}}})
@@ -248,7 +258,7 @@ test('failed apply keeps the previous theme and preserves selected preview for r
   context.onChoose({currentTarget:{dataset:{id:'campus'}}})
   writeFailure = true
   context.onApply()
-  assert.equal(context.data.themeId,'paper')
+  assert.equal(context.data.themeId,'aqua')
   assert.equal(context.data.selectedTheme,'campus')
   assert.equal(context.data.saving,false)
   assert.match(context.data.problem,/保存失败/)
@@ -270,8 +280,18 @@ test('theme bridge changes presentation only, including retained drafts and cale
   assert.equal(tabData.hidden, false)
   context.data.showShareHomePreview=true
   bridge.syncAppearance(context)
-  assert.equal(context.data.themeId,'paper')
+  assert.equal(context.data.themeId,'aqua')
+  assert.equal(tabData.themeId, 'aqua')
   assert.equal(tabData.hidden, true)
+  assert.equal(sharePreview.data.appearanceStyle, themes.themeStyle('aqua'))
+  assert.equal(sharePreview.data.appearanceIcon, themes.THEMES.aqua.icons.brand)
+  assert.equal(appearance.getCurrentThemeId(), 'campus')
+  assert.deepEqual(storage.get(KEY), { version: 1, themeId: 'campus' })
+  context.data.showShareHomePreview=false
+  bridge.syncAppearance(context)
+  assert.equal(context.data.themeId,'campus', 'leaving the public preview restores the saved personal theme')
+  assert.equal(tabData.hidden, false)
+  assert.deepEqual(writes, [KEY])
 })
 
 test('course editor retains legacy color only for serialization; new courses use fixed compatibility color', () => {
@@ -327,4 +347,109 @@ test('all routes initialize/resume theme, isolated grids get explicit theme, and
   const edit=readFileSync(new URL('../miniprogram/pages/course-edit/index.wxml',import.meta.url),'utf8')
   assert.doesNotMatch(edit,/onColor|选择颜色|class="colors"/)
   assert.equal(layout.computeCardStyle(course()),'top: 4rpx; height: 240rpx;')
+})
+
+test('aqua can be previewed, applied and restored without writing courses, todos or backups', () => {
+  reset({ version: 1, themeId: 'paper' })
+  const businessKeys = ['timetable_courses', 'timetable_todos', 'timetable_recent_backup', 'timetable_todos_recent_backup']
+  businessKeys.forEach((key, index) => storage.set(key, { preserved: index, raw: ['unchanged'] }))
+  const before = businessKeys.map(key => structuredClone(storage.get(key)))
+  const context = page(appearancePage, 'pages/appearance/index')
+  context.onLoad({})
+  assert.ok(context.data.choices.some(choice => choice.id === 'aqua'))
+  context.onChoose({ currentTarget: { dataset: { id: 'aqua' } } })
+  assert.equal(context.data.selectedTheme, 'aqua')
+  assert.equal(context.data.currentTheme, 'paper')
+  assert.equal(appearance.getCurrentThemeId(), 'paper')
+  assert.deepEqual(writes, [])
+  context.onApply()
+  assert.equal(context.data.themeId, 'aqua')
+  assert.equal(appearance.initializeAppearance(), 'aqua')
+  assert.deepEqual(storage.get(KEY), { version: 1, themeId: 'aqua' })
+  assert.deepEqual(businessKeys.map(key => storage.get(key)), before)
+  assert.deepEqual(writes, [KEY])
+})
+
+test('switching into and out of aqua preserves course and todo drafts and calendar position', () => {
+  reset({ version: 1, themeId: 'paper' })
+  const todo = page(todoPage, 'pages/todo/index')
+  const editor = page(coursePage, 'pages/course-edit/index')
+  editor.applyCourse(course({ color: '#aBcDeF' }), 1)
+  Object.assign(editor.data, { name: '未保存的课程名', location: '巡天楼T1 409' })
+  Object.assign(todo.data, { selectedDate: '2026-10-25', calendarMonth: '2026-11', calendarExpanded: true, title: '未保存的目标', note: '保留目标说明', editorOpen: true, dailyNote: '未保存的随想', dailyNoteDirty: true, noteSaveState: 'error' })
+  const beforeTodo = structuredClone(todo.data)
+  const beforeCourse = editor.buildCourse()
+  for (const theme of ['aqua', 'paper', 'aqua']) {
+    appearance.saveAppearance(theme)
+    bridge.syncAppearance(todo)
+    bridge.syncAppearance(editor)
+    assert.equal(todo.data.themeId, theme)
+    assert.equal(editor.data.themeId, theme)
+    for (const key of ['selectedDate', 'calendarMonth', 'calendarExpanded', 'title', 'note', 'editorOpen', 'dailyNote', 'dailyNoteDirty', 'noteSaveState']) assert.deepEqual(todo.data[key], beforeTodo[key])
+    assert.deepEqual(editor.buildCourse(), beforeCourse)
+  }
+  assert.ok(writes.every(key => key === KEY))
+})
+
+test('returning from aqua settings keeps the viewed week and refreshes the themed grid height', () => {
+  reset({ version: 1, themeId: 'paper' })
+  const fixture = { schemaVersion: 5, term: { startDate: '2026-08-31', totalWeeks: 18 }, courses: [course()], periodSettings: { durationMinutes: 50, breakMinutes: 10, firstStart: '08:00', overrides: [], periods: [{ start: '08:00', end: '08:50' }, { start: '09:00', end: '09:50' }] } }
+  storage.set('timetable_courses', fixture)
+  const before = structuredClone(fixture)
+  const context = page(timetablePage, 'pages/timetable/index')
+  Object.assign(context.data, { currentWeek: 8, termStartDate: '2026-08-31' })
+  context.onSettings()
+  appearance.saveAppearance('aqua')
+  context.onShow()
+  assert.equal(context.data.currentWeek, 8)
+  assert.equal(context.data.themeId, 'aqua')
+  assert.equal(context.data.swiperHeightRpx, layout.timetableGridHeightRpx(2, 'aqua'))
+  assert.equal(context.data.weekPanels.find(panel => panel.week === 8).calendar.days[0].dateKey, '2026-10-19')
+  assert.equal(context.data.weekPanels.find(panel => panel.week === 7).calendar.days[0].dateKey, '2026-10-12')
+  context.changeWeek(9)
+  assert.equal(context.data.currentWeek, 9)
+  assert.equal(context.data.weekPanels.find(panel => panel.week === 9).calendar.monthLabel, '10/11')
+  assert.equal(context.data.weekPanels.find(panel => panel.week === 9).calendar.days[6].dateKey, '2026-11-01')
+  assert.deepEqual(storage.get('timetable_courses'), before)
+  assert.deepEqual(writes, [KEY])
+})
+
+test('aqua course focus follows the active input and never changes a course draft or saved data', () => {
+  reset({ version: 1, themeId: 'aqua' })
+  const original = course({ teacher: '陈老师', location: '教学楼 308' })
+  storage.set('timetable_courses', { preserved: original })
+  const context = page(coursePage, 'pages/course-edit/index')
+  context.applyCourse(original, 1)
+  context.onShow()
+  context.onName({ detail: { value: '保留未保存的课程名' } })
+  const draft = context.buildCourse()
+  const before = structuredClone([...storage])
+  const field = name => ({ currentTarget: { dataset: { field: name } } })
+
+  context.onFieldFocus(field('name'))
+  assert.equal(context.data.focusedField, 'name')
+  context.onFieldFocus(field('teacher'))
+  context.onFieldBlur(field('name'))
+  assert.equal(context.data.focusedField, 'teacher', 'a late blur from the old input must retain the new focus')
+  context.onFieldBlur(field('teacher'))
+  assert.equal(context.data.focusedField, '')
+  context.onFieldFocus(field('location'))
+  context.onHide()
+  assert.equal(context.data.focusedField, '')
+  context.onFieldFocus(field('location'))
+  assert.equal(context.data.focusedField, '', 'a focus arriving after hide must not restore a highlight')
+  context.onShow()
+  assert.equal(context.data.focusedField, '')
+  context.onFieldFocus(field('name'))
+  context.onUnload()
+  assert.equal(context.data.focusedField, '')
+  assert.deepEqual(context.buildCourse(), draft)
+  assert.deepEqual([...storage], before)
+  assert.deepEqual(writes, [])
+
+  reset({ version: 1, themeId: 'paper' })
+  context.onShow()
+  context.onFieldFocus(field('name'))
+  assert.equal(context.data.focusedField, '', 'legacy themes do not acquire aqua focus presentation')
+  assert.deepEqual(context.buildCourse(), draft)
 })

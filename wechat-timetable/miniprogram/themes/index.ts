@@ -3,9 +3,9 @@ import { getReadableText } from '../utils/color'
 import { PAPER_TEXTURE } from './paper-texture'
 import { PIXEL_FRAME } from './pixel-frame'
 
-export type ThemeId = 'cream' | 'campus' | 'paper' | 'swiss' | 'pixel'
-export const THEME_IDS: readonly ThemeId[] = ['cream', 'campus', 'paper', 'swiss', 'pixel']
-export const DEFAULT_THEME: ThemeId = 'paper'
+export type ThemeId = 'cream' | 'campus' | 'paper' | 'swiss' | 'pixel' | 'aqua'
+export const THEME_IDS: readonly ThemeId[] = ['cream', 'campus', 'paper', 'swiss', 'pixel', 'aqua']
+export const DEFAULT_THEME: ThemeId = 'aqua'
 
 export interface ThemeDefinition {
   id: ThemeId
@@ -36,7 +36,21 @@ const shared = {
   'weight-title': '700', 'shadow': '0 4rpx 14rpx rgba(38, 44, 52, 0.04)',
 }
 
+// Fixed-size sky fields keep the header colors stable when a page grows taller.
+const AQUA_SKY = 'radial-gradient(ellipse 750rpx 540rpx at 100% 0rpx,rgba(180,247,229,.55) 0%,rgba(180,247,229,0) 82%),radial-gradient(ellipse 450rpx 400rpx at 58% 180rpx,rgba(175,239,255,.48) 0%,rgba(175,239,255,0) 85%),radial-gradient(ellipse 440rpx 180rpx at 0% 460rpx,rgba(205,252,225,.65) 0%,rgba(205,252,225,0) 80%),linear-gradient(180deg,#F4FCFF 0rpx,#F0F2FC 320rpx,#FFFFFF 600rpx)'
+
 function icons(id: ThemeId): ThemeDefinition['icons'] {
+  if (id === 'aqua') {
+    const asset = (name: string) => `/assets/appearance/${name}-aqua.svg`
+    return {
+      calendar: asset('calendar-accent'), todo: asset('todo-accent'),
+      neutralCalendar: asset('calendar'), neutralTodo: asset('todo'),
+      settings: asset('settings'), term: asset('term'),
+      backupExport: asset('export'), backupImport: asset('import'), backupRecent: asset('clock'), backupEmpty: asset('document'),
+      brand: asset('calendar-accent'), goal: asset('todo-accent'), journal: asset('book'),
+      menuAppearance: asset('palette'), menuTerm: asset('term'), menuTime: asset('clock'), menuData: asset('data'), menuBackup: asset('todo-accent'),
+    }
+  }
   if (id === 'paper' || id === 'swiss' || id === 'pixel') {
     const asset = (name: string) => `/assets/appearance/${name}-${id}.svg`
     return { calendar: asset('calendar').replace('.svg','-accent.svg'), todo: asset('todo').replace('.svg','-accent.svg'),
@@ -129,6 +143,25 @@ export const THEMES: Record<ThemeId, ThemeDefinition> = {
     courseBorders: ['#2A8DEE', '#46AD4F', '#F66B93', '#DFAF1C', '#A475DE', '#638CDC', '#E89D54'],
     courseTextColors: ['#092572', '#092572', '#092572', '#092572', '#092572', '#092572', '#092572'],
     illustration:'/assets/appearance/pixel-campus.png',icons:icons('pixel'),
+  },
+  aqua: {
+    id: 'aqua', name: '清透晴空', description: '浅青天光、通透白面与轻盈色线，清楚看见一周。',
+    tokens: {
+      ...shared, 'page': '#EFFBFC', 'surface': '#FFFFFF', 'soft': '#EAFBFD',
+      'text': '#15191D', 'muted': '#637384', 'accent': '#1267C9',
+      'primary': '#166BD4', 'on-primary': '#FFFFFF', 'selected': '#D7F5F5',
+      'border': '#DCECEE', 'disabled': '#E6EFF1', 'selection-bar': '#16485F',
+      'selection-muted': '#DFF6FA', 'input': '#F6FBFC', 'grid-head': 'transparent',
+      'grid-line': '#D8D8DC', 'grid-time': '#666C74',
+      'radius': '30rpx', 'radius-small': '18rpx', 'card-radius': '4rpx',
+      'course-rail-width': '4rpx', 'page-texture': AQUA_SKY, 'aqua-sky': AQUA_SKY,
+      'shadow': '0 10rpx 40rpx rgba(54,100,118,0.07)',
+      'icon-export-bg': '#E1F7FB', 'icon-import-bg': '#E8F9EE', 'icon-recent-bg': '#F0EAFC',
+    },
+    courseColors: ['#EDF7FF', '#F1FBFD', '#FAF3FF', '#FFF8EF', '#FFF2F7', '#EDFCF4', '#F2F3FF'],
+    courseBorders: ['#248BFF', '#39C6E6', '#B675F4', '#FFA43D', '#FF71AF', '#32DC9A', '#8581E8'],
+    courseTextColors: ['#0754B5', '#0B718E', '#6D2FA6', '#98500C', '#B51962', '#16713C', '#4A43A1'],
+    illustration: '', icons: icons('aqua'),
   },
 }
 

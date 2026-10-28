@@ -26,3 +26,17 @@
 .campus-signoff image { width:240rpx; height:180rpx; }
 .signoff-copy { position:relative; display:flex; flex-direction:column; gap:10rpx; margin-left:-24rpx; padding:30rpx 0 4rpx; color:#657F9E; font-size:28rpx; letter-spacing:6rpx; transform:rotate(-5deg); }
 .signoff-line { height:10rpx; border-top:4rpx solid #FFD14D; border-radius:50%; transform:rotate(-3deg); }
+
+.page.theme-aqua { padding:18rpx 22rpx calc(40rpx + env(safe-area-inset-bottom)); }
+.theme-aqua .menu-card { padding:0 26rpx; border-radius:34rpx; background:var(--surface); }
+.theme-aqua .menu-row { min-height:136rpx; padding:20rpx 0; gap:22rpx; }
+.theme-aqua .menu-icon { width:76rpx; height:76rpx; padding:14rpx; border-radius:22rpx; background:var(--soft); }
+.theme-aqua .menu-appearance .menu-icon { background:#F1EEFF; }
+.theme-aqua .menu-time .menu-icon { background:#EDF6FF; }
+.theme-aqua .menu-data .menu-icon { background:#EEF9F5; }
+.theme-aqua .menu-backup .menu-icon { background:#FFF7E9; }
+.theme-aqua .menu-copy { gap:8rpx; }
+.theme-aqua .menu-title { font-size:31rpx; font-weight:600; }
+.theme-aqua .menu-desc { font-size:24rpx; }
+.theme-aqua .divider { height:1rpx; margin-left:98rpx; background:var(--border); }
+.theme-aqua .chevron { width:13rpx; height:13rpx; margin-right:5rpx; border-right:2rpx solid var(--muted); border-top:2rpx solid var(--muted); transform:rotate(45deg); font-size:0; flex-shrink:0; }

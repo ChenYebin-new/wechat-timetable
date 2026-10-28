@@ -109,3 +109,16 @@
 
 .page { min-height: 0; padding-top: 22rpx; }
 .picker-value::after { content:''; width:12rpx; height:12rpx; margin:-6rpx 4rpx 0 16rpx; flex-shrink:0; border-right:2rpx solid var(--muted); border-bottom:2rpx solid var(--muted); transform:rotate(45deg); }
+
+.theme-aqua .card { padding:30rpx 28rpx; margin-bottom:24rpx; }
+.theme-aqua .card-desc { margin-top:12rpx; }
+.theme-aqua .chips { gap:14rpx; margin-top:24rpx; }
+.theme-aqua .chip { min-height:48px; font-size:27rpx; font-weight:500; }
+.theme-aqua .picker-value { margin-top:22rpx; font-size:28rpx; }
+.theme-aqua .notice { padding:24rpx; }
+.theme-aqua .picker-value,.theme-aqua .save-btn { transition:opacity 120ms ease-out; }
+.theme-aqua .picker-value.aqua-picker-pressed { opacity:.84; }
+.theme-aqua .save-btn.save-btn-pressed { transform:none; opacity:.84; }
+@media (prefers-reduced-motion:reduce) {
+  .theme-aqua .picker-value,.theme-aqua .save-btn { transition:none; }
+}

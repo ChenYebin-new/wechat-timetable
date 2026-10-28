@@ -8,13 +8,15 @@
     </view>
     <text wx:if="{{editorId}}" class="editor-label">标题</text>
     <input
-      class="title-input"
+      class="title-input {{focusedField === 'goal-title' ? 'field-focused' : ''}}"
+      data-field="goal-title"
       value="{{title}}"
       focus="{{editorFocus}}"
       maxlength="60"
       placeholder="写下一件要做的事"
       placeholder-class="placeholder"
       bindinput="onTitle"
+      bindfocus="onGoalFieldFocus"
       bindblur="onGoalTitleBlur"
       bindkeyboardheightchange="onGoalKeyboardHeightChange"
       bindconfirm="onSaveGoal"
@@ -30,13 +32,16 @@
     </button>
     <textarea
       wx:if="{{noteExpanded}}"
-      class="goal-note-input"
+      class="goal-note-input {{focusedField === 'goal-note' ? 'field-focused' : ''}}"
+      data-field="goal-note"
       value="{{note}}"
       maxlength="200"
       auto-height="{{!editorId}}"
       placeholder="补充说明，可留空"
       placeholder-class="placeholder"
       bindinput="onNote"
+      bindfocus="onGoalFieldFocus"
+      bindblur="onGoalFieldBlur"
       bindkeyboardheightchange="onGoalKeyboardHeightChange"
       disabled="{{!!storageProblem || savingGoal}}"
       adjust-position="{{true}}"
@@ -62,7 +67,7 @@
     </button>
     <view class="date-picker-slot">
       <picker class="date-picker" style="width: 100%;" mode="date" value="{{selectedDate}}" bindchange="onChooseDate" aria-label="选择待办日期，当前为{{dateLabel}}">
-        <view class="date-picker-content">
+        <view class="date-picker-content {{themeId === 'aqua' ? 'pressable' : ''}}" hover-class="{{themeId === 'aqua' ? 'press-feedback' : 'none'}}" hover-start-time="20" hover-stay-time="80">
           <view class="date-heading">
             <text class="date-label">{{shortDateLabel}}</text>
             <view class="date-dropdown" aria-hidden="true"></view>
@@ -136,7 +141,7 @@
   <view wx:else class="todo-list {{draggingId ? 'reordering' : ''}} {{dragSettling ? 'drop-settling' : ''}}" style="{{dragSlotStyle}}">
     <view class="todo-row {{item.completed ? 'completed' : ''}} {{editorOpen && editorId === item.id ? 'editing' : ''}} {{draggingId === item.id ? (dragSettling ? 'settling' : 'dragging') : ''}}" data-id="{{item.id}}" wx:for="{{visibleItems}}" wx:key="id">
       <view wx:if="{{editorOpen && editorId === item.id}}" class="inline-goal-editor">
-        <template is="goal-editor" data="{{editorId, title, note, noteExpanded, editorFocus, storageProblem, savingGoal, goalProblem}}" />
+        <template is="goal-editor" data="{{editorId, title, note, noteExpanded, editorFocus, focusedField, storageProblem, savingGoal, goalProblem}}" />
       </view>
       <view wx:else class="todo-surface">
       <button
@@ -203,7 +208,7 @@
       <view class="add-mark" aria-hidden="true"><view class="plus-line horizontal"></view><view class="plus-line vertical"></view></view>
       <text>添加目标</text>
     </button>
-    <template wx:else is="goal-editor" data="{{editorId, title, note, noteExpanded, editorFocus, storageProblem, savingGoal, goalProblem}}" />
+    <template wx:else is="goal-editor" data="{{editorId, title, note, noteExpanded, editorFocus, focusedField, storageProblem, savingGoal, goalProblem}}" />
   </view>
 
   <view wx:if="{{goalProblem && !editorOpen}}" class="goal-read-problem" aria-role="alert">
@@ -222,7 +227,7 @@
       <text>{{noteStatusLabel}}</text>
     </view>
   </view>
-  <view class="reflection-panel">
+  <view class="reflection-panel {{focusedField === 'journal' ? 'field-focused' : ''}}">
     <textarea
       class="daily-note-input"
       data-date="{{selectedDate}}"
@@ -250,7 +255,6 @@
     <button class="plain-button retry-button" bindtap="onRetryDailyNote" disabled="{{!!storageProblem || noteSaveState === 'saving'}}" hover-class="control-pressed" aria-disabled="{{!!storageProblem || noteSaveState === 'saving'}}" aria-label="重试保存当日随想">重试保存</button>
   </view>
   <button wx:if="{{dailyNoteDirty}}" class="plain-button retry-button" bindtouchstart="onPrepareDiscardNote" bindtouchmove="onCancelDiscardNote" bindtouchcancel="onCancelDiscardNote" bindtap="onDiscardDailyNote" aria-label="放弃尚未保存的随想修改">放弃修改</button>
-  <text class="expiry-hint">未完成目标次日过期，历史记录仍保留</text>
   </view>
 </view>
 </block>

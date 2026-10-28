@@ -1,3 +1,4 @@
 :host {
   display: block;
 }
+.theme-aqua { color:var(--text); font-family:var(--font-family); }

@@ -170,6 +170,21 @@
 
 .page { min-height: 0; padding-top: 22rpx; }
 
+.theme-aqua .card { padding:28rpx; margin-bottom:24rpx; }
+.theme-aqua .card-title { font-size:32rpx; font-weight:600; }
+.theme-aqua .card-desc { margin-top:14rpx; font-size:25rpx; }
+.theme-aqua .input { height:260rpx; padding:22rpx; margin-top:22rpx; font-size:26rpx; line-height:1.6; }
+.theme-aqua .btn { padding:20rpx; line-height:1.5; }
+.theme-aqua .row { gap:20rpx; padding:18rpx 0; align-items:flex-start; }
+.theme-aqua .k { width:210rpx; line-height:1.55; }
+.theme-aqua .v { line-height:1.55; }
+.theme-aqua .actions { flex-wrap:wrap; }
+.theme-aqua .actions .btn { min-width:240rpx; }
+@media (max-width:360px) {
+  .theme-aqua .actions .btn { flex-basis:100%; }
+  .theme-aqua .k { width:180rpx; }
+}
+
 /* Backup actions follow the full-width reference composition. */
 .page { min-height:0; padding:22rpx 24rpx calc(36rpx + env(safe-area-inset-bottom)); }
 .card { padding:24rpx; border-radius:24rpx; }

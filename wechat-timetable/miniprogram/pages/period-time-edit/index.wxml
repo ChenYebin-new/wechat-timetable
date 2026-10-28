@@ -10,14 +10,14 @@
 
   <view class="time-card">
     <picker mode="time" value="{{start}}" bindchange="onStartChange" aria-label="选择开始时间">
-      <view class="time-row">
+      <view class="time-row" hover-class="{{themeId === 'aqua' ? 'aqua-picker-pressed' : 'none'}}" hover-start-time="20" hover-stay-time="80">
         <text class="row-title">开始时间</text>
         <view class="row-value"><text>{{start}}</text><text class="chevron">›</text></view>
       </view>
     </picker>
     <view class="divider"></view>
     <picker mode="time" value="{{end}}" bindchange="onEndChange" aria-label="选择结束时间">
-      <view class="time-row">
+      <view class="time-row" hover-class="{{themeId === 'aqua' ? 'aqua-picker-pressed' : 'none'}}" hover-start-time="20" hover-stay-time="80">
         <text class="row-title">结束时间</text>
         <view class="row-value"><text>{{end}}</text><text class="chevron">›</text></view>
       </view>

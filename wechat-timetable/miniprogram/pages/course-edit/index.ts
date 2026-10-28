@@ -18,11 +18,13 @@ import { initializeHomeSharing, shareHomeToFriend, shareHomeToTimeline } from '.
 
 const legacyCourseColors = new WeakMap<object, string>()
 const deleteConfirmations = new WeakMap<object, object>()
+const visibleEditors = new WeakSet<object>()
 
 const dayOptions = DAYS
 const weekModeLabels = WEEK_MODES.map((m) => m.label)
 
 type EditMode = 'single-create' | 'segment-edit' | 'group-create' | 'group-edit'
+type FocusedField = '' | 'name' | 'teacher' | 'location'
 
 interface WeekChip {
   value: number
@@ -49,6 +51,7 @@ Page({
     isEdit: false,
     isGroupMode: false,
     saving: false,
+    focusedField: '' as FocusedField,
     sourceWeek: 1,
     ranges: [] as CourseRange[],
     rangeItems: [] as string[],
@@ -69,9 +72,16 @@ Page({
     showShareHomePreview: false,
   },
 
-  onShow() { syncAppearance(this) },
+  onShow() {
+    syncAppearance(this)
+    visibleEditors.add(this)
+  },
 
-  onHide() { deleteConfirmations.delete(this) },
+  onHide() {
+    visibleEditors.delete(this)
+    deleteConfirmations.delete(this)
+    if (this.data.focusedField) this.setData({ focusedField: '' })
+  },
   onUnload() { this.onHide() },
 
   onPageScroll(event: WechatMiniprogram.Page.IPageScrollOption) {
@@ -179,6 +189,16 @@ Page({
 
   onName(e: WechatMiniprogram.Input) {
     this.setData({ name: e.detail.value })
+  },
+
+  onFieldFocus(e: WechatMiniprogram.InputFocus) {
+    if (this.data.themeId !== 'aqua' || !visibleEditors.has(this) || this.data.showShareHomePreview) return
+    const field = e.currentTarget.dataset.field
+    if (field === 'name' || field === 'teacher' || field === 'location') this.setData({ focusedField: field })
+  },
+
+  onFieldBlur(e: WechatMiniprogram.InputBlur) {
+    if (this.data.focusedField && this.data.focusedField === e.currentTarget.dataset.field) this.setData({ focusedField: '' })
   },
 
   onDay(e: WechatMiniprogram.PickerChange) {

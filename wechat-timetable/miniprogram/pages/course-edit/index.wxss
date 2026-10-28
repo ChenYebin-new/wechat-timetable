@@ -53,3 +53,19 @@ button.clear-input { position:absolute; right:0; top:0; bottom:0; width:44px !im
   .theme-campus .range-edit { position:static; transform:none; }
   .theme-campus .range-list { width:100%; margin-right:0; }
 }
+
+.page.theme-aqua { padding:18rpx 22rpx calc(40rpx + env(safe-area-inset-bottom)); }
+.theme-aqua .form { padding:4rpx 28rpx; }
+.theme-aqua .field { flex-direction:column; align-items:stretch; gap:14rpx; padding:24rpx 0; min-height:0; }
+.theme-aqua .label { width:auto; font-size:28rpx; font-weight:600; }
+.theme-aqua .input-shell,.theme-aqua .week-control { flex:none; width:100%; }
+.theme-aqua .field .input,.theme-aqua .picker-value { padding:20rpx 22rpx; min-height:48px; font-size:29rpx; }
+.theme-aqua .field .input.field-focused { background:var(--surface); border-color:var(--accent); }
+.theme-aqua .picker-value,.theme-aqua .week-range,.theme-aqua .week-chip { font-variant-numeric:tabular-nums; }
+.theme-aqua .field picker { flex:none; width:100%; }
+.theme-aqua .range-heading { min-height:44px; }
+.theme-aqua .range-chip { background:var(--soft); color:var(--text); border:0; padding:20rpx 22rpx; }
+.theme-aqua .week-chips { gap:12rpx; }
+.theme-aqua .week-chip { min-width:44px; min-height:44px; background:var(--input); }
+.theme-aqua .week-chip.active { background:var(--selected); color:var(--accent); }
+.theme-aqua .actions { margin-top:24rpx; }

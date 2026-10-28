@@ -34,7 +34,7 @@
       <button class="pressable btn btn-secondary" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onPreviewRecent" disabled="{{busy || !!writeProblem}}">预览最近备份</button>
     </block>
     <text wx:elif="{{recentProblem}}" class="error-line" aria-role="alert">{{recentProblem}}</text>
-    <view wx:else class="backup-empty"><image wx:if="{{themeId === 'campus' || themeId === 'paper'}}" src="{{appearanceIcons.backupEmpty}}" aria-hidden="true" /><text class="empty-title">暂无备份</text><text class="card-desc">首次覆盖恢复前，会保留当前数据。</text></view>
+    <view wx:else class="backup-empty"><image wx:if="{{themeId === 'campus' || themeId === 'paper' || themeId === 'aqua'}}" src="{{appearanceIcons.backupEmpty}}" aria-hidden="true" /><text class="empty-title">暂无备份</text><text class="card-desc">首次覆盖恢复前，会保留当前数据。</text></view>
   </view>
 
   <view wx:if="{{preview}}" class="card preview-card">

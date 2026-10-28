@@ -183,3 +183,26 @@
 .theme-pixel .todo-note,.theme-pixel .menu-desc,.theme-pixel .card-desc { line-height:1.6; }
 .theme-pixel .menu-row .chevron { width:6rpx; height:6rpx; font-size:0; background:var(--accent); transform:none; box-shadow:-6rpx -6rpx var(--accent),-12rpx -12rpx var(--accent),-6rpx 6rpx var(--accent),-12rpx 12rpx var(--accent); margin:0 8rpx 0 14rpx; flex-shrink:0; }
 .theme-pixel .date-label,.theme-pixel .calendar-day-number { font-variant-numeric:tabular-nums; }
+
+/* Aqua: the sky belongs to the page; white surfaces carry the content. */
+.page.theme-aqua { background:transparent; font-family:var(--font-family); }
+.theme-aqua button,.theme-aqua input,.theme-aqua textarea { font-family:var(--font-family); }
+.theme-aqua .form,.theme-aqua .card,.theme-aqua .rule-card,.theme-aqua .count-card,.theme-aqua .period-card,.theme-aqua .time-card { background:var(--surface); border:0; border-radius:32rpx; box-shadow:none; }
+.theme-aqua .section-title,.theme-aqua .card-title,.theme-aqua .intro-title { color:var(--text); font-size:32rpx; font-weight:600; line-height:1.45; }
+.theme-aqua .card-desc,.theme-aqua .intro-desc,.theme-aqua .helper,.theme-aqua .footnote { color:var(--muted); line-height:1.65; }
+.theme-aqua .input,.theme-aqua .picker-value { background:var(--input); border:1rpx solid var(--border); border-radius:20rpx; }
+.theme-aqua .picker-value { min-height:48px; }
+.theme-aqua .chip,.theme-aqua .week-chip,.theme-aqua .range-chip { border-radius:18rpx; }
+.theme-aqua .chip.active,.theme-aqua .week-chip.active { background:var(--selected); color:var(--accent); border-color:transparent; }
+.theme-aqua .notice,.theme-aqua .error-box,.theme-aqua .merge-warning,.theme-aqua .term-setup { border-radius:24rpx; }
+.theme-aqua button.btn,.page.theme-aqua button.save-btn,.page.theme-aqua button.apply-button { border-radius:26rpx; min-height:48px; font-size:29rpx; font-weight:600; }
+.theme-aqua .btn-secondary { background:var(--soft); color:var(--accent); }
+.theme-aqua .btn-danger { background:var(--danger-soft); color:var(--danger); }
+.theme-aqua .backup-heading { gap:18rpx; }
+.theme-aqua .backup-icon { width:60rpx; height:60rpx; padding:10rpx; border-radius:18rpx; }
+.theme-aqua .backup-empty { border:0; border-radius:24rpx; background:var(--input); }
+.theme-aqua .backup-empty image { width:76rpx; height:76rpx; opacity:.75; }
+.theme-aqua .row { border-color:var(--border); }
+.theme-aqua .v { min-width:0; overflow-wrap:anywhere; }
+.theme-aqua .theme-choice { border-radius:26rpx; }
+.theme-aqua .selection-bar { border-radius:28rpx; }

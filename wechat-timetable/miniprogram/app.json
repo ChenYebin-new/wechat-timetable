@@ -16,8 +16,8 @@
   "window": {
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "拾课课表",
-    "navigationBarBackgroundColor": "#F7F3EB",
-    "backgroundColor": "#F7F3EB",
+    "navigationBarBackgroundColor": "#EFFBFC",
+    "backgroundColor": "#EFFBFC",
     "navigationStyle": "custom"
   },
   "usingComponents": {
@@ -25,9 +25,9 @@
     "page-header": "/components/page-header/index"
   },
   "tabBar": {
-    "color": "#6A6257",
-    "selectedColor": "#923F2C",
-    "backgroundColor": "#F7F3EB",
+    "color": "#637384",
+    "selectedColor": "#15191D",
+    "backgroundColor": "#FFFFFF",
     "borderStyle": "white",
     "list": [
       {

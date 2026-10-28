@@ -112,3 +112,17 @@
 .save-hint { display:block; margin:16rpx 4rpx 0; color:var(--muted); font-size:24rpx; line-height:1.6; text-align:center; }
 .theme-paper .intro { border-radius:8rpx; }
 .theme-swiss .intro,.theme-pixel .intro { border-radius:0; }
+
+.theme-aqua .intro { padding:26rpx; background:rgba(255,255,255,.65); border:1rpx solid rgba(255,255,255,.9); border-radius:28rpx; }
+.theme-aqua .time-card { padding:0 28rpx; }
+.theme-aqua .time-row { min-height:126rpx; }
+.theme-aqua .row-title { font-size:29rpx; }
+.theme-aqua .row-value { font-size:32rpx; font-weight:500; }
+.theme-aqua .divider { height:1rpx; }
+.theme-aqua .chevron { width:12rpx; height:12rpx; margin:0 5rpx 0 10rpx; border-right:2rpx solid var(--muted); border-top:2rpx solid var(--muted); transform:rotate(45deg); font-size:0; flex-shrink:0; }
+.theme-aqua .time-row,.theme-aqua .save-btn { transition:opacity 120ms ease-out; }
+.theme-aqua .time-row.aqua-picker-pressed { opacity:.84; }
+.theme-aqua .save-btn.save-btn-pressed { transform:none; opacity:.84; }
+@media (prefers-reduced-motion:reduce) {
+  .theme-aqua .time-row,.theme-aqua .save-btn { transition:none; }
+}

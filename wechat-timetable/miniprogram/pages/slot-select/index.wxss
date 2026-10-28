@@ -108,3 +108,7 @@
 .page { min-height: 0; padding-top: 22rpx; }
 .theme-paper .intro { border-radius:8rpx; }
 .theme-swiss .intro,.theme-pixel .intro { border-radius:0; }
+.page.theme-aqua { padding:18rpx 0 calc(176rpx + env(safe-area-inset-bottom)); background:transparent; }
+.theme-aqua .intro { margin:0 24rpx 12rpx; background:rgba(255,255,255,.7); border-radius:24rpx; padding:20rpx 24rpx; }
+.theme-aqua .grid-frame { border-radius:0; }
+.theme-aqua .selection-bar { border-radius:28rpx; box-shadow:0 10rpx 32rpx rgba(36,74,83,.12); }

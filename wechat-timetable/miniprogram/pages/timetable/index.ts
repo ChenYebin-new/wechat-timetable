@@ -8,8 +8,10 @@ import {
   buildWeekPanels,
   coursesForWeek,
   timetableGridHeightRpx,
+  timetableGridHeightStyle,
 } from '../../utils/timetable-layout'
 import type { WeekPanel } from '../../utils/timetable-layout'
+import { buildWeekDates, formatAcademicTerm } from '../../utils/timetable-dates'
 import { formatRanges, keysToRanges, rangesToKeys } from '../../utils/grid-selection'
 import { buildPeriodViews } from '../../utils/period-settings'
 import type { PeriodView } from '../../constants/timetable'
@@ -26,15 +28,21 @@ interface CourseEditorInit {
   sourceWeek: number
 }
 
+interface CalendarWeekPanel extends WeekPanel {
+  calendar: ReturnType<typeof buildWeekDates>
+}
+
 Page({
   data: {
     ...appearanceData(),
-    weekPanels: [] as WeekPanel[],
+    weekPanels: [] as CalendarWeekPanel[],
     periods: [] as PeriodView[],
     swiperHeightRpx: timetableGridHeightRpx(9),
+    swiperHeightStyle: timetableGridHeightStyle(9),
     isEmpty: true,
     overviewText: '',
     termLabel: '设置学期',
+    academicTermLabel: '设置学期',
     termReady: false,
     needsMigration: false,
     currentWeek: 1,
@@ -84,7 +92,8 @@ Page({
       this.setData({
         weekPanels: [],
         periods: [],
-        swiperHeightRpx: timetableGridHeightRpx(0),
+        swiperHeightRpx: timetableGridHeightRpx(0, this.data.themeId),
+        swiperHeightStyle: timetableGridHeightStyle(0, this.data.themeId),
         isEmpty: false,
         overviewText: '课表暂时无法读取，请重新读取。',
         termReady: false,
@@ -118,13 +127,15 @@ Page({
       weekOptions,
       termStartDate: term?.startDate || '',
       termLabel: term ? `${term.startDate.slice(0, 4)} ${Number(term.startDate.slice(5, 7)) >= 7 ? '秋季' : '春季'}学期` : '设置学期',
+      academicTermLabel: formatAcademicTerm(term),
       preserveSettingsWeek: false,
       termReady: !!term,
       needsMigration: snapshot.kind === 'legacy',
       storageProblem: snapshot.kind === 'corrupt' || snapshot.kind === 'unsupported' ? snapshot.reason : '',
       weekStatus,
       periods,
-      swiperHeightRpx: timetableGridHeightRpx(periods.length),
+      swiperHeightRpx: timetableGridHeightRpx(periods.length, this.data.themeId),
+      swiperHeightStyle: timetableGridHeightStyle(periods.length, this.data.themeId),
     })
     this.renderWeek(currentWeek, term, storage.courses)
     return snapshot.kind
@@ -150,7 +161,9 @@ Page({
     this.setData({
       currentWeek: week,
       weekIndex: week - 1,
-      weekPanels: buildWeekPanels(courses, week, term?.totalWeeks),
+      weekPanels: buildWeekPanels(courses, week, term?.totalWeeks).map(panel => ({
+        ...panel, calendar: buildWeekDates(term, panel.week),
+      })),
       isEmpty: courses.length === 0,
       overviewText,
     })

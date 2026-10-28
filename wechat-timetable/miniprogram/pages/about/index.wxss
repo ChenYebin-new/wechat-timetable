@@ -18,3 +18,11 @@
 .qr-error { color:var(--danger); }
 .feedback-note { margin:32rpx 4rpx 0; }
 .note-title { display:block; color:var(--text); font-size:26rpx; font-weight:600; line-height:1.5; }
+
+.theme-aqua .about-intro { padding:12rpx 4rpx 6rpx; margin-bottom:28rpx; }
+.theme-aqua .brand-icon { width:72rpx; height:72rpx; }
+.theme-aqua .brand-title { font-size:38rpx; font-weight:600; }
+.theme-aqua .card { padding:28rpx; }
+.theme-aqua .email-address { color:var(--accent); font-size:29rpx; }
+.theme-aqua .qr-preview { padding-top:8rpx; }
+.theme-aqua .feedback-note { padding:0 8rpx; }

@@ -1,0 +1,190 @@
+{
+  "date": "2026-10-25",
+  "theme": "aqua",
+  "reference": "../../../assets/appearance/aqua/approved-timetable.png",
+  "screenshotsUnmodified": true,
+  "fixture": "Synthetic courses and todos; in-memory storage mocks; no user data copied",
+  "device": {
+    "model": "iPhone 12/13 (Pro)",
+    "platform": "devtools",
+    "windowWidth": 390,
+    "windowHeight": 844,
+    "screenHeight": 844,
+    "pixelRatio": 3,
+    "SDKVersion": "3.17.2"
+  },
+  "automated": {
+    "command": "npm.cmd --prefix wechat-timetable run check",
+    "typecheck": "passed",
+    "tests": 472,
+    "passed": 472,
+    "failed": 0,
+    "coverage": {
+      "lines": 85.11,
+      "branches": 89.69,
+      "functions": 87.15
+    }
+  },
+  "nativeFirst": {
+    "pageThemeCombinations": 17,
+    "aquaPages": 12,
+    "legacyThemes": 5,
+    "screenshots": 20,
+    "passedChecks": [
+      "aqua timetable rendering",
+      "aqua todo rendering",
+      "aqua settings rendering",
+      "aqua appearance rendering",
+      "aqua term-settings rendering",
+      "aqua period-settings rendering",
+      "aqua period-time-edit rendering",
+      "aqua course-edit rendering",
+      "aqua slot-select rendering",
+      "aqua data-manage rendering",
+      "aqua todo-backup rendering",
+      "aqua about rendering",
+      "aqua course selection and bottom content",
+      "aqua custom tab navigation and touch targets",
+      "paper timetable regression",
+      "cream timetable regression",
+      "campus timetable regression",
+      "swiss timetable regression",
+      "pixel timetable regression"
+    ],
+    "initialHarnessFailures": [
+      "aqua calendar and inline editor",
+      "aqua settings return and theme draft preservation"
+    ],
+    "runtimeExceptions": 0,
+    "storageUnchanged": true,
+    "syntheticBusinessDataUnchanged": true,
+    "cleanupError": null
+  },
+  "nativeFinal": {
+    "routes": [
+      "timetable",
+      "todo",
+      "appearance",
+      "slot-select"
+    ],
+    "checks": [
+      "aqua timetable rendering",
+      "aqua todo rendering",
+      "aqua appearance rendering",
+      "aqua slot-select rendering",
+      "aqua calendar and inline editor",
+      "aqua course selection and bottom content",
+      "aqua period 14 native row alignment",
+      "aqua settings return and theme draft preservation",
+      "aqua custom tab navigation and touch targets"
+    ],
+    "failures": [],
+    "screenshots": 10,
+    "phases": [
+      {
+        "name": "calendar/reLaunch",
+        "status": "passed",
+        "elapsedMs": 4269
+      },
+      {
+        "name": "calendar/ready",
+        "status": "passed",
+        "elapsedMs": 166
+      },
+      {
+        "name": "calendar/choose-date",
+        "status": "passed",
+        "elapsedMs": 6
+      },
+      {
+        "name": "calendar/toggle",
+        "status": "passed",
+        "elapsedMs": 7
+      },
+      {
+        "name": "calendar/expanded-state",
+        "status": "passed",
+        "elapsedMs": 23
+      },
+      {
+        "name": "calendar/query-42-days",
+        "status": "passed",
+        "elapsedMs": 13
+      },
+      {
+        "name": "calendar/screenshot",
+        "status": "passed",
+        "elapsedMs": 1101
+      },
+      {
+        "name": "editor/open-existing-goal",
+        "status": "passed",
+        "elapsedMs": 8
+      },
+      {
+        "name": "editor/open-state",
+        "status": "passed",
+        "elapsedMs": 15
+      },
+      {
+        "name": "editor/screenshot",
+        "status": "passed",
+        "elapsedMs": 1160
+      },
+      {
+        "name": "editor/cancel",
+        "status": "passed",
+        "elapsedMs": 20
+      }
+    ],
+    "runtimeExceptions": 0,
+    "storageUnchanged": true,
+    "syntheticBusinessDataUnchanged": true,
+    "cleanupError": null,
+    "period14Alignment": "All card top/height/bottom errors below 0.1 logical px, before and after bottom scroll"
+  },
+  "responsiveProxy": {
+    "engine": "Browser rendering of real WXML/WXSS, not WeChat native",
+    "widths": [
+      320,
+      360,
+      390,
+      430
+    ],
+    "cases": 20,
+    "overflow": 0,
+    "overlaps": 0,
+    "smallTargets": 0
+  },
+  "boundaries": [
+    "No physical iOS/Android device acceptance",
+    "Some interactions driven by page methods, not physical gestures",
+    "No upload, release, commit or push"
+  ],
+  "screenshots": [
+    {
+      "file": "aqua-appearance-preview.png",
+      "sha256": "307334d8d05611bfc6b146f7f966a4c70077dd7e3e3b85e562eaa9cae1700b07"
+    },
+    {
+      "file": "aqua-slot-select.png",
+      "sha256": "b5107f5452aa7a2156d713ba9acdd5f0e339d617e293385041e4553e07e35ed2"
+    },
+    {
+      "file": "aqua-timetable-period-14.png",
+      "sha256": "4e8b5c934d06e76fd59806682cd8ecd45be91ad013834b73de9a21867453a095"
+    },
+    {
+      "file": "aqua-timetable.png",
+      "sha256": "a4244e00c27841661223d06c6778559ccba6c237072de150fffd010d2479c4b4"
+    },
+    {
+      "file": "aqua-todo-calendar.png",
+      "sha256": "46759f1b66239ddad02ad93f5cf0291a376455d5820ea444e22202d9c800a157"
+    },
+    {
+      "file": "aqua-todo.png",
+      "sha256": "1d9e2751f6d0e2c60038a68d46c7e75c0f284e096ab86606f49393ccde550090"
+    }
+  ]
+}

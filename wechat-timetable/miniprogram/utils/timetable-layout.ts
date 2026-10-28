@@ -19,15 +19,33 @@ export interface WeekPanel {
   disabledKeys: string[]
 }
 
-/** 课表外框上下内边距 16rpx + 星期栏 80rpx + 动态节次高度。 */
-export function timetableGridHeightRpx(periodCount: number): number {
-  return 96 + periodCount * CELL_HEIGHT
+/** The grid, cards and swiper use the same dimensions for each visual theme. */
+export function timetableMetrics(themeId?: string) {
+  return themeId === 'aqua'
+    ? { cellHeight: 140, headHeight: 120, padding: 0, cardInset: 0 }
+    : { cellHeight: CELL_HEIGHT, headHeight: 80, padding: 16, cardInset: 4 }
 }
 
-export function computeCardStyle(course: Course): string {
-  const cardInset = 4
-  const top = (course.startPeriod - 1) * CELL_HEIGHT + cardInset
-  const height = (course.endPeriod - course.startPeriod + 1) * CELL_HEIGHT - cardInset * 2
+export function timetableGridHeightRpx(periodCount: number, themeId?: string): number {
+  const { cellHeight, headHeight, padding } = timetableMetrics(themeId)
+  return padding + headHeight + periodCount * cellHeight
+}
+
+/** Multiply after rpx conversion so native pixel rounding cannot accumulate. */
+export function timetableGridHeightStyle(periodCount: number, themeId?: string): string {
+  const { cellHeight, headHeight } = timetableMetrics(themeId)
+  return themeId === 'aqua'
+    ? `calc(${headHeight}rpx + ${periodCount} * ${cellHeight}rpx)`
+    : `${timetableGridHeightRpx(periodCount, themeId)}rpx`
+}
+
+export function computeCardStyle(course: Course, themeId?: string): string {
+  if (themeId === 'aqua') {
+    return `top: calc(var(--cell-height) * ${course.startPeriod - 1}); height: calc(var(--cell-height) * ${course.endPeriod - course.startPeriod + 1});`
+  }
+  const { cellHeight, cardInset } = timetableMetrics(themeId)
+  const top = (course.startPeriod - 1) * cellHeight + cardInset
+  const height = (course.endPeriod - course.startPeriod + 1) * cellHeight - cardInset * 2
   return `top: ${top}rpx; height: ${height}rpx;`
 }
 

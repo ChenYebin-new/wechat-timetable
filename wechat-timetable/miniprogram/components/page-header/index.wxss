@@ -58,3 +58,12 @@ button.back { width: 44px !important; min-width: 44px; height: 44px; padding: 0;
 .theme-paper.subpage .navigation-title,.theme-swiss.subpage .navigation-title,.theme-pixel.subpage .navigation-title { position:absolute; left:50%; transform:translateX(-50%); max-width:calc(100% - 176px); text-align:center; line-height:1.25; }
 .paper-intro .paper-course-quote { flex:0 0 auto; margin-left:auto; max-width:48%; font-size:26rpx; line-height:1.75; letter-spacing:1rpx; }
 .theme-swiss .navigation-title { line-height:1.2; }
+
+/* Aqua shares the page's sky and leaves the real system capsule unobstructed. */
+.theme-aqua { background:transparent; padding-bottom:12rpx; font-family:var(--font-family); }
+.theme-aqua.home { padding-bottom:0; }
+.theme-aqua .status-cover { background-color:var(--page); background-image:var(--aqua-sky); background-size:100% 600rpx; background-repeat:no-repeat; }
+.theme-aqua .navigation { padding-left:34rpx; }
+.theme-aqua .navigation-title,.theme-aqua.home .navigation-title { font-size:34rpx; font-weight:650; letter-spacing:0; line-height:1.3; }
+.theme-aqua .navigation.scrolled { background-color:var(--page); background-image:var(--aqua-sky); background-size:100% 600rpx; background-position:0 calc(0px - var(--navigation-top)); background-repeat:no-repeat; border-bottom:0; }
+.theme-aqua .back-mark { width:21rpx; height:21rpx; border-width:3rpx; }

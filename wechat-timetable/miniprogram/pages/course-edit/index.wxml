@@ -7,7 +7,7 @@
   <view class="form">
     <view class="field">
       <text class="label">课程名称</text>
-      <view class="input-shell"><input class="input" value="{{name}}" placeholder="必填" placeholder-class="ph" bindinput="onName" aria-label="课程名称" /><button wx:if="{{themeId === 'campus' && name}}" class="pressable clear-input" data-field="name" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onClearField" aria-label="清除课程名称"><view class="clear-mark" /></button></view>
+      <view class="input-shell"><input class="input {{focusedField === 'name' ? 'field-focused' : ''}}" data-field="name" value="{{name}}" placeholder="必填" placeholder-class="ph" bindinput="onName" bindfocus="onFieldFocus" bindblur="onFieldBlur" aria-label="课程名称" /><button wx:if="{{themeId === 'campus' && name}}" class="pressable clear-input" data-field="name" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onClearField" aria-label="清除课程名称"><view class="clear-mark" /></button></view>
     </view>
 
     <block wx:if="{{isGroupMode}}">
@@ -26,33 +26,33 @@
       <view class="field">
         <text class="label">星期</text>
         <picker mode="selector" range="{{dayOptions}}" value="{{dayIndex}}" bindchange="onDay" aria-label="选择星期">
-          <view class="picker-value">{{dayOptions[dayIndex]}}</view>
+          <view class="picker-value {{themeId === 'aqua' ? 'pressable' : ''}}" hover-class="{{themeId === 'aqua' ? 'press-feedback' : 'none'}}" hover-start-time="20" hover-stay-time="80">{{dayOptions[dayIndex]}}</view>
         </picker>
       </view>
 
       <view class="field">
         <text class="label">开始节次</text>
         <picker mode="selector" range="{{periodOptions}}" value="{{startIndex}}" bindchange="onStart" aria-label="选择开始节次">
-          <view class="picker-value">{{periodOptions[startIndex]}}</view>
+          <view class="picker-value {{themeId === 'aqua' ? 'pressable' : ''}}" hover-class="{{themeId === 'aqua' ? 'press-feedback' : 'none'}}" hover-start-time="20" hover-stay-time="80">{{periodOptions[startIndex]}}</view>
         </picker>
       </view>
 
       <view class="field">
         <text class="label">结束节次</text>
         <picker mode="selector" range="{{periodOptions}}" value="{{endIndex}}" bindchange="onEnd" aria-label="选择结束节次">
-          <view class="picker-value">{{periodOptions[endIndex]}}</view>
+          <view class="picker-value {{themeId === 'aqua' ? 'pressable' : ''}}" hover-class="{{themeId === 'aqua' ? 'press-feedback' : 'none'}}" hover-start-time="20" hover-stay-time="80">{{periodOptions[endIndex]}}</view>
         </picker>
       </view>
     </block>
 
     <view class="field">
       <text class="label">教师</text>
-      <view class="input-shell"><input class="input" value="{{teacher}}" placeholder="可选" placeholder-class="ph" bindinput="onTeacher" aria-label="教师" /><button wx:if="{{themeId === 'campus' && teacher}}" class="pressable clear-input" data-field="teacher" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onClearField" aria-label="清除教师"><view class="clear-mark" /></button></view>
+      <view class="input-shell"><input class="input {{focusedField === 'teacher' ? 'field-focused' : ''}}" data-field="teacher" value="{{teacher}}" placeholder="可选" placeholder-class="ph" bindinput="onTeacher" bindfocus="onFieldFocus" bindblur="onFieldBlur" aria-label="教师" /><button wx:if="{{themeId === 'campus' && teacher}}" class="pressable clear-input" data-field="teacher" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onClearField" aria-label="清除教师"><view class="clear-mark" /></button></view>
     </view>
 
     <view class="field">
       <text class="label">教室</text>
-      <view class="input-shell"><input class="input" value="{{location}}" placeholder="可选" placeholder-class="ph" bindinput="onLocation" aria-label="教室" /><button wx:if="{{themeId === 'campus' && location}}" class="pressable clear-input" data-field="location" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onClearField" aria-label="清除教室"><view class="clear-mark" /></button></view>
+      <view class="input-shell"><input class="input {{focusedField === 'location' ? 'field-focused' : ''}}" data-field="location" value="{{location}}" placeholder="可选" placeholder-class="ph" bindinput="onLocation" bindfocus="onFieldFocus" bindblur="onFieldBlur" aria-label="教室" /><button wx:if="{{themeId === 'campus' && location}}" class="pressable clear-input" data-field="location" hover-class="press-feedback" hover-start-time="20" hover-stay-time="80" bindtap="onClearField" aria-label="清除教室"><view class="clear-mark" /></button></view>
     </view>
 
     <view class="field">
@@ -60,7 +60,7 @@
       <block wx:if="{{totalWeeks > 0}}">
         <view class="week-control">
         <picker mode="selector" range="{{weekModeLabels}}" value="{{weekModeIndex}}" bindchange="onWeekMode" aria-label="选择课程周次模式">
-          <view class="picker-value">{{weekModeLabels[weekModeIndex]}}</view>
+          <view class="picker-value {{themeId === 'aqua' ? 'pressable' : ''}}" hover-class="{{themeId === 'aqua' ? 'press-feedback' : 'none'}}" hover-start-time="20" hover-stay-time="80">{{weekModeLabels[weekModeIndex]}}</view>
         </picker>
         <text wx:if="{{weekMode === 'all'}}" class="field-hint week-range">第1—{{totalWeeks}}周</text>
         </view>

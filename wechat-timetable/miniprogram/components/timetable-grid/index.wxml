@@ -1,8 +1,17 @@
 <!-- components/timetable-grid/index.wxml -->
-<view class="timetable theme-{{themeId}}" style="{{appearanceStyle}}">
+<view class="timetable theme-{{themeId}}" style="{{appearanceStyle}}--cell-height:{{metrics.cellHeight}}rpx;--head-height:{{metrics.headHeight}}rpx;">
   <view class="head">
-    <view class="head-corner" aria-label="节次">{{themeId === 'campus' || themeId === 'swiss' ? '节次' : ''}}</view>
-    <view class="head-day" wx:for="{{days}}" wx:key="index">{{item}}</view>
+    <block wx:if="{{themeId === 'aqua' && calendarDays.length}}">
+      <view class="head-corner head-month" aria-label="{{monthLabel}}月"><text>{{monthLabel}}</text><text>月</text></view>
+      <view class="head-day dated-day" wx:for="{{calendarDays}}" wx:key="dateKey" aria-label="{{item.dateKey}}，星期{{item.weekday}}{{item.isToday ? '，今天' : ''}}">
+        <text class="day-label">{{item.weekday}}</text>
+        <view class="day-date {{item.isToday ? 'is-today' : ''}}">{{item.date}}</view>
+      </view>
+    </block>
+    <block wx:else>
+      <view class="head-corner" aria-label="节次">{{themeId === 'campus' || themeId === 'swiss' ? '节次' : ''}}</view>
+      <view class="head-day" wx:for="{{days}}" wx:key="index">{{item}}</view>
+    </block>
   </view>
 
   <view class="body">

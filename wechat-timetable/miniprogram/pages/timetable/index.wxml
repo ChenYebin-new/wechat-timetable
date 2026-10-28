@@ -4,7 +4,19 @@
 <block wx:else>
 <page-header class="page-masthead" title="拾课课表" subtitle="{{termLabel}}" home="{{true}}" theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}" art="{{appearanceArt}}" />
 <view class="page theme-{{themeId}} {{selectionMode ? 'selecting' : ''}}" style="{{appearanceStyle}}">
-  <view class="schedule-toolbar {{selectionMode ? 'actions-disabled' : ''}}">
+  <view wx:if="{{themeId === 'aqua'}}" class="aqua-toolbar {{selectionMode ? 'actions-disabled' : ''}}">
+    <view class="aqua-header-surface" aria-hidden="true" />
+    <view class="aqua-toolbar-controls">
+      <picker wx:if="{{termReady}}" class="aqua-week-picker" mode="selector" range="{{weekOptions}}" value="{{weekIndex}}" bindchange="onWeekChange" disabled="{{selectionMode}}" aria-label="选择教学周，第{{currentWeek}}周"><view class="aqua-week-label" hover-class="{{selectionMode ? 'none' : 'aqua-picker-pressed'}}" hover-start-time="20" hover-stay-time="80"><text>第<text class="aqua-week-number">{{currentWeek}}</text>周</text><view class="down-mark" /></view></picker>
+      <view class="pressable aqua-term" hover-class="{{selectionMode ? 'none' : 'press-feedback'}}" hover-start-time="20" hover-stay-time="80" bindtap="onTermSettings" aria-role="button" aria-label="修改学期，{{academicTermLabel}}" aria-disabled="{{selectionMode}}"><text>{{academicTermLabel}}</text></view>
+      <view class="aqua-tools">
+        <view class="pressable aqua-tool aqua-settings" hover-class="{{selectionMode ? 'none' : 'press-feedback'}}" hover-start-time="20" hover-stay-time="80" bindtap="onSettings" aria-role="button" aria-label="设置" aria-disabled="{{selectionMode}}"><image src="{{appearanceIcons.settings}}" aria-hidden="true" /></view>
+        <button class="pressable aqua-tool aqua-share" open-type="share" disabled="{{selectionMode}}" hover-class="{{selectionMode ? 'none' : 'press-feedback'}}" hover-start-time="20" hover-stay-time="80" aria-label="分享拾课课表"><view class="aqua-share-mark" aria-hidden="true"><view /></view></button>
+        <view class="pressable aqua-tool aqua-add" hover-class="{{selectionMode ? 'none' : 'press-feedback'}}" hover-start-time="20" hover-stay-time="80" bindtap="onAdd" aria-role="button" aria-label="新增课程" aria-disabled="{{selectionMode}}"><view class="aqua-add-face"><view class="plus-icon" /></view></view>
+      </view>
+    </view>
+  </view>
+  <view wx:else class="schedule-toolbar {{selectionMode ? 'actions-disabled' : ''}}">
     <view wx:if="{{themeId === 'cream' || themeId === 'paper' || themeId === 'swiss'}}" class="pressable term-label" hover-class="{{selectionMode ? 'none' : 'press-feedback'}}" hover-start-time="20" hover-stay-time="80" bindtap="onTermSettings" aria-role="button" aria-label="修改学期，{{termLabel}}" aria-disabled="{{selectionMode}}"><text class="term-text">{{termLabel}}</text><view class="down-mark" /></view>
     <view class="pressable tool-settings tool-button" hover-class="{{selectionMode ? 'none' : 'press-feedback'}}" hover-start-time="20" hover-stay-time="80" bindtap="onSettings" aria-role="button" aria-label="设置" aria-disabled="{{selectionMode}}"><view class="tool-face"><image src="{{appearanceIcons.settings}}" aria-hidden="true" /><text>设置</text></view></view>
     <view wx:if="{{termReady}}" class="week-bar {{selectionMode ? 'week-bar-disabled' : ''}}">
@@ -37,7 +49,7 @@
     <swiper
       wx:if="{{!selectionMode}}"
       class="week-swiper"
-      style="height: {{swiperHeightRpx}}rpx;"
+      style="height: {{swiperHeightStyle}};"
       current="{{weekIndex}}"
       duration="320"
       easing-function="easeOutCubic"
@@ -50,6 +62,7 @@
       <swiper-item wx:for="{{weekPanels}}" wx:key="week">
         <view wx:if="{{item.active}}" class="grid-frame">
           <timetable-grid class="course-grid" theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}"
+            calendar-days="{{item.calendar.days}}" month-label="{{item.calendar.monthLabel}}"
             periods="{{periods}}"
             day-slots="{{item.daySlots}}"
             selection-mode="{{selectionMode}}"
@@ -64,10 +77,11 @@
         </view>
       </swiper-item>
     </swiper>
-    <view wx:else class="week-static" style="height: {{swiperHeightRpx}}rpx;">
+    <view wx:else class="week-static" style="height: {{swiperHeightStyle}};">
       <block wx:for="{{weekPanels}}" wx:key="week">
         <view wx:if="{{item.week === currentWeek}}" class="grid-frame">
           <timetable-grid class="course-grid" theme-id="{{themeId}}" appearance-style="{{appearanceStyle}}"
+            calendar-days="{{item.calendar.days}}" month-label="{{item.calendar.monthLabel}}"
             periods="{{periods}}"
             day-slots="{{item.daySlots}}"
             selection-mode="{{true}}"

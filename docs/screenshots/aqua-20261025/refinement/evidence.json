@@ -1,0 +1,838 @@
+{
+  "date": "2026-10-25",
+  "scope": "Aqua input focus, stable numerals and restrained press feedback",
+  "codeChecks": {
+    "tests": 476,
+    "passed": 476,
+    "failed": 0,
+    "typecheck": "passed",
+    "coverage": {
+      "lines": 85.18,
+      "branches": 89.69,
+      "functions": 87.36
+    }
+  },
+  "responsiveProxy": {
+    "widths": [
+      320,
+      360,
+      390,
+      430
+    ],
+    "combinations": 28,
+    "failures": 0,
+    "maxAdjacentTermShiftPx": 0.02,
+    "engine": "Browser proxy of current WXML/WXSS, not native device proof"
+  },
+  "nativeControls": {
+    "checks": [
+      "term-settings native picker and save hover keep geometry",
+      "period-time-edit native picker and save hover keep geometry",
+      "week number keeps adjacent controls fixed across digit count",
+      "period-settings native picker and save hover keep geometry"
+    ],
+    "runtimeExceptions": [],
+    "realStorageUnchanged": true,
+    "weekValues": [
+      1,
+      9,
+      10,
+      30
+    ]
+  },
+  "nativeFocus": {
+    "method": "Actual Windows pointer clicks in WeChat DevTools; observed via original native focus/blur bindings",
+    "device": {
+      "model": "iPhone 12/13 (Pro)",
+      "windowWidth": 390,
+      "windowHeight": 844,
+      "pixelRatio": 3,
+      "SDKVersion": "3.17.2"
+    },
+    "snapshots": [
+      {
+        "label": "course-open",
+        "at": "2026-10-25T14:39:01.172Z",
+        "route": "pages/course-edit/index",
+        "themeId": "aqua",
+        "focusedField": "",
+        "scrollTop": 0,
+        "draft": {
+          "name": "概率论与数理统计",
+          "teacher": "陈老师",
+          "location": "巡天楼 T1 409"
+        },
+        "elements": {
+          ".input": [
+            {
+              "dataset": {
+                "field": "name"
+              },
+              "left": 25,
+              "right": 365,
+              "top": 146,
+              "bottom": 194,
+              "width": 340,
+              "height": 48,
+              "border-top-color": "rgb(220, 236, 238)",
+              "background-color": "rgb(246, 251, 252)",
+              "border-top-width": "1px"
+            },
+            {
+              "dataset": {
+                "field": "teacher"
+              },
+              "left": 25,
+              "right": 365,
+              "top": 362,
+              "bottom": 410,
+              "width": 340,
+              "height": 48,
+              "border-top-color": "rgb(220, 236, 238)",
+              "background-color": "rgb(246, 251, 252)",
+              "border-top-width": "1px"
+            },
+            {
+              "dataset": {
+                "field": "location"
+              },
+              "left": 25,
+              "right": 365,
+              "top": 461,
+              "bottom": 509,
+              "width": 340,
+              "height": 48,
+              "border-top-color": "rgb(220, 236, 238)",
+              "background-color": "rgb(246, 251, 252)",
+              "border-top-width": "1px"
+            }
+          ],
+          ".input-shell": [
+            {
+              "dataset": {},
+              "left": 25,
+              "right": 365,
+              "top": 146,
+              "bottom": 194,
+              "width": 340,
+              "height": 48,
+              "border-top-color": "rgb(21, 25, 29)",
+              "background-color": "rgba(0, 0, 0, 0)",
+              "border-top-width": "0px"
+            },
+            {
+              "dataset": {},
+              "left": 25,
+              "right": 365,
+              "top": 362,
+              "bottom": 410,
+              "width": 340,
+              "height": 48,
+              "border-top-color": "rgb(21, 25, 29)",
+              "background-color": "rgba(0, 0, 0, 0)",
+              "border-top-width": "0px"
+            },
+            {
+              "dataset": {},
+              "left": 25,
+              "right": 365,
+              "top": 461,
+              "bottom": 509,
+              "width": 340,
+              "height": 48,
+              "border-top-color": "rgb(21, 25, 29)",
+              "background-color": "rgba(0, 0, 0, 0)",
+              "border-top-width": "0px"
+            }
+          ],
+          ".title-input": [],
+          ".goal-note-input": [],
+          ".active-goal-editor": [],
+          ".daily-note-input": [],
+          ".reflection-panel": [],
+          ".field-focused": []
+        }
+      },
+      {
+        "label": "course-real-click",
+        "at": "2026-10-25T14:39:27.666Z",
+        "route": "pages/course-edit/index",
+        "themeId": "aqua",
+        "focusedField": "name",
+        "scrollTop": 0,
+        "draft": {
+          "name": "概率论与数理统计",
+          "teacher": "陈老师",
+          "location": "巡天楼 T1 409"
+        },
+        "elements": {
+          ".input": [
+            {
+              "dataset": {
+                "field": "name"
+              },
+              "left": 25,
+              "right": 365,
+              "top": 146,
+              "bottom": 194,
+              "width": 340,
+              "height": 48,
+              "border-top-color": "rgb(18, 103, 201)",
+              "background-color": "rgb(255, 255, 255)",
+              "border-top-width": "1px"
+            },
+            {
+              "dataset": {
+                "field": "teacher"
+              },
+              "left": 25,
+              "right": 365,
+              "top": 362,
+              "bottom": 410,
+              "width": 340,
+              "height": 48,
+              "border-top-color": "rgb(220, 236, 238)",
+              "background-color": "rgb(246, 251, 252)",
+              "border-top-width": "1px"
+            },
+            {
+              "dataset": {
+                "field": "location"
+              },
+              "left": 25,
+              "right": 365,
+              "top": 461,
+              "bottom": 509,
+              "width": 340,
+              "height": 48,
+              "border-top-color": "rgb(220, 236, 238)",
+              "background-color": "rgb(246, 251, 252)",
+              "border-top-width": "1px"
+            }
+          ],
+          ".input-shell": [
+            {
+              "dataset": {},
+              "left": 25,
+              "right": 365,
+              "top": 146,
+              "bottom": 194,
+              "width": 340,
+              "height": 48,
+              "border-top-color": "rgb(21, 25, 29)",
+              "background-color": "rgba(0, 0, 0, 0)",
+              "border-top-width": "0px"
+            },
+            {
+              "dataset": {},
+              "left": 25,
+              "right": 365,
+              "top": 362,
+              "bottom": 410,
+              "width": 340,
+              "height": 48,
+              "border-top-color": "rgb(21, 25, 29)",
+              "background-color": "rgba(0, 0, 0, 0)",
+              "border-top-width": "0px"
+            },
+            {
+              "dataset": {},
+              "left": 25,
+              "right": 365,
+              "top": 461,
+              "bottom": 509,
+              "width": 340,
+              "height": 48,
+              "border-top-color": "rgb(21, 25, 29)",
+              "background-color": "rgba(0, 0, 0, 0)",
+              "border-top-width": "0px"
+            }
+          ],
+          ".title-input": [],
+          ".goal-note-input": [],
+          ".active-goal-editor": [],
+          ".daily-note-input": [],
+          ".reflection-panel": [],
+          ".field-focused": [
+            {
+              "dataset": {
+                "field": "name"
+              },
+              "left": 25,
+              "right": 365,
+              "top": 146,
+              "bottom": 194,
+              "width": 340,
+              "height": 48,
+              "border-top-color": "rgb(18, 103, 201)",
+              "background-color": "rgb(255, 255, 255)",
+              "border-top-width": "1px"
+            }
+          ]
+        }
+      },
+      {
+        "label": "course-teacher-focused",
+        "at": "2026-10-25T14:39:46.351Z",
+        "route": "pages/course-edit/index",
+        "themeId": "aqua",
+        "focusedField": "teacher",
+        "scrollTop": 0,
+        "draft": {
+          "name": "概率论与数理统计",
+          "teacher": "陈老师",
+          "location": "巡天楼 T1 409"
+        },
+        "elements": {
+          ".input": [
+            {
+              "dataset": {
+                "field": "name"
+              },
+              "left": 25,
+              "right": 365,
+              "top": 146,
+              "bottom": 194,
+              "width": 340,
+              "height": 48,
+              "border-top-color": "rgb(220, 236, 238)",
+              "background-color": "rgb(246, 251, 252)",
+              "border-top-width": "1px"
+            },
+            {
+              "dataset": {
+                "field": "teacher"
+              },
+              "left": 25,
+              "right": 365,
+              "top": 362,
+              "bottom": 410,
+              "width": 340,
+              "height": 48,
+              "border-top-color": "rgb(18, 103, 201)",
+              "background-color": "rgb(255, 255, 255)",
+              "border-top-width": "1px"
+            },
+            {
+              "dataset": {
+                "field": "location"
+              },
+              "left": 25,
+              "right": 365,
+              "top": 461,
+              "bottom": 509,
+              "width": 340,
+              "height": 48,
+              "border-top-color": "rgb(220, 236, 238)",
+              "background-color": "rgb(246, 251, 252)",
+              "border-top-width": "1px"
+            }
+          ],
+          ".input-shell": [
+            {
+              "dataset": {},
+              "left": 25,
+              "right": 365,
+              "top": 146,
+              "bottom": 194,
+              "width": 340,
+              "height": 48,
+              "border-top-color": "rgb(21, 25, 29)",
+              "background-color": "rgba(0, 0, 0, 0)",
+              "border-top-width": "0px"
+            },
+            {
+              "dataset": {},
+              "left": 25,
+              "right": 365,
+              "top": 362,
+              "bottom": 410,
+              "width": 340,
+              "height": 48,
+              "border-top-color": "rgb(21, 25, 29)",
+              "background-color": "rgba(0, 0, 0, 0)",
+              "border-top-width": "0px"
+            },
+            {
+              "dataset": {},
+              "left": 25,
+              "right": 365,
+              "top": 461,
+              "bottom": 509,
+              "width": 340,
+              "height": 48,
+              "border-top-color": "rgb(21, 25, 29)",
+              "background-color": "rgba(0, 0, 0, 0)",
+              "border-top-width": "0px"
+            }
+          ],
+          ".title-input": [],
+          ".goal-note-input": [],
+          ".active-goal-editor": [],
+          ".daily-note-input": [],
+          ".reflection-panel": [],
+          ".field-focused": [
+            {
+              "dataset": {
+                "field": "teacher"
+              },
+              "left": 25,
+              "right": 365,
+              "top": 362,
+              "bottom": 410,
+              "width": 340,
+              "height": 48,
+              "border-top-color": "rgb(18, 103, 201)",
+              "background-color": "rgb(255, 255, 255)",
+              "border-top-width": "1px"
+            }
+          ]
+        }
+      },
+      {
+        "label": "todo-open-native-title-request",
+        "at": "2026-10-25T14:39:53.396Z",
+        "route": "pages/todo/index",
+        "themeId": "aqua",
+        "focusedField": "goal-title",
+        "editorOpen": true,
+        "editorFocus": true,
+        "noteExpanded": true,
+        "selectedDate": "2026-10-25",
+        "scrollTop": 82,
+        "draft": {
+          "title": "整理课堂笔记",
+          "note": "复习今天的重点内容",
+          "dailyNote": "今天的课堂笔记整理好了。",
+          "dailyNoteDirty": false,
+          "noteSaveState": "saved"
+        },
+        "elements": {
+          ".input": [],
+          ".input-shell": [],
+          ".title-input": [
+            {
+              "dataset": {
+                "field": "goal-title"
+              },
+              "left": 35,
+              "right": 355,
+              "top": 203.1875,
+              "bottom": 251.1875,
+              "width": 320,
+              "height": 48,
+              "border-top-color": "rgb(18, 103, 201)",
+              "background-color": "rgb(255, 255, 255)",
+              "border-top-width": "1px"
+            }
+          ],
+          ".goal-note-input": [
+            {
+              "dataset": {
+                "field": "goal-note"
+              },
+              "left": 35,
+              "right": 355,
+              "top": 297.1875,
+              "bottom": 363.1875,
+              "width": 320,
+              "height": 66,
+              "border-top-color": "rgb(220, 236, 238)",
+              "background-color": "rgb(255, 255, 255)",
+              "border-top-width": "1px"
+            }
+          ],
+          ".active-goal-editor": [
+            {
+              "dataset": {},
+              "left": 24,
+              "right": 366,
+              "top": 145.1875,
+              "bottom": 428.1875,
+              "width": 342,
+              "height": 283,
+              "border-top-color": "rgb(21, 25, 29)",
+              "background-color": "rgba(0, 0, 0, 0)",
+              "border-top-width": "0px"
+            }
+          ],
+          ".daily-note-input": [
+            {
+              "dataset": {
+                "date": "2026-10-25"
+              },
+              "left": 34,
+              "right": 356,
+              "top": 572.375,
+              "bottom": 717.375,
+              "width": 322,
+              "height": 145,
+              "border-top-color": "rgb(21, 25, 29)",
+              "background-color": "rgba(0, 0, 0, 0)",
+              "border-top-width": "0px"
+            }
+          ],
+          ".reflection-panel": [
+            {
+              "dataset": {},
+              "left": 23,
+              "right": 367,
+              "top": 561.375,
+              "bottom": 728.375,
+              "width": 344,
+              "height": 167,
+              "border-top-color": "rgba(0, 0, 0, 0)",
+              "background-color": "rgb(246, 251, 252)",
+              "border-top-width": "1px"
+            }
+          ],
+          ".field-focused": [
+            {
+              "dataset": {
+                "field": "goal-title"
+              },
+              "left": 35,
+              "right": 355,
+              "top": 203.1875,
+              "bottom": 251.1875,
+              "width": 320,
+              "height": 48,
+              "border-top-color": "rgb(18, 103, 201)",
+              "background-color": "rgb(255, 255, 255)",
+              "border-top-width": "1px"
+            }
+          ]
+        }
+      },
+      {
+        "label": "todo-note-focused",
+        "at": "2026-10-25T14:40:04.949Z",
+        "route": "pages/todo/index",
+        "themeId": "aqua",
+        "focusedField": "goal-note",
+        "editorOpen": true,
+        "editorFocus": false,
+        "noteExpanded": true,
+        "selectedDate": "2026-10-25",
+        "scrollTop": 82,
+        "draft": {
+          "title": "整理课堂笔记",
+          "note": "复习今天的重点内容",
+          "dailyNote": "今天的课堂笔记整理好了。",
+          "dailyNoteDirty": false,
+          "noteSaveState": "saved"
+        },
+        "elements": {
+          ".input": [],
+          ".input-shell": [],
+          ".title-input": [
+            {
+              "dataset": {
+                "field": "goal-title"
+              },
+              "left": 35,
+              "right": 355,
+              "top": 203.1875,
+              "bottom": 251.1875,
+              "width": 320,
+              "height": 48,
+              "border-top-color": "rgb(220, 236, 238)",
+              "background-color": "rgb(255, 255, 255)",
+              "border-top-width": "1px"
+            }
+          ],
+          ".goal-note-input": [
+            {
+              "dataset": {
+                "field": "goal-note"
+              },
+              "left": 35,
+              "right": 355,
+              "top": 297.1875,
+              "bottom": 363.1875,
+              "width": 320,
+              "height": 66,
+              "border-top-color": "rgb(18, 103, 201)",
+              "background-color": "rgb(255, 255, 255)",
+              "border-top-width": "1px"
+            }
+          ],
+          ".active-goal-editor": [
+            {
+              "dataset": {},
+              "left": 24,
+              "right": 366,
+              "top": 145.1875,
+              "bottom": 428.1875,
+              "width": 342,
+              "height": 283,
+              "border-top-color": "rgb(21, 25, 29)",
+              "background-color": "rgba(0, 0, 0, 0)",
+              "border-top-width": "0px"
+            }
+          ],
+          ".daily-note-input": [
+            {
+              "dataset": {
+                "date": "2026-10-25"
+              },
+              "left": 34,
+              "right": 356,
+              "top": 572.375,
+              "bottom": 717.375,
+              "width": 322,
+              "height": 145,
+              "border-top-color": "rgb(21, 25, 29)",
+              "background-color": "rgba(0, 0, 0, 0)",
+              "border-top-width": "0px"
+            }
+          ],
+          ".reflection-panel": [
+            {
+              "dataset": {},
+              "left": 23,
+              "right": 367,
+              "top": 561.375,
+              "bottom": 728.375,
+              "width": 344,
+              "height": 167,
+              "border-top-color": "rgba(0, 0, 0, 0)",
+              "background-color": "rgb(246, 251, 252)",
+              "border-top-width": "1px"
+            }
+          ],
+          ".field-focused": [
+            {
+              "dataset": {
+                "field": "goal-note"
+              },
+              "left": 35,
+              "right": 355,
+              "top": 297.1875,
+              "bottom": 363.1875,
+              "width": 320,
+              "height": 66,
+              "border-top-color": "rgb(18, 103, 201)",
+              "background-color": "rgb(255, 255, 255)",
+              "border-top-width": "1px"
+            }
+          ]
+        }
+      },
+      {
+        "label": "journal-open",
+        "at": "2026-10-25T14:40:06.052Z",
+        "route": "pages/todo/index",
+        "themeId": "aqua",
+        "focusedField": "",
+        "editorOpen": false,
+        "editorFocus": false,
+        "noteExpanded": false,
+        "selectedDate": "2026-10-25",
+        "scrollTop": 0,
+        "draft": {
+          "title": "",
+          "note": "",
+          "dailyNote": "今天的课堂笔记整理好了。",
+          "dailyNoteDirty": false,
+          "noteSaveState": "saved"
+        },
+        "elements": {
+          ".input": [],
+          ".input-shell": [],
+          ".title-input": [],
+          ".goal-note-input": [],
+          ".active-goal-editor": [],
+          ".daily-note-input": [
+            {
+              "dataset": {
+                "date": "2026-10-25"
+              },
+              "left": 34,
+              "right": 356,
+              "top": 420.375,
+              "bottom": 565.375,
+              "width": 322,
+              "height": 145,
+              "border-top-color": "rgb(21, 25, 29)",
+              "background-color": "rgba(0, 0, 0, 0)",
+              "border-top-width": "0px"
+            }
+          ],
+          ".reflection-panel": [
+            {
+              "dataset": {},
+              "left": 23,
+              "right": 367,
+              "top": 409.375,
+              "bottom": 576.375,
+              "width": 344,
+              "height": 167,
+              "border-top-color": "rgba(0, 0, 0, 0)",
+              "background-color": "rgb(246, 251, 252)",
+              "border-top-width": "1px"
+            }
+          ],
+          ".field-focused": []
+        }
+      },
+      {
+        "label": "journal-focused",
+        "at": "2026-10-25T14:40:22.405Z",
+        "route": "pages/todo/index",
+        "themeId": "aqua",
+        "focusedField": "journal",
+        "editorOpen": false,
+        "editorFocus": false,
+        "noteExpanded": false,
+        "selectedDate": "2026-10-25",
+        "scrollTop": 0,
+        "draft": {
+          "title": "",
+          "note": "",
+          "dailyNote": "今天的课堂笔记整理好了。",
+          "dailyNoteDirty": false,
+          "noteSaveState": "saved"
+        },
+        "elements": {
+          ".input": [],
+          ".input-shell": [],
+          ".title-input": [],
+          ".goal-note-input": [],
+          ".active-goal-editor": [],
+          ".daily-note-input": [
+            {
+              "dataset": {
+                "date": "2026-10-25"
+              },
+              "left": 34,
+              "right": 356,
+              "top": 420.375,
+              "bottom": 565.375,
+              "width": 322,
+              "height": 145,
+              "border-top-color": "rgb(21, 25, 29)",
+              "background-color": "rgba(0, 0, 0, 0)",
+              "border-top-width": "0px"
+            }
+          ],
+          ".reflection-panel": [
+            {
+              "dataset": {},
+              "left": 23,
+              "right": 367,
+              "top": 409.375,
+              "bottom": 576.375,
+              "width": 344,
+              "height": 167,
+              "border-top-color": "rgb(18, 103, 201)",
+              "background-color": "rgb(255, 255, 255)",
+              "border-top-width": "1px"
+            }
+          ],
+          ".field-focused": [
+            {
+              "dataset": {},
+              "left": 23,
+              "right": 367,
+              "top": 409.375,
+              "bottom": 576.375,
+              "width": 344,
+              "height": 167,
+              "border-top-color": "rgb(18, 103, 201)",
+              "background-color": "rgb(255, 255, 255)",
+              "border-top-width": "1px"
+            }
+          ]
+        }
+      },
+      {
+        "label": "journal-blurred",
+        "at": "2026-10-25T14:40:33.321Z",
+        "route": "pages/todo/index",
+        "themeId": "aqua",
+        "focusedField": "",
+        "editorOpen": false,
+        "editorFocus": false,
+        "noteExpanded": false,
+        "selectedDate": "2026-10-25",
+        "scrollTop": 0,
+        "draft": {
+          "title": "",
+          "note": "",
+          "dailyNote": "今天的课堂笔记整理好了。",
+          "dailyNoteDirty": false,
+          "noteSaveState": "saved"
+        },
+        "elements": {
+          ".input": [],
+          ".input-shell": [],
+          ".title-input": [],
+          ".goal-note-input": [],
+          ".active-goal-editor": [],
+          ".daily-note-input": [
+            {
+              "dataset": {
+                "date": "2026-10-25"
+              },
+              "left": 34,
+              "right": 356,
+              "top": 420.375,
+              "bottom": 565.375,
+              "width": 322,
+              "height": 145,
+              "border-top-color": "rgb(21, 25, 29)",
+              "background-color": "rgba(0, 0, 0, 0)",
+              "border-top-width": "0px"
+            }
+          ],
+          ".reflection-panel": [
+            {
+              "dataset": {},
+              "left": 23,
+              "right": 367,
+              "top": 409.375,
+              "bottom": 576.375,
+              "width": 344,
+              "height": 167,
+              "border-top-color": "rgba(0, 0, 0, 0)",
+              "background-color": "rgb(246, 251, 252)",
+              "border-top-width": "1px"
+            }
+          ],
+          ".field-focused": []
+        }
+      }
+    ],
+    "runtimeExceptions": [],
+    "realStorageUnchanged": true,
+    "cleanupErrors": []
+  },
+  "automationLimit": "Element.tap did not deliver native input focus; affected focus checks were completed using actual desktop clicks, not injected focus state",
+  "screenshots": [
+    {
+      "file": "course-name-focused.png",
+      "sha256": "83bd47ceebacd9cd5fd644bdf2d577ee9ba2b22ac95a72a1715ad46f01280ba1"
+    },
+    {
+      "file": "journal-focused.png",
+      "sha256": "5e6beeab7c2c2328be882e86ed39a1ba620e74fa39d1dd4c931b1ef0d60b3e7c"
+    },
+    {
+      "file": "todo-note-focused.png",
+      "sha256": "d3644ce31c331999d97fac66300dbaf9c7547f221739dca95c577df41dafc3f3"
+    },
+    {
+      "file": "todo-refined.png",
+      "sha256": "4ef6d2e5782d6d35f66e6bdc0c807a5c4d92b4e52e851ac4196fa6628f5c09d9"
+    },
+    {
+      "file": "todo-title-focused.png",
+      "sha256": "5dd93d4fcf221e7a06eca556bf869f5b57f46c489da34e692d2a5b13c3071d4e"
+    }
+  ],
+  "boundaries": [
+    "No physical-device keyboard, OS font scaling or screen-reader acceptance",
+    "Journal blur saving verified by behavioral tests; manual UI focus checks did not edit stored user data"
+  ]
+}

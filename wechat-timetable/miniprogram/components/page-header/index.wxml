@@ -1,4 +1,4 @@
-<view class="masthead theme-{{themeId}} {{home ? 'home' : 'subpage'}}" style="{{appearanceStyle}}padding-top:{{statusHeight}}px;">
+<view class="masthead theme-{{themeId}} {{home ? 'home' : 'subpage'}}" style="{{appearanceStyle}}padding-top:{{statusHeight}}px;--navigation-top:{{statusHeight}}px;">
   <image wx:if="{{art}}" class="scene" src="{{art}}" mode="{{themeId === 'pixel' ? 'aspectFit' : 'aspectFill'}}" aria-hidden="true" />
   <view wx:if="{{themeId === 'pixel'}}" class="pixel-book-caption" aria-hidden="true">好好学习<text>天天向上</text></view>
   <view class="status-cover {{scrolled ? 'scrolled' : ''}}" style="height:{{statusHeight}}px;" aria-hidden="true" />
