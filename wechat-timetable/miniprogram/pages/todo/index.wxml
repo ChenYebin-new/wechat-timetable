@@ -50,7 +50,7 @@
     ></textarea>
     <text wx:if="{{goalProblem}}" class="inline-problem" aria-role="alert">{{goalProblem}}</text>
     <view class="editor-actions">
-      <button class="plain-button cancel-button" style="{{editorId ? 'width: 144rpx;' : ''}}" bindtap="onCancelEditor" disabled="{{!!storageProblem || savingGoal}}" hover-class="control-pressed" aria-disabled="{{!!storageProblem || savingGoal}}">取消</button>
+      <button class="plain-button cancel-button" style="{{editorId ? 'width: 144rpx;' : ''}}" bindtap="onCancelEditor" disabled="{{savingGoal}}" hover-class="control-pressed" aria-disabled="{{savingGoal}}">取消</button>
       <button class="save-button" style="{{editorId ? 'width: 168rpx;' : ''}}" bindtap="onSaveGoal" loading="{{savingGoal}}" disabled="{{!!storageProblem || savingGoal}}" hover-class="save-button-pressed" aria-disabled="{{!!storageProblem || savingGoal}}" aria-label="{{goalProblem ? '重试保存目标' : '保存目标'}}">{{goalProblem ? '重试保存' : '保存'}}</button>
     </view>
   </view>
@@ -204,7 +204,7 @@
   </view>
 
   <view class="goal-editor">
-    <button wx:if="{{!editorOpen || editorId}}" class="plain-button add-goal" bindtap="onAdd" disabled="{{!!storageProblem || savingGoal || editorOpen}}" hover-class="content-pressed" aria-disabled="{{!!storageProblem || savingGoal || editorOpen}}" aria-label="添加当日目标">
+    <button wx:if="{{!editorOpen || (editorId && !storageProblem)}}" class="plain-button add-goal" bindtap="onAdd" disabled="{{!!storageProblem || savingGoal || editorOpen}}" hover-class="content-pressed" aria-disabled="{{!!storageProblem || savingGoal || editorOpen}}" aria-label="添加当日目标">
       <view class="add-mark" aria-hidden="true"><view class="plus-line horizontal"></view><view class="plus-line vertical"></view></view>
       <text>添加目标</text>
     </button>

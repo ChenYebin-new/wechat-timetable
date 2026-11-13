@@ -432,6 +432,26 @@ test('每日一篇随想，保存保留正文、空白与换行，更新不重�
   assert.equal(todoStorage.getTodoSnapshot().data.dailyNotes.length, 1)
 })
 
+test('相同目标和随想不重复写盘或改变时间戳，清空不存在的随想不创建空存储', () => {
+  todoStorage.saveDailyNote('2026-09-16', '')
+  assert.equal(storage.has(KEY), false)
+  assertNoWrites()
+  const raw = current([v3Item()], [{ date: '2026-09-16', content: ' 原文\n', updatedAt: 3 }])
+  seed(raw)
+  const item = raw.items[0]
+  assert.equal(todoStorage.saveTodo({ id: item.id, title: ` ${item.title} `, note: item.note, taskDate: item.taskDate }), item.id)
+  todoStorage.saveDailyNote('2026-09-16', ' 原文\n')
+  todoStorage.saveDailyNote('2026-09-17', '')
+  assert.deepEqual(storage.get(KEY), raw)
+  assertNoWrites()
+})
+
+test('无变化保存仍重新读取并校验当前存储，不能绕过数据异常', () => {
+  seed({ schemaVersion: 99, items: [], dailyNotes: [] })
+  assert.throws(() => todoStorage.saveDailyNote('2026-09-16', ''), /版本/)
+  assertNoWrites()
+})
+
 test('随想验证真实日期与 2,000 字上限，非法输入不写；边界正文完整保留', () => {
   for (const date of ['', '2026-02-29', '2026-9-16', '2026-02-30']) {
     assert.throws(() => todoStorage.saveDailyNote(date, '随想'), /随想日期/)

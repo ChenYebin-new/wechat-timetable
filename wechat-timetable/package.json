@@ -8,7 +8,8 @@
   },
   "scripts": {
     "test": "node --test --disable-warning=ExperimentalWarning",
-    "test:coverage": "node --experimental-test-coverage --test-coverage-lines=67 --test-coverage-branches=77 --test-coverage-functions=70 --test --disable-warning=ExperimentalWarning",
+    "test:coverage": "node --experimental-test-coverage --test-coverage-lines=85 --test-coverage-branches=89 --test-coverage-functions=87 --test --disable-warning=ExperimentalWarning",
+    "benchmark": "node --disable-warning=ExperimentalWarning scripts/benchmark-timetable.mjs && node --disable-warning=ExperimentalWarning scripts/benchmark-todo.mjs && node --disable-warning=ExperimentalWarning scripts/benchmark-appearance.mjs && node --disable-warning=ExperimentalWarning scripts/benchmark-course-conflicts.mjs",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm run test:coverage"
   },

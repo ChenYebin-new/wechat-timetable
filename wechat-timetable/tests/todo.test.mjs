@@ -563,6 +563,49 @@ test('随想草稿保存失败时可返回原日处理，主动放弃解除恢�
   assert.equal(todoSession.firstTodoDraftDate(), '')
 })
 
+test('离页后的旧随想放弃确认不能删除保留草稿，返回后自动保存恢复', () => {
+  seed([], [{ date: '2026-09-16', content: '已保存原文', updatedAt: 1 }])
+  const page = pageContext()
+  page.onDailyNoteInput(input('尚未保存的草稿'))
+  page.onDiscardDailyNote()
+  const staleDialog = modals.at(-1)
+  failWrites = 1
+  page.onHide()
+  page.onShow()
+  const before = writes
+  staleDialog.success({ confirm: true })
+  staleDialog.complete()
+  assert.equal(writes, before)
+  assert.equal(page.data.dailyNote, '尚未保存的草稿')
+  assert.equal(page.data.dailyNoteDirty, true)
+  assert.equal(todoSession.unsavedDailyNotes.get('2026-09-16'), '尚未保存的草稿')
+  page.onDailyNoteInput(input('返回后继续写'))
+  advance(500)
+  assert.equal(stored().dailyNotes[0].content, '返回后继续写')
+  assert.equal(page.data.dailyNoteDirty, false)
+})
+
+test('旧随想确认的完成回调不能解除返回后新确认的保存暂停', () => {
+  seed()
+  const page = pageContext()
+  page.onDailyNoteInput(input('离开前草稿'))
+  page.onDiscardDailyNote()
+  const staleDialog = modals.at(-1)
+  page.onHide(); page.onShow()
+  assert.equal(stored().dailyNotes[0].content, '离开前草稿')
+  page.onDailyNoteInput(input('新草稿'))
+  page.onDiscardDailyNote()
+  const currentDialog = modals.at(-1)
+  const before = writes
+  staleDialog.complete()
+  advance(600)
+  assert.equal(writes, before)
+  assert.equal(stored().dailyNotes[0].content, '离开前草稿')
+  currentDialog.success({ confirm: false })
+  currentDialog.complete()
+  assert.equal(stored().dailyNotes[0].content, '新草稿')
+})
+
 test('恢复后返回缓存待办页关闭旧编辑器并重建目标、随想和月历', () => {
   seed([todoItem()], [{ date: '2026-09-16', content: '恢复内容', updatedAt: 1 }])
   const backupText = todoBackup.exportTodoBackup()
@@ -638,7 +681,7 @@ test('原位编辑与末尾新增共用表单，编辑卡片替换普通表面�
   assert.match(markup, /<template name="goal-editor">/)
   assert.match(markup, /wx:if="{{editorOpen && editorId === item.id}}" class="inline-goal-editor"/)
   assert.match(markup, /<view wx:else class="todo-surface">/)
-  assert.match(markup, /wx:if="{{!editorOpen \|\| editorId}}" class="plain-button add-goal"/)
+  assert.match(markup, /wx:if="{{!editorOpen \|\| \(editorId && !storageProblem\)}}" class="plain-button add-goal"/)
   assert.equal([...markup.matchAll(/is="goal-editor"/g)].length, 2)
   assert.equal([...markup.matchAll(/bindinput="onTitle"/g)].length, 1)
   assert.match(markup, /focus="{{editorFocus}}"/)
@@ -893,6 +936,21 @@ test('目标仅显示选定日期，未完成在前、已完成在后，组内�
   assert.deepEqual(context.data.visibleItems.map((item) => item.id), ['other-day'])
   assert.equal(context.data.completedCount, 0)
   assert.equal(context.data.totalCount, 1)
+})
+
+test('列表渲染仅传输显示字段，迁移时间与存储元数据保留在 Storage', () => {
+  const item = todoItem({
+    legacyTiming: { dueDate: '2026-09-15', scheduleDate: '2026-09-16', scheduleStartTime: '08:00', scheduleEndTime: '09:00' },
+  })
+  seed([item])
+  const page = pageContext()
+  assert.deepEqual(page.data.visibleItems, [{ id: item.id, title: item.title, note: item.note, completed: false, expired: false }])
+  assert.deepEqual(stored().items, [item])
+  assert.equal(writes, 0)
+  page.editGoal(item.id)
+  page.onTitle(input('编辑后仍保留兼容字段'))
+  page.onSaveGoal()
+  assert.deepEqual(stored().items[0].legacyTiming, item.legacyTiming)
 })
 
 test('过期按实际今天派生，刷新不删、不顺延、不写盘，历史目标仍可补完成', () => {
@@ -1183,6 +1241,35 @@ test('重新读取失败会清空陈旧目标计数并呈现读取错误', () =>
   assert.equal(context.data.totalCount, 0)
   assert.equal(context.data.completedCount, 0)
   assert.match(context.data.storageProblem, /读取.*失败/)
+})
+
+test('读取失败时新建和原位编辑草稿仍可取消，解除备份恢复的草稿阻塞', () => {
+  const markup = readFileSync(new URL('../miniprogram/pages/todo/index.wxml', import.meta.url), 'utf8')
+  const cancel = markup.match(/<button\b[^>]*bindtap="onCancelEditor"[^>]*>/)[0]
+  assert.match(cancel, /disabled="{{savingGoal}}"/)
+  assert.match(cancel, /aria-disabled="{{savingGoal}}"/)
+  assert.match(markup, /wx:if="{{!editorOpen \|\| \(editorId && !storageProblem\)}}"/)
+  for (const editing of [false, true]) {
+    seed([todoItem()])
+    const page = pageContext()
+    if (editing) page.editGoal('todo-1')
+    else page.onAdd()
+    page.onTitle(input('保留在表单中的草稿'))
+    const before = stored()
+    failReads = true
+    page.refresh()
+    assert.equal(page.data.visibleItems.length, 0)
+    assert.equal(page.data.title, '保留在表单中的草稿')
+    assert.equal(page.data.editorOpen, true)
+    assert.equal(todoSession.firstTodoDraftDate(), '2026-09-16')
+    page.onCancelEditor()
+    assert.equal(page.data.editorOpen, false)
+    assert.equal(todoSession.firstTodoDraftDate(), '')
+    assert.equal(writes, 0)
+    assert.deepEqual(stored(), before)
+    failReads = false
+    page.onHide()
+  }
 })
 
 test('Todo页首次显示安全升级旧数据，未完成统一当天且再次显示不重复迁移', () => {
