@@ -143,27 +143,40 @@ Page({
 
   /** 按指定周渲染课表（选周时调用，不再受当前自然周覆盖）。 */
   renderWeek(week: number, term: TermSettings | null, courses: Course[]) {
+    const now = new Date()
     const visible = term
       ? coursesForWeek(courses, week)
       : courses
-    const systemDay = new Date().getDay()
+    const systemDay = now.getDay()
     const today = systemDay === 0 ? 7 : systemDay
     const todayCourses = visible.filter((course) => course.day === today)
     const todayCount = courseGroupCount(todayCourses)
     const totalCount = courseGroupCount(visible)
     const todayText = todayCount > 0 ? `今天有 ${todayCount} 门课` : '今天没有课程'
-    const todayWeek = calcCurrentWeek(term, new Date())
+    const todayWeek = calcCurrentWeek(term, now)
     const overviewText = term
       ? todayWeek === week
         ? `第 ${week} 周 · ${todayText} · ${DAYS[today - 1]} · 本周共 ${totalCount} 门课程`
         : `第 ${week} 周 · 本周共 ${totalCount} 门课程、${visible.length} 个时段`
       : `${todayText} · ${DAYS[today - 1]} · 共 ${courseGroupCount(courses)} 门课程`
+    const panels = buildWeekPanels(courses, week, term?.totalWeeks).map(panel => ({
+      ...panel,
+      calendar: panel.active ? buildWeekDates(term, panel.week, now) : { monthLabel: '', days: [] },
+    }))
+    const panelPatch: Record<string, CalendarWeekPanel | CalendarWeekPanel[]> = {}
+    const previous = this.data.weekPanels
+    if (!previous || previous.length !== panels.length) {
+      panelPatch.weekPanels = panels
+    } else {
+      // Unchanged adjacent weeks retain their native grid instead of receiving a full array.
+      panels.forEach((panel, index) => {
+        if (JSON.stringify(previous[index]) !== JSON.stringify(panel)) panelPatch[`weekPanels[${index}]`] = panel
+      })
+    }
     this.setData({
       currentWeek: week,
       weekIndex: week - 1,
-      weekPanels: buildWeekPanels(courses, week, term?.totalWeeks).map(panel => ({
-        ...panel, calendar: buildWeekDates(term, panel.week),
-      })),
+      ...panelPatch,
       isEmpty: courses.length === 0,
       overviewText,
     })

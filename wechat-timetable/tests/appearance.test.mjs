@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { readFileSync, existsSync } from 'node:fs'
 import './helpers/register-typescript.mjs'
+import { applyDataPatch } from './helpers/set-data.mjs'
 
 let storage = new Map(), writes = [], nativeCalls = [], writeFailure = false, readFailure = false, corruptWrite = false
 const pages = []
@@ -41,7 +42,7 @@ function reset(value) {
   appearance.initializeAppearance()
 }
 function page(definition, route) {
-  return { ...definition, route, data: structuredClone(definition.data), setData(patch) { Object.assign(this.data, patch) } }
+  return { ...definition, route, data: structuredClone(definition.data), setData(patch) { applyDataPatch(this.data, patch) } }
 }
 function course(overrides = {}) {
   return { id: 'math-1', groupId: 'math', name: '高等数学', color: '#abcdef', day: 1, startPeriod: 1, endPeriod: 2, weekMode: 'all', weeks: [1,2,3,4,5,6], createdAt: 1, updatedAt: 1, ...overrides }

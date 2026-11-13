@@ -2,8 +2,12 @@ import type { TodoItem } from '../models/todo'
 
 /** Storage 中的数组顺序就是手动顺序；按完成状态分区时保留组内顺序。 */
 export function todosForDate(items: TodoItem[], date: string): TodoItem[] {
-  const daily = items.filter((item) => item.taskDate === date)
-  return [...daily.filter((item) => !item.completed), ...daily.filter((item) => item.completed)]
+  const pending: TodoItem[] = []
+  const completed: TodoItem[] = []
+  for (const item of items) {
+    if (item.taskDate === date) (item.completed ? completed : pending).push(item)
+  }
+  return pending.concat(completed)
 }
 
 export interface TodoRowRect {

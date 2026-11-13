@@ -9,7 +9,7 @@ import { unsavedDailyNotes, setGoalDraft, todoRevision, takeRequestedDraftDate }
 import { todosForDate, todoDragLayout } from '../../utils/todo-order'
 import type { TodoRowRect } from '../../utils/todo-order'
 
-interface TodoView extends TodoItem {
+interface TodoView extends Pick<TodoItem, 'id' | 'title' | 'note' | 'completed'> {
   expired: boolean
 }
 
@@ -175,6 +175,7 @@ Page({
     stateFor(this).lifecycle += 1
     stateFor(this).visible = false
     stateFor(this).noteFocused = false
+    stateFor(this).discardingNote = false
     this.setData({ editorFocus: false, goalKeyboardHeight: 0, focusedField: '' })
     this.flushDailyNote()
     this.stopTimers()
@@ -226,7 +227,10 @@ Page({
     }
 
     const visibleItems = todosForDate(snapshot.data.items, selectedDate)
-      .map((item) => ({ ...item, expired: !item.completed && item.taskDate < today }))
+      .map((item) => ({
+        id: item.id, title: item.title, note: item.note, completed: item.completed,
+        expired: !item.completed && item.taskDate < today,
+      }))
     const storedNote = snapshot.data.dailyNotes.find((entry) => entry.date === selectedDate)?.content || ''
     const state = stateFor(this)
     state.goalDates = new Set(snapshot.data.items.map((item) => item.taskDate))
@@ -781,18 +785,20 @@ Page({
     const date = state.noteDate
     const content = this.data.dailyNote
     const revision = todoRevision()
+    const lifecycle = state.lifecycle
     wx.showModal({
       title: '放弃随想修改',
       content: '只放弃尚未保存的修改，已保存的随想会保留。',
       confirmText: '放弃修改',
       cancelText: '继续编辑',
       success: (result) => {
-        if (!result.confirm || todoRevision() !== revision || state.noteDate !== date || this.data.dailyNote !== content) return
+        if (!result.confirm || state.lifecycle !== lifecycle || todoRevision() !== revision || state.noteDate !== date || this.data.dailyNote !== content) return
         unsavedDailyNotes.delete(date)
         this.setData({ dailyNoteDirty: false, noteSaveProblem: '' })
         this.refresh()
       },
       complete: () => {
+        if (state.lifecycle !== lifecycle || todoRevision() !== revision) return
         state.discardingNote = false
         if (state.visible) this.flushDailyNote()
       },

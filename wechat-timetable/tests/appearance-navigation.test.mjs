@@ -139,3 +139,36 @@ test('an already hidden keyboard does not block tab navigation', t => {
   assert.equal(calls.length, 1)
   assert.equal(calls[0][1].url, '/pages/todo/index')
 })
+
+test('a late keyboard callback cannot switch tabs after the source page hides or detaches', t => {
+  const hides = []
+  t.mock.method(wx, 'hideKeyboard', options => hides.push(options))
+  for (const leave of [tab.pageLifetimes.hide, tab.lifetimes.detached]) {
+    calls = []
+    const context = instance(tab)
+    context.onSwitch({ currentTarget: { dataset: { index: 1 } } })
+    leave.call(context)
+    hides.pop().complete({ errMsg: 'hideKeyboard:ok' })
+    assert.deepEqual(calls, [])
+  }
+})
+
+test('returning to the source page permits a new switch without accepting its old callback', t => {
+  calls = []
+  const hides = []
+  t.mock.method(wx, 'hideKeyboard', options => hides.push(options))
+  stack = [{ route: 'pages/timetable/index', data: {} }]
+  const context = instance(tab)
+  const event = { currentTarget: { dataset: { index: 1 } } }
+  context.onSwitch(event)
+  tab.pageLifetimes.hide.call(context)
+  tab.pageLifetimes.show.call(context)
+  context.onSwitch(event)
+  hides[0].complete({ errMsg: 'hideKeyboard:ok' })
+  assert.deepEqual(calls, [])
+  assert.equal(context.data.switching, true)
+  hides[1].complete({ errMsg: 'hideKeyboard:ok' })
+  assert.equal(calls.length, 1)
+  calls[0][1].complete({ errMsg: 'switchTab:ok' })
+  assert.equal(context.data.switching, false)
+})

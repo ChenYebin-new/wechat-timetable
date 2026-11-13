@@ -89,8 +89,14 @@ Component({
   },
 
   observers: {
-    'themeId, periods, daySlots, selectedKeys, disabledKeys'() {
+    'themeId, periods, daySlots, disabledKeys'() {
       this.rebuildColumns()
+    },
+    selectedKeys() {
+      this.updateSelectedCells()
+    },
+    'holdEnabled, selectionMode'() {
+      if (!this.properties.holdEnabled || this.properties.selectionMode) this.onCellTouchEnd()
     },
   },
 
@@ -109,6 +115,19 @@ Component({
   },
 
   methods: {
+    /** Selection changes must not resend every course card and grid cell. */
+    updateSelectedCells() {
+      const selected = new Set(this.properties.selectedKeys as string[])
+      const patch: Record<string, boolean> = {}
+      this.data.columns.forEach((column, dayIndex) => {
+        column.cells.forEach((cell, periodIndex) => {
+          const value = selected.has(cell.key)
+          if (cell.selected !== value) patch[`columns[${dayIndex}].cells[${periodIndex}].selected`] = value
+        })
+      })
+      if (Object.keys(patch).length) this.setData(patch)
+    },
+
     rebuildColumns() {
       const selected = new Set(this.properties.selectedKeys as string[])
       const disabled = new Set(this.properties.disabledKeys as string[])
@@ -156,6 +175,10 @@ Component({
       state.timer = setTimeout(() => {
         const key = state.key
         clearHoldTimer(this)
+        if (!this.properties.holdEnabled || this.properties.selectionMode || (this.properties.disabledKeys as string[] || []).includes(key)) {
+          this.setData({ pressingKey: '' })
+          return
+        }
         state.ignoreTapKey = key
         state.ignoreTapUntil = Date.now() + 600
         this.setData({ pressingKey: '' })

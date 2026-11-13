@@ -1,0 +1,56 @@
+{
+  "date": "2026-11-13",
+  "platform": "WeChat Developer Tools, isolated tourist project",
+  "device": {
+    "model": "iPhone 12/13 (Pro)",
+    "width": 390,
+    "height": 844,
+    "SDKVersion": "3.17.2"
+  },
+  "sourceFilesCompared": 216,
+  "sourceMismatches": 0,
+  "automatedTests": {
+    "passed": 499,
+    "coverage": {
+      "functions": 87.74,
+      "branches": 90.15,
+      "lines": 85.39
+    },
+    "failed": 0
+  },
+  "initialPassedChecks": [
+    "aqua timetable rendering",
+    "aqua todo rendering",
+    "aqua appearance rendering",
+    "aqua slot-select rendering",
+    "aqua calendar and inline editor",
+    "aqua course selection and bottom content",
+    "aqua period 14 native row alignment",
+    "aqua custom tab navigation and touch targets"
+  ],
+  "targetedPassedChecks": [
+    "settings return preserves the explicitly selected week",
+    "all six themes preserve week and native selected-cell state through settings",
+    "neighboring and distant week patches render the correct dates and courses",
+    "storage read failure keeps an existing goal draft visible and cancellable",
+    "custom tab navigation reflects actual route and retains bottom safe area"
+  ],
+  "runtimeExceptions": [],
+  "originalStorageUnchanged": true,
+  "syntheticBusinessUnchanged": true,
+  "harnessCorrections": [
+    "Legacy fixed week 8 assertion depended on the execution date; retested all themes via the real settings route at explicit week 15.",
+    "Explicit navigateBack delta and route settling replaced legacy navigation assumptions.",
+    "Button disabled attributes are strings; cancellation is asserted after the asynchronous tap completes."
+  ],
+  "sourceReports": [
+    "dist/optimization-native-20261113-final/report.json",
+    "dist/optimization-native-followup-20261113/report.json",
+    "dist/optimization-native-recovery-final-20261113/report.json"
+  ],
+  "limits": [
+    "Payload and timing benchmarks are Node.js measurements.",
+    "No iOS/Android physical-device performance, keyboard, accessibility or release verification.",
+    "No upload or publication."
+  ]
+}

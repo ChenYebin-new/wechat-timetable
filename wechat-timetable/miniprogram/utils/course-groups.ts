@@ -1,5 +1,5 @@
 import type { Course } from '../models/course'
-import { isOverlapping } from './course-validator'
+import { DAYS, MAX_PERIODS, MAX_TOTAL_WEEKS } from '../constants/timetable'
 
 export type GroupMergeDecisionKind = 'add' | 'duplicate' | 'conflict'
 
@@ -10,19 +10,14 @@ export interface GroupMergeDecision {
   reason?: string
 }
 
-function sameWeeks(a: number[], b: number[]): boolean {
-  return a.length === b.length && a.every((week, index) => week === b[index])
+function courseIdentity(course: Course): string {
+  return JSON.stringify([course.name.trim(), course.day, course.startPeriod, course.endPeriod, course.weeks])
 }
 
-function isDuplicateCourse(a: Course, b: Course): boolean {
-  if (a.id === b.id) return true
-  return (
-    a.name.trim() === b.name.trim() &&
-    a.day === b.day &&
-    a.startPeriod === b.startPeriod &&
-    a.endPeriod === b.endPeriod &&
-    sameWeeks(a.weeks, b.weeks)
-  )
+function weekMask(weeks: number[]): number {
+  // 周次已通过 1–30 范围校验；旧版空数组代表全部周。
+  if (!weeks.length) return (1 << MAX_TOTAL_WEEKS) - 1
+  return weeks.reduce((mask, week) => mask | (1 << (week - 1)), 0)
 }
 
 export function groupCourses(courses: Course[]): Course[][] {
@@ -41,9 +36,18 @@ export function courseGroupCount(courses: Course[]): number {
 
 /** 合并以课程组为最小单位，避免只导入同一门课程的部分时段。 */
 export function planCourseGroupMerge(incoming: Course[], existing: Course[]): GroupMergeDecision[] {
+  const ids = new Set<string>()
+  const identities = new Set<string>()
+  const occupied = new Int32Array(DAYS.length * MAX_PERIODS)
+  for (const course of existing) {
+    ids.add(course.id)
+    identities.add(courseIdentity(course))
+    const mask = weekMask(course.weeks)
+    const offset = (course.day - 1) * MAX_PERIODS - 1
+    for (let period = course.startPeriod; period <= course.endPeriod; period++) occupied[offset + period] |= mask
+  }
   return groupCourses(incoming).map((courses) => {
-    const duplicate = courses.some((course) => existing.some((item) => isDuplicateCourse(course, item)))
-    const conflict = courses.some((course) => existing.some((item) => isOverlapping(course, item)))
+    const duplicate = courses.some((course) => ids.has(course.id) || identities.has(courseIdentity(course)))
     if (duplicate) {
       return {
         groupId: courses[0].groupId,
@@ -52,6 +56,14 @@ export function planCourseGroupMerge(incoming: Course[], existing: Course[]): Gr
         reason: `「${courses[0].name}」包含与当前课表重复的时段，整门课程已跳过`,
       }
     }
+    const conflict = courses.some((course) => {
+      const mask = weekMask(course.weeks)
+      const offset = (course.day - 1) * MAX_PERIODS - 1
+      for (let period = course.startPeriod; period <= course.endPeriod; period++) {
+        if (occupied[offset + period] & mask) return true
+      }
+      return false
+    })
     if (conflict) {
       return {
         groupId: courses[0].groupId,

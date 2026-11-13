@@ -291,7 +291,9 @@ export function saveTodo(draft: TodoDraft): string {
   const now = Date.now()
   let id = draft.id || ''
   if (id) {
-    if (!loaded.data.items.some((item) => item.id === id)) throw new Error('没有找到要编辑的目标')
+    const existing = loaded.data.items.find((item) => item.id === id)
+    if (!existing) throw new Error('没有找到要编辑的目标')
+    if (existing.title === normalized.title && existing.note === normalized.note && existing.taskDate === normalized.taskDate) return id
     loaded.data.items = loaded.data.items.map((item) => item.id === id
       ? { ...item, ...normalized, updatedAt: now }
       : item)
@@ -349,6 +351,7 @@ export function saveDailyNote(date: string, content: string): void {
   if (content.length > 2000) throw new Error('随想不能超过 2,000 个字')
   const loaded = loadWritable()
   const existingIndex = loaded.data.dailyNotes.findIndex((note) => note.date === date)
+  if (existingIndex < 0 ? content === '' : loaded.data.dailyNotes[existingIndex].content === content) return
   if (content === '') loaded.data.dailyNotes = loaded.data.dailyNotes.filter((note) => note.date !== date)
   else {
     const next: TodoDailyNote = { date, content, updatedAt: Date.now() }
